@@ -21,16 +21,18 @@ r.TGraphErrors.__init__._creates = False
 r.TGraphAsymmErrors.__init__._creates = False
 
 
-import supersusy.utils.plot_utils as pu
-import supersusy.utils.utils as utils
-import supersusy.utils.signal as signal
-import supersusy.utils.background as background
-import supersusy.utils.region as region
-import supersusy.utils.plot as plot
+import tools.plot_utils as pu
+import tools.utils as utils
+import tools.signal as signal
+import tools.background as background
+import tools.region as region
+import tools.plot as plot
 
 def get_plotConfig(conf) :
     configuration_file = ""
-    configuration_file = "./" + indir + "/" + conf + ".py"
+    configuration_file = "./" + indir + "/" + conf
+    if not configuration_file.endswith(".py"):
+        configuration_file += '.py'
     if os.path.isfile(configuration_file) :
         return configuration_file
     else :

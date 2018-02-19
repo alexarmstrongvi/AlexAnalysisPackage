@@ -3,7 +3,7 @@ from math import sqrt
 ROOT.gROOT.SetBatch(True)
 import array
 
-import supersusy.utils.plot as plot
+import tools.plot as plot
 
 ROOT.gStyle.SetCanvasPreferGL(ROOT.kTRUE)
 
