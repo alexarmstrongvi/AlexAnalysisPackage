@@ -3,7 +3,7 @@ import glob
 import sys
 sys.path.append('../..')
 
-import supersusy.utils.background as background
+import tools.background as background
 
 class Signal() :
     def __init__(self, name = "", displayname ="") :

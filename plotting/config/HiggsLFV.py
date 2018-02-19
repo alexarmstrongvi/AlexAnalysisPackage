@@ -2,10 +2,10 @@ import sys, os
 import re
 from collections import namedtuple
 sys.path.append(os.environ['SUSYDIR'])
-import supersusy.utils.plot as plot
-import supersusy.utils.background as background
-import supersusy.utils.region as region
-import supersusy.utils.systematic as systematic
+import tools.plot as plot
+import tools.background as background
+import tools.region as region
+import tools.systematic as systematic
 
 
 #######################################

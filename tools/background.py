@@ -3,7 +3,7 @@ import glob
 import sys
 sys.path.append('../..')
 
-import supersusy.utils.systematic as systematic
+import tools.systematic as systematic
 
 r.TColor.__init__._creates = False
 r.TEventList.__init__._creates = False
