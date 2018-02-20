@@ -3,7 +3,9 @@ Basic analysis package for SusyNt analyses.
 
 ## Dependencies
 [SusyNt Read](https://github.com/susynt/susynt-read)
+
 [Restframes](https://github.com/crogan/RestFrames)
+
 [Superflow](https://github.com/dantrim/Superflow)
 
 ## Expected file structure
@@ -53,6 +55,7 @@ analysis\_run
 22. Go outside the `analysis_<tag>` directories and `tar analysis_<tag>`
     * `tar cfvz analysis_n<tag>.tgz  --exclude=".*" --exclude="*git*" --exclude="*\.root" analysis_n<tag>/`
     * Make sure there is a soft link area.tgz pointing to the tarred analysis directory
+
 Getting miniNtuples and plots
 1. If any changes
     * `source susynt-read/bash/setup_root.sh` from `analysis_<tag>`
