@@ -636,23 +636,22 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         rcan.upper_pad.Update()
 
     print "Total SM: %.2f"%(n_total_sm_yield)
-    print "\tTESTING: if %.2f is similar. remove n_total_sm_yield"%(stack.Integral(0,-1))
 
     # max y value for stack
     # maxy = 0
     # Order the hists by total events
-    # histos = sorted(histos, key=lambda h: h.Integral())
-    # for h in histos :
-    #     if "fake" in h.GetName() or "Fake" in h.GetName() : continue
-    #     stack.Add(h)
-    #     maxy += h.GetMaximum()
-    #     # add items to legend in order of stack
-    #     name_for_legend = ""
-    #     for b in backgrounds :
-    #         if b.treename in h.GetName() :
-    #             name_for_legend = b.displayname
-    #     leg.AddEntry(h, name_for_legend, "f")
-    # rcan.upper_pad.Update()
+    histos = sorted(histos, key=lambda h: h.Integral())
+    for h in histos :
+        if "fake" in h.GetName() or "Fake" in h.GetName() : continue
+        stack.Add(h)
+        #maxy += h.GetMaximum()
+        # add items to legend in order of stack
+        # name_for_legend = ""
+        # for b in backgrounds :
+        #     if b.treename in h.GetName() :
+        #         name_for_legend = b.displayname
+        # leg.AddEntry(h, name_for_legend, "f")
+    rcan.upper_pad.Update()
 
     # removes = {}
     # removal_list = []
@@ -1531,7 +1530,7 @@ def make_plots(plots, regions, data, backgrounds) :
     '''
     for reg in regions:
         # first check that there are plots for the given region
-        plots_with_region = [p.region for p in plots if p.region == reg.name]
+        plots_with_region = [p for p in plots if p.region == reg.name]
         if not len(plots_with_region): continue
 
         ########################################################################
@@ -1693,7 +1692,7 @@ if __name__=="__main__" :
                             help='provide the name of the directory containing the config, plots, and lists directories')
     parser.add_argument("-c", "--plotConfig",
                             default="",
-                            help='provide the name of the config file (without '.py')')
+                            help='provide the name of the config file')
     parser.add_argument("-s", "--doSys", action="store_true",
                             default=False)
     parser.add_argument("-r", "--requestRegion",

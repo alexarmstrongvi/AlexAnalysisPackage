@@ -76,7 +76,7 @@ zll.set_chain_from_list_CONDOR(filelist_dir+ "zll/", rawdir)
 backgrounds.append(zll)
 
 # Zll
-ztt = background.Background("ztt", "Ztautau")
+ztt = background.Background("ztt", "Z#tau#tau")
 ztt.set_debug()
 ztt.scale_factor = lumi_[lumi_val]
 ztt.set_fillStyle(0)
@@ -98,7 +98,7 @@ wjets.set_chain_from_list_CONDOR(filelist_dir+ "wjets/", rawdir)
 backgrounds.append(wjets)
 
 ## Higgs -> tau tau
-htt = background.Background("htt", "Htautau")
+htt = background.Background("htt", "H#tau#tau")
 #higgs = background.Background("higgs", "Higgs")
 htt.scale_factor = lumi_[lumi_val]
 htt.set_fillStyle(0)
