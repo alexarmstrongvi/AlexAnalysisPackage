@@ -513,8 +513,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # if not add_scale_factors :
     #     print " *** NOT ADDING S2L SCALE FACTORS *** "
 
-    print 50*"- "
-    print "make_plotsRatio    Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name)
+    print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
 
     ############################################################################
     # Intialize plot components
@@ -556,6 +555,9 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     #leg = pu.default_legend(xl=0.55,yl=0.65,xh=0.93,yh=0.90)
     leg.SetNColumns(2)
 
+    # Yield table
+    yield_tbl = []
+
     ############################################################################
     # Get background MC stack
 
@@ -566,11 +568,14 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     #h_nom_fake = None
 
     n_total_sm_yield = 0.
+    hists_to_clear = []
 
     # Add MC backgrounds to stack
     for b in backgrounds :
         # Initilize histogram
-        h = pu.th1f("h_"+b.treename+"_"+plot.variable, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h_name = "h_"+reg.name+'_'+b.treename+"_"+plot.variable
+        hists_to_clear.append(h_name)
+        h = pu.th1f(h_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
 
         h.SetLineColor(b.color)
         h.GetXaxis().SetLabelOffset(-999)
@@ -612,11 +617,12 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())
         b.tree.Draw(draw_cmd, cut * sel, "goff")
 
-        # Print the yield +/- stat error
+        # Yield +/- stat error
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
         n_total_sm_yield += float(integral)
-        print "%s: %.2f +/- %.2f"%(b.name, integral, stat_err)
+        yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
+        #print "%s: %.2f +/- %.2f"%(b.name, integral, stat_err)
 
         # Get the variation histos if plotting syst band
         # if g_doSys and 'fakes' not in b.name and (integral>0) : getSystHists(plot, reg, b, integral, h)
@@ -629,22 +635,18 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
 
         # Record all and non-empty histograms
         all_histos.append(h)
-        if integral > 0 :
-            histos.append(h)
-        else :
-            avoid_bkg.append(b.name)
+        histos.append(h) if integral > 0 else avoid_bkg.append(b.name)
         rcan.upper_pad.Update()
 
-    print "Total SM: %.2f"%(n_total_sm_yield)
+    if not len(histos):
+        print "make_plotsRatio ERROR :: All SM hists are empty"
+    yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
 
-    # max y value for stack
-    # maxy = 0
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
     for h in histos :
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
-        #maxy += h.GetMaximum()
         # add items to legend in order of stack
         # name_for_legend = ""
         # for b in backgrounds :
@@ -690,23 +692,24 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     ############################################################################
     # Get data hist
 
-    hd = pu.th1f("h_data_"+reg.name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+    hd_name = "h_"+reg.name+'_data_'+plot.variable
+    hd = pu.th1f(hd_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
     hd.Sumw2
 
     cut = "(" + reg.tcut + ")"
     cut = r.TCut(cut)
     sel = r.TCut("1")
-    draw_cmd = "%s>>+%s"%(plot.variable, hd.GetName())
+    draw_cmd = "%s>>%s"%(plot.variable, hd.GetName())
     data.tree.Draw(draw_cmd, cut * sel, "goff")
     hd.GetXaxis().SetLabelOffset(-999)
 
 
-    maxy = hd.GetMaximum() if hd.GetMaximum() > stack.GetMaximum() else stack.GetMaximum()
 
     # print the yield +/- stat error
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
-    print "Data: %.2f +/- %.2f"%(integral, stat_err)
+    yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
     # Add overflow
     pu.add_overflow_to_lastbin(hd)
@@ -827,10 +830,9 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     stack.SetMinimum(plot.y_range_min)
 
     # Determine y range for plot
-    max_mult = 1.65
-        # Note if plot contains signal sample for setting axis ranges
-    if any([b.isSignal() for b in backgrounds]) :
-        max_mult = 2.0
+    max_mult = 2.0 if any([b.isSignal() for b in backgrounds]) else 1.66
+
+    maxy = max(hd.GetMaximum(), stack.GetMaximum())
     if not plot.isLog() :
         hax.SetMaximum(max_mult*maxy)
         hax.Draw()
@@ -856,7 +858,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         error_sym = r.Double(0.0)
         error_sym = (ehigh + elow) / 2.0
 
-        print "initial error (+%.2f,-%.2f), symmetrized = (+%.2f,-%.2f)"%(ehigh,elow, error_sym, error_sym)
+        if ehigh != error_sym:
+            print "initial error (+%.2f,-%.2f), symmetrized = (+%.2f,-%.2f)"%(ehigh,elow, error_sym, error_sym)
 
 
         nominalAsymErrors.SetPointEYhigh(i,0.0)
@@ -915,7 +918,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         # print the yield +/- stat error
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
-        print "%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
+        yield_tbl.append("%10s: %.2f +/- %.2f"%(s.name, integral, stat_err))
+        #print "%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
 
         # add overflow
         pu.add_overflow_to_lastbin(h)
@@ -926,6 +930,16 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         rcan.upper_pad.Update()
 
     ############################################################################
+    #
+    # Print yield table
+    print "Yields for %s region"%reg.displayname
+    print 30*'-'
+    for yld in yield_tbl:
+        if 'total' in yld.lower():
+            print 20*'-'
+        print yld
+    print 30*'-'
+
     #draw the signals
     for hsig in sig_histos :
         hsig.Draw("hist same")
@@ -1036,6 +1050,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     rcan.canvas.Update()
     ############################################################################
 
+    print "\n"
     outname = plot.name + ".eps"
     rcan.canvas.SaveAs(outname)
     out = g_indir + "/plots/" + g_outdir
@@ -1533,6 +1548,7 @@ def make_plots(plots, regions, data, backgrounds) :
         plots_with_region = [p for p in plots if p.region == reg.name]
         if not len(plots_with_region): continue
 
+        print 20*'-', "Plots for %s region"%reg.displayname, 20*'-','\n'
         ########################################################################
         # Set event lists, if they already exist load it.
         # Otherwise make it and save
@@ -1545,13 +1561,17 @@ def make_plots(plots, regions, data, backgrounds) :
         for b in backgrounds :
             list_name = "list_" + reg.name + "_" + b.treename
             save_name = "./" + g_indir + "/lists/" + list_name + ".root"
+            save_name = os.path.normpath(save_name)
             if g_dbg: print 'List name =',list_name
+
+            # Reset event list
+            b.tree.SetEventList(0)
 
             # check if the list already exists
             if os.path.isfile(save_name) :
                 rfile = r.TFile.Open(save_name)
                 list = rfile.Get(list_name)
-                print "%10s : EventList found at %s"%(b.name, os.path.abspath(save_name))
+                print "%10s : EventList found at %s"%(b.name, save_name)
                 if g_dbg : list.Print()
                 b.tree.SetEventList(list)
             else :
@@ -1560,7 +1580,6 @@ def make_plots(plots, regions, data, backgrounds) :
                 list = r.gROOT.FindObject(list_name)
                 b.tree.SetEventList(list)
                 list.SaveAs(save_name)
-                #list.SaveAs(list_name + ".root")
 
         # systematics trees
         # if g_doSys :
@@ -1613,10 +1632,15 @@ def make_plots(plots, regions, data, backgrounds) :
         if data :
             data_list_name = "list_" + reg.name + "_" + data.treename
             data_save_name = "./" + g_indir + "/lists/" + data_list_name + ".root"
+            data_save_name = os.path.normpath(data_save_name)
+            
+            # Reset event list
+            data.tree.SetEventList(0)
+            
             if os.path.isfile(data_save_name) :
                 rfile = r.TFile.Open(data_save_name)
                 data_list = rfile.Get(data_list_name)
-                print "%10s : EventList found at %s"%('Data', os.path.abspath(data_save_name))
+                print "%10s : EventList found at %s"%('Data', data_save_name)
                 if g_dbg : data_list.Print()
                 data.tree.SetEventList(data_list)
             else :
@@ -1632,6 +1656,8 @@ def make_plots(plots, regions, data, backgrounds) :
         for n_current, p in enumerate(plots_with_region, 1):
             if not p.is2D : make_plots1D(p, reg, data, backgrounds, n_current, n_total)
             elif p.is2D : make_plots2D(p, reg, data, backgrounds)
+        print 30*'-', '%s region completed'%reg.displayname, 30*'-'
+    print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 
 def check_for_consistency(plots, regions) :
     '''
@@ -1674,6 +1700,7 @@ def get_plotConfig(conf) :
     configuration_file = "./" + g_indir + "/" + conf
     if not configuration_file.endswith(".py"):
         configuration_file += '.py'
+    configuration_file = os.path.normpath(configuration_file)
     if os.path.isfile(configuration_file) :
         return configuration_file
     else :
@@ -1754,11 +1781,14 @@ if __name__=="__main__" :
         for p in plots :
             p.Print()
     print "+-----------------------+ "
-    print "  Loaded backgrounds:    "
+    print "Loaded backgrounds:    "
     for b in backgrounds :
+        print '\t', 
         b.Print()
-    print "  Loaded data sample:    "
-    if data : data.Print()
+    print "Loaded data sample:    "
+    if data : 
+        print '\t', 
+        data.Print()
     print "+-----------------------+ "
     # if g_doSys :
     #     print "+-----------------------+ "

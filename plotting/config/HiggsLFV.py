@@ -51,18 +51,50 @@ stop.set_treename("ST")
 stop.set_chain_from_list_CONDOR(filelist_dir+ "singletop/", rawdir)
 backgrounds.append(stop)
 
+# WW
+WW = background.Background("ww", "WW")
+WW.set_debug()
+WW.scale_factor = lumi_[lumi_val] #* 1.06
+WW.set_fillStyle(0)
+WW.setLineStyle(1)
+WW.set_color(r.TColor.GetColor("#325f85"))
+WW.set_treename("WW")
+WW.set_chain_from_list_CONDOR(filelist_dir+ "WW/", rawdir)
+backgrounds.append(WW)
 
-# diboson
-diboson = background.Background("vv", "VV")
-diboson.set_debug()
-diboson.scale_factor = lumi_[lumi_val] #* 1.06
-diboson.set_fillStyle(0)
-diboson.setLineStyle(1)
-diboson.set_color(r.TColor.GetColor("#325f85"))
-diboson.set_treename("diboson")
-diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson/", rawdir)
-#diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson_new_check/", diboson_rawdir_SF)
-backgrounds.append(diboson)
+# ZZ
+ZZ = background.Background("zz", "ZZ")
+ZZ.set_debug()
+ZZ.scale_factor = lumi_[lumi_val] #* 1.06
+ZZ.set_fillStyle(0)
+ZZ.setLineStyle(1)
+ZZ.set_color(r.TColor.GetColor("#325f85"))
+ZZ.set_treename("ZZ")
+ZZ.set_chain_from_list_CONDOR(filelist_dir+ "ZZ/", rawdir)
+backgrounds.append(ZZ)
+
+# WZ
+WZ = background.Background("wz", "WZ")
+WZ.set_debug()
+WZ.scale_factor = lumi_[lumi_val] #* 1.06
+WZ.set_fillStyle(0)
+WZ.setLineStyle(1)
+WZ.set_color(r.TColor.GetColor("#325f85"))
+WZ.set_treename("WZ")
+WZ.set_chain_from_list_CONDOR(filelist_dir+ "WZ/", rawdir)
+backgrounds.append(WZ)
+
+## diboson
+#diboson = background.Background("vv", "VV")
+#diboson.set_debug()
+#diboson.scale_factor = lumi_[lumi_val] #* 1.06
+#diboson.set_fillStyle(0)
+#diboson.setLineStyle(1)
+#diboson.set_color(r.TColor.GetColor("#325f85"))
+#diboson.set_treename("diboson")
+#diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson/", rawdir)
+##diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson_new_check/", diboson_rawdir_SF)
+#backgrounds.append(diboson)
 
 # Zll
 zll = background.Background("zll", "Zll")
@@ -221,30 +253,36 @@ Baseline_Sel = 'l_pt[0] >= 45 && l_pt[1] >= 15 '\
 VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 
 # Define regions
-reg1 = region.Region()
-reg1.name = "baseline"
-reg1.displayname = "Baseline"
-reg1.tcut = Baseline_Sel + " && " + emu
-regions.append(reg1)
+reg = region.Region()
+reg.name = "baseline"
+reg.displayname = "Baseline"
+reg.tcut = Baseline_Sel
+regions.append(reg)
 
-reg2 = region.Region()
-reg2.name = "baseline_emu"
-reg2.displayname = "Baseline (Channel: El-Mu)"
-reg2.tcut = Baseline_Sel + " && " + emu
-regions.append(reg2)
+reg = region.Region()
+reg.name = "baseline_emu"
+reg.displayname = "Baseline (Channel: El-Mu)"
+reg.tcut = Baseline_Sel + " && " + emu
+regions.append(reg)
 
-reg3 = region.Region()
-reg3.name = "vbf"
-reg3.displayname = "VBF"
-reg3.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
-regions.append(reg3)
+reg = region.Region()
+reg.name = "baseline_mue"
+reg.displayname = "Baseline (Channel: Mu-El)"
+reg.tcut = Baseline_Sel + " && " + mue
+regions.append(reg)
 
-reg4 = region.Region()
-reg4.name = "optimized"
-reg4.displayname = "Optimized"
-#reg4.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+l_pt[1])/l_pt[1]) > 0.5"%(Baseline_Sel, VBF_stripped)
-reg4.tcut = "1"
-regions.append(reg4)
+reg = region.Region()
+reg.name = "vbf"
+reg.displayname = "VBF"
+reg.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
+regions.append(reg)
+
+reg = region.Region()
+reg.name = "optimized"
+reg.displayname = "Optimized"
+#reg.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+l_pt[1])/l_pt[1]) > 0.5"%(Baseline_Sel, VBF_stripped)
+reg.tcut = "1"
+regions.append(reg)
 
 
 ##########################################
@@ -261,7 +299,7 @@ HistOp1D.__new__.__defaults__=   ('baseline', 25,     0,  -1, None, None, False,
 
 HistOpMap = {
     'RunNumber'       : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event run number',                  regions='baseline'),
-    'event_number'    : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event number',                      regions='baseline'),
+    'event_number'    : HistOp1D(nBinsX=1000, x0=0,  x1=1000000000,    xUnits='',    xLabel='Event number',                      regions='baseline_emu, baseline_mue'),
     'isMC'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='is Monte Carlo',                    regions='baseline'),
     'eventweight'     : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event weight',                      regions='baseline'),
     'dsid'            : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Sample DSID',                       regions='baseline'),
@@ -290,7 +328,7 @@ HistOpMap = {
     'Lep1Phi'         : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#phi^{subleading lep}',             regions='baseline'),
     'MLep0'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='M_{l0}',                            regions='baseline'),
     'MLep1'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='M_{l1}',                            regions='baseline'),
-    'DEtaLL'          : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#Delta#eta_{ll}',                   regions='baseline'),
+    'DEtaLL'         : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#Delta#eta_{ll}',                   regions='baseline'),
     'DphiLL'          : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#Delta#phi_{ll}',                   regions='baseline'),
     'drll'            : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR_{ll}',                      regions='baseline'),
     'dilep_flav'      : HistOp1D(nBinsX=5,  x0=-0.5, x1=4.5,   xUnits='',    xLabel='Dilepton flavor',                   regions='baseline'),
@@ -299,7 +337,7 @@ HistOpMap = {
     'MCollASym'       : HistOp1D(nBinsX=25, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='LFV Collinear Mass m_{coll}',       regions='baseline'),
     'MtLep0'          : HistOp1D(nBinsX=15, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='m_{T}(l_{0},MET)',                  regions='baseline'),
     'MtLep1'          : HistOp1D(nBinsX=20, x0=0.0,  x1=140.0, xUnits='GeV', xLabel='m_{T}(l_{1},MET)',                  regions='baseline'),
-    'MLL'             : HistOp1D(nBinsX=18, x0=20.0, x1=160.0, xUnits='GeV', xLabel='M_{ll}',                            regions='baseline'),
+    'MLL'             : HistOp1D(nBinsX=18, x0=20.0, x1=160.0, xUnits='GeV', xLabel='M_{ll}',                            regions='baseline, baseline_mue, baseline_emu'), 
     'ptll'            : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='pT_{ll}',                           regions='baseline'),
     'dpt_ll'          : HistOp1D(nBinsX=20, x0=0.0,  x1=150.0, xUnits='GeV', xLabel='#Deltap_{T}^{ll}',                  regions='baseline'),
     'DphiLep0MET'     : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#Delta#phi(l_{0},MET)',             regions='baseline'),
@@ -350,8 +388,8 @@ HistOpMap = {
 }
 
 #vars_to_plot = ['eventweight', 'Lep0Pt', 'Lep0Eta', 'nCentralLJets']
-#vars_to_plot = ['Lep0Pt', 'Lep1Pt', 'MET', 'dpt_ll', 'MLL', 'nCentralLJets', 'j_pt[0]']
-vars_to_plot = ['MLL']
+#vars_to_plot = ['Lep0Pt', 'Lep1Pt', 'MET', 'MLL', 'nCentralLJets', 'j_pt[0]']
+vars_to_plot = ['event_number']
 
 for var in vars_to_plot:
     ops = HistOpMap[var]
@@ -364,7 +402,9 @@ for var in vars_to_plot:
     name_ = re.sub(r'[(){}[\]]+','',var)
     bin_width = (ops.x1 - ops.x0) / float(ops.nBinsX)
     width_label = str(round(bin_width, 2))
-    if width_label == '1.0':
+    if not ops.xUnits:
+        yLabel = ops.yLabel
+    elif width_label == '1.0':
         yLabel = "%s / %s"%(ops.yLabel, ops.xUnits)
     else:
         yLabel = "%s / %s %s"%(ops.yLabel,width_label,ops.xUnits)
@@ -373,8 +413,10 @@ for var in vars_to_plot:
 
     # Create plot for each indicated region
     for region in ops.regions.split(','):
+        region = region.strip()
+        print "Plotting for region", region
         p = plot.Plot1D()
-        p.initialize(region, var, "%s_%s"%(region, name_))
+        p.initialize(region, var, name="%s_%s"%(region, name_))
         p.doLogY = ops.logY
         p.labels(x=ops.xLabel, y=yLabel) 
         p.xax(bin_width, ops.x0, ops.x1)
@@ -383,64 +425,4 @@ for var in vars_to_plot:
         #p.setDefaultCanvas(p.name)
         plots.append(p)
 
-
-
-#vars["l_pt[0]"]         = { "baseline" : [20, 0, 500, 1e6] }
-#vars["l_pt[1]"]         = { "baseline" : [20, 0, 500, 1e6] }
-#vars["ptll"]            = { "baseline" : [20, 0, 1000, 1e6] }
-#
-## Discriminating variables
-#
-#run_reg = "baseline"
-#
-#nice_names = {}
-#for var in vars.keys() :
-#    nice_names[var] = var
-#
-#
-#for var, bounds in vars.iteritems() :
-#    p = plot.Plot1D()
-#    # Determine plot name
-#    name_ = ""
-#    if "abs(" in var and "DPB_vSS" not in var :
-#        name_ = var.replace("abs(","")
-#        name_ = name_.replace(")", "")
-#    elif "[" in var :
-#        name_ = var.replace("[","")
-#        name_ = name_.replace("]","")
-#    elif var=="DPB_vSS - 0.9*abs(cosThetaB)" :
-#        name_ = "DPB_minus_COSB"
-#    else :
-#        name_ = var
-#    p.initialize(run_reg, var, "%s_%s"%(run_reg, name_))
-#    
-#    # Get y-axis units
-#    ylabel_unit = ""
-#    gev_variables = ["MDR", "met", "l_pt[0]", "l_pt[1]", "mll"]
-#    if var in gev_variables :
-#        ylabel_unit = " GeV"
-#
-#    ylabel_title = str(bounds[run_reg][0]) + ylabel_unit
-#
-#    # Setup plot
-#    p.labels(x=nice_names[var], y = "Events / %s"%(str(ylabel_title)))
-#    #p.labels(x=nice_names[var], y = "Entries / %s"%(str(bounds[run_reg][0])))
-#    p.xax(bounds[run_reg][0], bounds[run_reg][1], bounds[run_reg][2])
-#    
-#    if run_reg=="baseline" :
-#        p.doLogY = True
-#        if len(bounds[run_reg]) == 4 :
-#            p.yax(0.1, bounds[run_reg][3])
-#        else :
-#            p.yax(0.1, 1e7)
-#    else :
-#        p.doLogY = False
-#        if len(bounds[run_reg]) == 4 :
-#            p.yax(0, bounds[run_reg][3])
-#        else :
-#            p.yax(0, 5000)
-#
-#    #p.setRatioCanvas(p.name)
-#    p.setDefaultCanvas(p.name)
-#    plots.append(p)
 
