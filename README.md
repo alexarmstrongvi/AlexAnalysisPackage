@@ -2,7 +2,7 @@
 Basic analysis package for SusyNt analyses.
 
 ## Dependencies
-[SusyNt Read](https://github.com/susynt/susynt-read)
+[SusyNt-Read](https://github.com/susynt/susynt-read)
 
 [Restframes](https://github.com/crogan/RestFrames)
 
@@ -26,6 +26,7 @@ analysis\_run
 - outputs - root files created by condor submissions
 - logs - log files created by condor submissions
 - plots - plot images created by plotting scripts
+- yields - text files for yields
   
 
 ## Directions for initial setup 
@@ -38,6 +39,8 @@ analysis\_run
 5. (?) Configure global_variables.py assuming it can’t all be done automatically
 6. (optional) Run setup_fax_samples.sh if the plan is to use SusyNts stored on fax instead of locally
 
+After initial setup, only run `setup_environment.sh`
+
 ## Making nTuples for plotting
 1. Setup fax and rucio
 2. Test on single fax link (`makeMiniNtuples -f fax-prefix/path/to/group:group.phys-susy.ID#._00000#.susyNt.root -n 1`)
@@ -49,9 +52,12 @@ analysis\_run
     * .log, .err, and .out files for each submitted sample are stored in the `logs` directory
 6. Run `condor_q $USER` to check on jobs
 
-- Optional checks
-  - `chain_process.py` - looks through `outputs` and creats TChains for each background and store missing root files
-  - `check_for_failed_samples.py` - read log files for confirmation of success and record failed samples
-  - `print_failed_sample_stats.py` - read through missing or failed log files to determine causes of failure
+## Helpful Scripts
+### Checking Condor Output Logs
+### Plotting
+### Yield Table
+### Checking DSID lists
+### Cutflow Comparison
+### Other
 
 ## Writing configuration files for plotter.py
