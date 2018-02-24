@@ -54,7 +54,11 @@ fi
 echo -e "\nSetting up susynt-read"
 ./bash/setup_area.sh [--stable] 2>&1 |tee setup_area.log
 
+cd $ANALYSIS_DIR/analysis/susynt-read/SusyNtuple
+git checkout $susynt_tag/AA/devel
+
 echo -e "\nSetting up susynt-read environment"
+cd $ANALYSIS_DIR/analysis/susynt-read/
 source bash/setup_release.sh
 
 cd $ANALYSIS_DIR/analysis/
