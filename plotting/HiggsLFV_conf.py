@@ -1,28 +1,27 @@
 import sys, os
 import re
 from collections import namedtuple
-sys.path.append(os.environ['SUSYDIR'])
 import tools.plot as plot
 import tools.background as background
 import tools.region as region
 import tools.systematic as systematic
-
+import global_variables as g
 
 #######################################
 # samples
 ########################################
 
-tag = "n0235"
-analysis_dir = "/data/uclhc/uci/user/armstro1/SusyNt/analysis_%s/"%tag
-analysis_run_dir = "/data/uclhc/uci/user/armstro1/SusyNt/analysis_%s_run/"%tag
+tag = g.tag 
+analysis_dir = g.analysis_dir 
+analysis_run_dir = g.analysis_run_dir
 
 # Path to directories with flat ntuples
-rawdir        = os.path.join(analysis_run_dir, 'flat_ntuples/mc/')
-signal_rawdir = os.path.join(analysis_run_dir, 'flat_ntuples/mc/') 
-data_rawdir   = os.path.join(analysis_run_dir, 'flat_ntuples/data/') 
+rawdir        = g.mc_ntuples 
+signal_rawdir = g.mc_ntuples
+data_rawdir   = g.data_ntuples
 
 # Path to directory with condor filelists  
-filelist_dir = os.path.join(analysis_dir,'inputs_LFV_check/')
+filelist_dir = g.input_files 
 
 lumi_ = [36180, 36.01, 3209, 32971] #[2015-16 (ipb), 2015-16 (ifb), 2015 (ipb), 2016 (ipb)] 
 lumi_val = 0
@@ -59,7 +58,7 @@ WW.set_fillStyle(0)
 WW.setLineStyle(1)
 WW.set_color(r.TColor.GetColor("#325f85"))
 WW.set_treename("WW")
-WW.set_chain_from_list_CONDOR(filelist_dir+ "WW/", rawdir)
+WW.set_chain_from_list_CONDOR(filelist_dir+ "ww/", rawdir)
 backgrounds.append(WW)
 
 # ZZ
@@ -70,7 +69,7 @@ ZZ.set_fillStyle(0)
 ZZ.setLineStyle(1)
 ZZ.set_color(r.TColor.GetColor("#325f85"))
 ZZ.set_treename("ZZ")
-ZZ.set_chain_from_list_CONDOR(filelist_dir+ "ZZ/", rawdir)
+ZZ.set_chain_from_list_CONDOR(filelist_dir+ "zz/", rawdir)
 backgrounds.append(ZZ)
 
 # WZ
@@ -81,7 +80,7 @@ WZ.set_fillStyle(0)
 WZ.setLineStyle(1)
 WZ.set_color(r.TColor.GetColor("#325f85"))
 WZ.set_treename("WZ")
-WZ.set_chain_from_list_CONDOR(filelist_dir+ "WZ/", rawdir)
+WZ.set_chain_from_list_CONDOR(filelist_dir+ "wz/", rawdir)
 backgrounds.append(WZ)
 
 ## diboson

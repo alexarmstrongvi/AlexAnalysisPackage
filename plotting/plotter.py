@@ -9,8 +9,6 @@ r.PyConfig.IgnoreCommandLineOptions = True # don't let root steal cmd-line optio
 r.gROOT.SetBatch(True)
 r.gStyle.SetOptStat(False)
 import sys
-sys.path.append(os.environ['SUSYDIR'])
-#sys.path.append('../../../')
 #sys.dont_write_bytecode = True
 
 import math
@@ -394,7 +392,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
 
     # set output
     outname = plot.name + ".eps"
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     c.SaveAs(outname)
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
@@ -474,7 +472,7 @@ def make_1dprofile(plot, reg, data, backgrounds) :
 
     # set output
     outname =  plot.name + ".eps"
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     c.SaveAs(outname)
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
@@ -1053,13 +1051,13 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     print "\n"
     outname = plot.name + ".eps"
     rcan.canvas.SaveAs(outname)
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
 
     # outname = plot.name + ".root"
     # rcan.canvas.SaveAs(outname)
-    # out = g_indir + "/plots/" + g_outdir
+    # out = g.plots_dir + g_outdir
     # utils.mv_file_to_dir(outname, out, True)
 
     print "%s saved to : %s"%(outname, os.path.abspath(fullname))
@@ -1175,7 +1173,7 @@ def make_plotsComparison(plot, reg, data, backgrounds) :
 
     outname = plot.name + ".eps"
     c.SaveAs(outname)
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
     print "%s saved to : %s"%(outname, os.path.abspath(fullname))
@@ -1392,7 +1390,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
 
     outname = plot.name + ".eps"
     c.SaveAs(outname)
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     out = os.path.normpath(out)
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
@@ -1495,7 +1493,7 @@ def make_plots2D(plot, reg, data, backgrounds) :
     r.gPad.RedrawAxis()
 
     outname = plot.name+".eps"
-    out = g_indir + "/plots/" + g_outdir
+    out = g.plots_dir + g_outdir
     c.SaveAs(outname)
     utils.mv_file_to_dir(outname, out, True)
     fullname = out + "/" + outname
@@ -1560,7 +1558,7 @@ def make_plots(plots, regions, data, backgrounds) :
         # EventLists for Backgrounds
         for b in backgrounds :
             list_name = "list_" + reg.name + "_" + b.treename
-            save_name = "./" + g_indir + "/lists/" + list_name + ".root"
+            save_name = g.event_list_dir + list_name + ".root"
             save_name = os.path.normpath(save_name)
             if g_dbg: print 'List name =',list_name
 
@@ -1594,7 +1592,7 @@ def make_plots(plots, regions, data, backgrounds) :
 
         #             # up variation
         #             list_name_up = "list_" + reg.name + "_" + b.treename + "_" + s.name + "_UP"
-        #             save_name_up = "./" + g_indir + "/lists/" + list_name_up + ".root"
+        #             save_name_up = g.event_list_dir + list_name_up + ".root"
 
         #             if os.path.isfile(save_name_up) :
         #                 rfile = r.TFile.Open(save_name_up)
@@ -1613,7 +1611,7 @@ def make_plots(plots, regions, data, backgrounds) :
         #             # down variation
 
         #             list_name_dn = "list_" + reg.name + "_" + b.treename + "_" + s.name + "_DN"
-        #             save_name_dn = "./" + g_indir + "/lists/" + list_name_dn + ".root"
+        #             save_name_dn = g.event_list_dir + list_name_dn + ".root"
 
         #             if not s.isOneSided() :
         #                 if os.path.isfile(save_name_dn) :
@@ -1631,7 +1629,7 @@ def make_plots(plots, regions, data, backgrounds) :
         # EventLists for Data
         if data :
             data_list_name = "list_" + reg.name + "_" + data.treename
-            data_save_name = "./" + g_indir + "/lists/" + data_list_name + ".root"
+            data_save_name = g.event_list_dir + data_list_name + ".root"
             data_save_name = os.path.normpath(data_save_name)
             
             # Reset event list
@@ -1697,7 +1695,7 @@ def get_plotConfig(conf) :
         str:
             path to configuration file
     """
-    configuration_file = "./" + g_indir + "/" + conf
+    configuration_file = conf
     if not configuration_file.endswith(".py"):
         configuration_file += '.py'
     configuration_file = os.path.normpath(configuration_file)
@@ -1705,18 +1703,15 @@ def get_plotConfig(conf) :
         return configuration_file
     else :
         print 'get_plotConfig ERROR    '\
-              'Input g_plotConfig ("%s") is not found in the directory/path (%s).'\
-              'Does it exist? Exitting.'%(conf, configuration_file)
+              'Input g_plotConfig ("%s") is not found in the directory/path.'\
+              'Does it exist? Exitting.'%(configuration_file)
         sys.exit()
 
 ################################################################################
 if __name__=="__main__" :
-    global g_indir, g_plotConfig, g_requestRegion, g_requestPlot, g_outdir, g_dbg
+    global g_plotConfig, g_requestRegion, g_requestPlot, g_outdir, g_dbg
 
     parser = ArgumentParser()
-    parser.add_argument("-i", "--indir",
-                            default="",
-                            help='provide the name of the directory containing the config, plots, and lists directories')
     parser.add_argument("-c", "--plotConfig",
                             default="",
                             help='provide the name of the config file')
@@ -1736,7 +1731,6 @@ if __name__=="__main__" :
                             help='set debug/verbosity to True')
 
     args = parser.parse_args()
-    g_indir           = args.indir
     g_plotConfig      = args.plotConfig
     g_doSys           = args.doSys
     g_requestRegion   = args.requestRegion
@@ -1752,7 +1746,6 @@ if __name__=="__main__" :
     print " ++ ------------------------- ++ "
     print "      plotter                    "
     print "                                 "
-    print " config directory :  %s          "%g_indir
     print " plot config      :  %s          "%g_plotConfig
     print " requested region :  %s          "%g_requestRegion
     print " requested plot   :  %s          "%g_requestPlot

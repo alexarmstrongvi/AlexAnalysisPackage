@@ -3,45 +3,44 @@ import os
 import sys
 import glob
 import subprocess
+import global_variables as g
 
-ana_type   = "LFV"
-use_local = True
-submitMissing = False
-susyNtType = "n0235"
-userName = "armstro1"
-ana_name            = "makeMiniNtuple_Fakes"
-tar_location        = "/data/uclhc/uci/user/%s/SusyNt/"%(userName)
+# Configuration settings
+ana_name      = "makeMiniNtuple_Higgs"
+use_local     = True  # run over brick samples instead of fax 
+submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+# Where to submit condor jobs
+doBrick       = True 
+doLocal       = False 
+doSDSC        = False 
+doUC          = False 
+
+# Local samples are only stored on the brick so the
+# condor jobs should only be submitted to the brick
 if use_local:
-    filelist_dir        = "/data/uclhc/uci/user/%s/SusyNt/analysis_%s/LOCAL_inputs_LFV/"%(userName,susyNtType)
-    in_job_filelist_dir = "/analysis_%s/LOCAL_inputs_LFV/"%(susyNtType)
+    doLocal = doSDSC = doUC = False
+    doBrick = True
+
+# Settings defined in global_variables.py
+tar_location        = g.analysis_path 
+if use_local:
+    filelist_dir        = g.local_input_files 
+    in_job_filelist_dir = g.local_input_files 
 else:
-    filelist_dir        = "/data/uclhc/uci/user/%s/SusyNt/analysis_%s/inputs_LFV/"%(userName,susyNtType)
-    in_job_filelist_dir = "/analysis_%s/inputs_LFV/"%(susyNtType)
-out_dir             = "/data/uclhc/uci/user/%s/SusyNt/analysis_%s_run/outputs_new/"%(userName,susyNtType)
-log_dir             = "/data/uclhc/uci/user/%s/SusyNt/analysis_%s_run/logs/"%(userName,susyNtType)
-samples             = [ "data15",
-                        "data16",
-                        "Signal",
-                        "HWW",
-                        "Htt",
-                        "Top",
-                        "Diboson",
-                        "Zll_ZEW",
-                        "Ztt_ZttEW",
-                        "Wjets"
-                        ]
-tarred_dir          = "analysis_%s/"%(susyNtType)
-doBrick = True 
-doLocal = False 
-doSDSC  = False 
-doUC    = False 
+    filelist_dir        = g.input_files
+    in_job_filelist_dir = g.input_files 
+out_dir             = g.output_dir
+log_dir             = g.logs_dir 
+samples             = g.groups.keys()
+tarred_dir          = g.analysis_dir 
+
 
 def main() :
     print "SubmitCondorSF"
 
     if submitMissing:
         missing_dsids     = []
-        missing_dsid_file = open('%s/missing.txt'%(out_dir))
+        missing_dsid_file = open(g.missing_dsids_file)
         for dsid in missing_dsid_file:
             missing_dsids.append(dsid.split('\n')[0])
         missing_dsid_file.close()
@@ -177,8 +176,8 @@ def look_for_condor_executable() :
     f.write('source susynt-read/bash/setup_root.sh\n')
     f.write('echo "Calling : source RootCore/local_setup.sh"\n')
     f.write('source RootCore/local_setup.sh\n')
-    f.write('echo "Calling : cd MyAnalysis/scripts"\n')
-    f.write('cd MyAnalysis/scripts\n')
+    f.write('echo "Calling : cd AlexAnalysisPackage/scripts"\n')
+    f.write('cd AlexAnalysisPackage/scripts\n')
     f.write('source setRestFrames.sh\n')
     f.write('echo "Calling : cd ${work_dir}"\n')
     f.write('cd ${work_dir}\n')
