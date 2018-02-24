@@ -69,13 +69,14 @@ mv susynt-read/SUSYTools ./
 # Setup Superflow and RestFrames
 echo -e "\n\n------------------------------------------------------------"
 echo -e "\nCloning Superflow"
+cd $ANALYSIS_DIR/analysis/
 git clone git@github.com:alexarmstrongvi/Superflow.git
-mv Superflow $ANALYSIS_DIR/analysis/
+cd $ANALYSIS_DIR/analysis/Superflow
 git remote add upstream git@github.com:dantrim/Superflow.git
 
 echo -e "\nCloning RestFrames"
+cd $ANALYSIS_DIR/analysis/
 git clone git@github.com:crogan/RestFrames.git
-mv RestFrames $ANALYSIS_DIR/analysis/
 
 echo -e "\nConfiguring RestFrames (may take a while)"
 cd $ANALYSIS_DIR/analysis/RestFrames
@@ -112,7 +113,7 @@ sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPa
 # Final setup and compile
 echo -e "\n\n------------------------------------------------------------"
 echo -e "\nFinal setup and compile"
-source $ANALYSIS_DIR/setup_env.sh
+source $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
 rc find_packages
 rc clean
 rc compile
