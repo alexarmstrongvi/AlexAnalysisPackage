@@ -1,12 +1,20 @@
 #!/bin/bash/env python
 import ROOT
 
+################################################################################
 # User-defined analysis specific settings
+################################################################################
+# SusyNt tag
 tag = "n0235"
+# Path to directory containing AlexAnalysisPackage
 analysis_path = '/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/' 
+# (Optional) Path to local directory containing susyNt production samples 
 LOCAL_DSID_DIR = '/data/uclhc/uci/user/dantrim/susynt_productions/n0235/'
-LOCAL_DSID_SUBDIRS = {'data':'data','mc':'mc'}
+# (Optional) Name of directory containing data and mc samples; 
+LOCAL_DSID_SUBDIRS = {'data':'data',
+                      'mc'  :'mc'}
 
+# Important paths (shouldn't need to modify)
 analysis_dir = analysis_path+'analysis/'
 analysis_run_dir = analysis_path+'analysis_run/'
 
@@ -23,9 +31,14 @@ plots_dir           = analysis_run_dir+"plots/"
 mc_ntuples = analysis_run_dir+"ntuples/mc/"
 data_ntuples = analysis_run_dir+"ntuples/data/"
 
+# Set input files as local or fax
 input_files = local_input_files
+#input_files = fax_input_files
 
 
+################################################################################
+# DSID sample groupings 
+################################################################################
 # Samples recommended by Duc Bao Ta (xiedebao@googlemail.com)
 # subset of full sample list used in Htt analysis (ATL-COM-PHYS-2017-446)
 # additions where indicated
@@ -122,6 +135,9 @@ groups['data16'] = [
     311287, 311321, 311365, 311402, 311473, 311481,
 ]
 
+################################################################################
+# Useful functions 
+################################################################################
 def get_mc_groups():
     mc_groups = {}
     for key, lst in groups.iteritems():

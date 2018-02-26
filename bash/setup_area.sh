@@ -82,9 +82,9 @@ echo -e "\nConfiguring RestFrames (may take a while)"
 cd $ANALYSIS_DIR/analysis/RestFrames
 ./configure
 make 
-make check
+#make check
 make install
-make installcheck
+#make installcheck
 
 # Setup directory structure
 echo -e "\n\n------------------------------------------------------------"
@@ -102,10 +102,12 @@ mv $ANALYSIS_DIR/AlexAnalysisPackage $ANALYSIS_DIR/analysis/
 
 # Add useful symbolic links
 cd $ANALYSIS_DIR/analysis_run/outputs/
-ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/submit/submitMakeMiniNtupleToCondor.py ./submitMakeMiniNtupleToCondor.py
-#cd $ANALYSIS_DIR
-#ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh ./setup_env.sh
-
+ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/python/submitMakeMiniNtupleToCondor.py ./submitMakeMiniNtupleToCondor.py
+cd $ANALYSIS_DIR
+ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh ./setup_env.sh
+cd $ANALYSIS_DIR/analysis_run
+ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/python ./python
+ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/plotting ./plotting
 
 # Configure setup_env.sh
 sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
@@ -113,11 +115,12 @@ sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPa
 # Final setup and compile
 echo -e "\n\n------------------------------------------------------------"
 echo -e "\nFinal setup and compile"
+cd $ANALYSIS_DIR
 source $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
 rc find_packages
 rc clean
 rc compile
 
-
 cd $ANALYSIS_DIR
+echo -e "\n------------------- SETUP COMPLETE -------------------------------"
 return 0
