@@ -17,7 +17,7 @@ Basic analysis package for SusyNt analyses.
 
 ## Directions for initial setup 
 1. Clone this repository
-2. Run `setup_area.sh`
+2. Run `setup_area.sh <tag>` with \<tag\> being the desired susynt-read tag (e.g. n0235)  
 3. Configure `global_variables.py` in `python` directory
 4. Run `setup_fax_samples.sh` - you will need to enter your GRID password
 
@@ -25,7 +25,10 @@ After initial setup, only run `setup_env.sh` and `setup_grid.sh` or `setup_fax.s
 
 ## Expected file structure
 analysis 
-- AlexAnalysisPackage
+- AlexAnalysisPackage - contains scripts for setup, flat ntuple production, and plotting
+ - bash - scripts for setting up the environment and preparing for condor submission
+ - plotting - main plotting script and configuration files
+ - python - all python tools and scripts
 - Superflow - useful interface for making nTuples from susyNts, particularly for determining event weights
 - susynt-read - central package to prepare a working area for reading SusyNtuples
 - SusyNtuple - defines the objects stored in a root ntuple, as well as the methods used to retrieve the objects
@@ -39,7 +42,7 @@ analysis\_run
 - outputs - root files created by condor submissions
 - logs - log files created by condor submissions
 - plots - plot images created by plotting scripts
-- yields - text files for yields
+- yields - text files for yield tables
 
 ## Making nTuples for plotting
 1. Run `setup_fax.sh`
