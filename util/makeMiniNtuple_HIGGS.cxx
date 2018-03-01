@@ -377,10 +377,6 @@ int main(int argc, char* argv[])
     baseTaus =  *sl->baseTaus;
     signalTaus = *sl->taus;
 
-    preJets = *sl->preJets;
-    baseJets =  *sl->baseJets;
-    signalJets = *sl->jets;
-
     met = *sl->met;
   };
 
@@ -488,13 +484,13 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("Baseline Electron ID (non-inclusive)"); {
     *cutflow << HFTname("baseEl_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for (auto& el : baseElectrons) {
         if (!el->veryLooseLLH) out.push_back(0);
         else if (el->veryLooseLLH && !el->looseLLH) out.push_back(1);
         else if (el->looseLLH && !el->looseLLHBLayer) out.push_back(2);
         else if (el->looseLLHBLayer && !el->mediumLLH) out.push_back(3);
-        else if (el->mediumLLH && !el->tight) out.push_back(4);
+        else if (el->mediumLLH && !el->tightLLH) out.push_back(4);
         else if (el->tightLLH) out.push_back(5);
       }
       return out;
@@ -572,7 +568,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("PreMuon ID (non-inclusive)"); {
     *cutflow << HFTname("preMuon_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for (auto& mu : preMuons) {
         if (!mu->veryLoose) out.push_back(0);
         else if (mu->veryLoose && !mu->loose) out.push_back(1);
@@ -626,7 +622,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("Baseline Muon ID (non-inclusive)"); {
     *cutflow << HFTname("baseMuon_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for (auto& mu : baseMuons) {
         if (!mu->veryLoose) out.push_back(0);
         else if (mu->veryLoose && !mu->loose) out.push_back(1);
@@ -704,7 +700,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("Baseline Tau nTracks"); {
     *cutflow << HFTname("baseTau_nTracks");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for (auto& tau : baseTaus) {out.push_back(tau->nTrack); }
       return out;
     };
@@ -713,7 +709,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("Baseline Tau ID (non-inclusive)"); {
     *cutflow << HFTname("baseTau_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for (auto& tau : baseTaus) {
         if (!tau->loose) out.push_back(0);
         else if (tau->loose && !tau->medium) out.push_back(1);
@@ -763,7 +759,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("lepton flavor (0: e, 1: m)"); {
     *cutflow << HFTname("l_flav");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<double> out;
+      vector<int> out;
       for(auto& lepton : signalLeptons) {
         out.push_back(lepton->isEle() ? 0 : 1);
       }
@@ -1199,7 +1195,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("jet flavor (0: NA, 1: CL, 2: CB, 3: F)"); {
     *cutflow << HFTname("j_flav");
     *cutflow << [&](Superlink* sl, var_int_array*) -> vector<int> {
-      vector<double> out; int flav = 0;
+      vector<int> out; int flav = 0;
       for(auto& jet : baseJets) {
         if(sl->tools->m_jetSelector->isCentralLight(jet))  { flav = 1; }
         else if(sl->tools->m_jetSelector->isCentralB(jet)) { flav = 2; }
