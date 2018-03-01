@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 
   Superflow* cutflow = new Superflow(); // initialize the cutflow
   cutflow->setAnaName("SuperflowAna");                // arbitrary
-  cutflow->setAnaType(AnalysisType::Ana_Stop2L);        // analysis type, passed to SusyNt
+  cutflow->setAnaType(AnalysisType::Ana_HLFV);        // analysis type, passed to SusyNt
   cutflow->setLumi(1.0);                              // set the MC normalized to X pb-1
   cutflow->setSampleName(input_file);                 // sample name, check to make sure it's set OK
   cutflow->setRunMode(run_mode);                      // make configurable via run_mode
@@ -215,10 +215,10 @@ int main(int argc, char* argv[])
   *cutflow << CutName("2+ leptons") << [](Superlink* sl) -> bool {
       return (sl->leptons->size() >= 2);
   };
-  *cutflow << CutName("Different flavor leptons") << [&](Superlink* sl) -> bool {
-      bool emu = sl->leptons->at(0)->isEle() && sl->leptons->at(1)->isMu();
-      bool mue = sl->leptons->at(0)->isMu() && sl->leptons->at(1)->isEle();
-      return emu || mue;
+  *cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
+      bool DF = sl->leptons->at(0)->isEle() != sl->leptons->at(1)->isEle();
+      bool OS = sl->leptons->at(0)->q != sl->leptons->at(1)->q;
+      return DF && OS; 
   };
   *cutflow << CutName("pass good vertex") << [&](Superlink* sl) -> bool {
       return (sl->tools->passGoodVtx(cutflags));
@@ -229,9 +229,6 @@ int main(int argc, char* argv[])
   *cutflow << CutName("bad muon veto") << [&](Superlink* sl) -> bool {
       return (sl->tools->passBadMuon(sl->preMuons));
   };
-  //*cutflow << CutName("pass cosmic veto") << [&](Superlink* sl) -> bool {
-  //    return (sl->tools->passCosmicMuon(sl->baseMuons));
-  //};
   *cutflow << CutName("2 leptons") << [](Superlink* sl) -> bool {
       return (sl->leptons->size() == 2);
   };
@@ -326,6 +323,18 @@ int main(int argc, char* argv[])
   }
 
    // Single Lepton Triggers
+  //*cutflow << NewVar("HLT_e17_lhvloose_nod0 trigger bit"); {
+  //    *cutflow << HFTname("pass_HLT_e17_lhvloose_nod0");
+  //    *cutflow << [](Superlink* sl, var_bool*) -> bool {
+  //        return sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhvloose_nod0"); };
+  //    *cutflow << SaveVar();
+  //}
+  *cutflow << NewVar("HLT_mu14 trigger bit"); {
+      *cutflow << HFTname("pass_HLT_mu14");
+      *cutflow << [](Superlink* sl, var_bool*) -> bool {
+          return sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu14"); };
+      *cutflow << SaveVar();
+  }
   *cutflow << NewVar("HLT_e60_lhmedium trigger bit"); {
       *cutflow << HFTname("pass_HLT_e60_lhmedium");
       *cutflow << [](Superlink* sl, var_bool*) -> bool {
@@ -444,10 +453,11 @@ int main(int argc, char* argv[])
 
 
   // Accesing objects through superlink and assigning them to internal variables
-  LeptonVector baseLeptons, signalLeptons;
+  LeptonVector preLeptons, baseLeptons, signalLeptons;
   ElectronVector signalElectrons;
   Susy::Met met;
   *cutflow << [&](Superlink* sl, var_void*) {
+    preLeptons = *sl->preLeptons;
     baseLeptons   = *sl->baseLeptons;
     signalLeptons = *sl->leptons;
     signalElectrons = *sl->electrons;
@@ -479,6 +489,42 @@ int main(int argc, char* argv[])
   }
 
   // Storing a bunch of vectors
+
+  // PreElectron
+  *cutflow << NewVar("number of pre leptons"); {
+    *cutflow << HFTname("nPreLeptons");
+    *cutflow << [&](Superlink* /*sl*/, var_int*) -> int { return preLeptons.size(); };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("preElectron pt"); {
+    *cutflow << HFTname("preEl_pt");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for(auto& lepton : preLeptons) {
+        if (!lepton->isEle()) continue;
+        out.push_back(lepton->Pt());
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  // PreMuon
+  *cutflow << NewVar("preMuon pt"); {
+    *cutflow << HFTname("preMu_pt");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for(auto& lepton : preLeptons) {
+        if (!lepton->isMu()) continue;
+        out.push_back(lepton->Pt());
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  };
+  // PreTau
+
+  // PreJet
+
   *cutflow << NewVar("lepton pt"); {
     *cutflow << HFTname("l_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
@@ -491,26 +537,40 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
 
-  *cutflow << NewVar("leading electron track pt"); {
-    *cutflow << HFTname("el0_track_pt");
+  *cutflow << NewVar("subleading electron track pt"); {
+    *cutflow << HFTname("el1_track_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-            if (signalElectrons.size() > 0) {
-                return signalElectrons.at(0)->trackPt;
-            } else {
-                return -1;
-            }
+      if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
+          const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
+          return ele ? ele->trackPt : -2;
+      } else {
+          return -1;
+      }
     };
     *cutflow << SaveVar();
   }
 
-  *cutflow << NewVar("leading electron clus pt"); {
-    *cutflow << HFTname("el0_clus_pt");
+  *cutflow << NewVar("subleading electron clus pt"); {
+    *cutflow << HFTname("el1_clus_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-            if (signalElectrons.size() > 0) {
-                return signalElectrons.at(0)->clusE;
-            } else {
-                return -1;
-            }
+      if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
+          const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
+          return ele ? ele->clusE : -2;
+      } else {
+          return -1;
+      }
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Subleading Electron pT track-cluster ratio"); {
+    *cutflow << HFTname("el1pT_trackclus_ratio");
+    *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
+      if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
+          const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
+          return ele ? ele->trackPt / ele->clusE : -2;
+      } else {
+          return -1;
+      }
     };
     *cutflow << SaveVar();
   }
@@ -707,6 +767,7 @@ int main(int argc, char* argv[])
         };
     *cutflow << SaveVar();
   }
+
 
   *cutflow << NewVar("collinear mass, M_coll"); {
     *cutflow << HFTname("MCollASym");
@@ -962,7 +1023,7 @@ int main(int argc, char* argv[])
 
   // Clear internal variables
   *cutflow << [&](Superlink* /*sl*/, var_void*) {
-    baseLeptons.clear();signalLeptons.clear();
+    preLeptons.clear(); baseLeptons.clear(); signalLeptons.clear();
     baseJets.clear();signalJets.clear();
     centralLightJets.clear();centralBJets.clear();forwardJets.clear();
 

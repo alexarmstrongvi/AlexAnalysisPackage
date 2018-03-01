@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
   Superflow* cutflow = new Superflow(); // initialize the cutflow
   cutflow->setAnaName("SuperflowAna");                // arbitrary
-  cutflow->setAnaType(AnalysisType::Ana_Stop2L);        // analysis type, passed to SusyNt
+  cutflow->setAnaType(AnalysisType::Ana_HLFV);        // analysis type, passed to SusyNt
   cutflow->setLumi(1.0);                              // set the MC normalized to X pb-1
   cutflow->setSampleName(input_file);                 // sample name, check to make sure it's set OK
   cutflow->setRunMode(run_mode);                      // make configurable via run_mode
