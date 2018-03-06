@@ -210,8 +210,8 @@ def trim_sample_name(sample):
 def get_sample_group(sample):
     searches = {}
     # Match pattern order
-    # Elements in the innermost lists are ORd
-    # The list elements in main list are ANDd
+    # Elements in the innermost lists are OR'd
+    # The list elements in main list are AND'd
     # Data
     searches['data15'] = [['data15']]
     searches['data16'] = [['data16']]

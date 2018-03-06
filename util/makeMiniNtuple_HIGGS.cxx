@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
 
   // Dilepton Triggers
   ADD_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14)
-  ADD_TRIGGER_VAR(HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1)
+  // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1)
   ADD_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24)
 
   // Single Electron Triggers

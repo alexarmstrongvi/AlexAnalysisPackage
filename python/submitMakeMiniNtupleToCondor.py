@@ -6,9 +6,9 @@ import subprocess
 import global_variables as g
 
 # Configuration settings
-ana_name      = "makeMiniNtuple_Higgs"
+ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = False # submit only DSIDs stored in outputs/missing.txt
 # Where to submit condor jobs
 doBrick       = True 
 doLocal       = False 
@@ -176,8 +176,8 @@ def look_for_condor_executable() :
     f.write('source susynt-read/bash/setup_root.sh\n')
     f.write('echo "Calling : source RootCore/local_setup.sh"\n')
     f.write('source RootCore/local_setup.sh\n')
-    f.write('echo "Calling : cd AlexAnalysisPackage/scripts"\n')
-    f.write('cd AlexAnalysisPackage/scripts\n')
+    f.write('echo "Calling : cd AlexAnalysisPackage/bash"\n')
+    f.write('cd AlexAnalysisPackage/bash\n')
     f.write('source setRestFrames.sh\n')
     f.write('echo "Calling : cd ${work_dir}"\n')
     f.write('cd ${work_dir}\n')

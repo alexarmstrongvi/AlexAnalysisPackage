@@ -1,5 +1,6 @@
 import sys, os
 import re
+import ROOT
 from collections import namedtuple
 import tools.plot as plot
 import tools.background as background
@@ -34,7 +35,7 @@ ttbar.set_debug()
 ttbar.scale_factor = lumi_[lumi_val]#
 ttbar.set_fillStyle(0)
 ttbar.setLineStyle(1)
-ttbar.set_color(r.TColor.GetColor("#e4706a"))
+ttbar.set_color(ROOT.kOrange+2)
 ttbar.set_treename("ttbar")
 ttbar.set_chain_from_list_CONDOR(filelist_dir+ "ttbar/", rawdir)
 backgrounds.append(ttbar)
@@ -45,7 +46,7 @@ stop.set_debug()
 stop.scale_factor = lumi_[lumi_val]
 stop.set_fillStyle(0)
 stop.setLineStyle(1)
-stop.set_color(r.TColor.GetColor("#db101c"))
+stop.set_color(ROOT.kOrange+1)
 stop.set_treename("ST")
 stop.set_chain_from_list_CONDOR(filelist_dir+ "singletop/", rawdir)
 backgrounds.append(stop)
@@ -56,7 +57,7 @@ WW.set_debug()
 WW.scale_factor = lumi_[lumi_val] #* 1.06
 WW.set_fillStyle(0)
 WW.setLineStyle(1)
-WW.set_color(r.TColor.GetColor("#325f85"))
+WW.set_color(ROOT.kSpring-6)
 WW.set_treename("WW")
 WW.set_chain_from_list_CONDOR(filelist_dir+ "ww/", rawdir)
 backgrounds.append(WW)
@@ -67,7 +68,7 @@ ZZ.set_debug()
 ZZ.scale_factor = lumi_[lumi_val] #* 1.06
 ZZ.set_fillStyle(0)
 ZZ.setLineStyle(1)
-ZZ.set_color(r.TColor.GetColor("#325f85"))
+ZZ.set_color(ROOT.kSpring-4)
 ZZ.set_treename("ZZ")
 ZZ.set_chain_from_list_CONDOR(filelist_dir+ "zz/", rawdir)
 backgrounds.append(ZZ)
@@ -78,7 +79,7 @@ WZ.set_debug()
 WZ.scale_factor = lumi_[lumi_val] #* 1.06
 WZ.set_fillStyle(0)
 WZ.setLineStyle(1)
-WZ.set_color(r.TColor.GetColor("#325f85"))
+WZ.set_color(ROOT.kSpring-5)
 WZ.set_treename("WZ")
 WZ.set_chain_from_list_CONDOR(filelist_dir+ "wz/", rawdir)
 backgrounds.append(WZ)
@@ -89,7 +90,7 @@ backgrounds.append(WZ)
 #diboson.scale_factor = lumi_[lumi_val] #* 1.06
 #diboson.set_fillStyle(0)
 #diboson.setLineStyle(1)
-#diboson.set_color(r.TColor.GetColor("#325f85"))
+#diboson.set_color(ROOT.kSpring-6)
 #diboson.set_treename("diboson")
 #diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson/", rawdir)
 ##diboson.set_chain_from_list_CONDOR(filelist_dir+ "diboson_new_check/", diboson_rawdir_SF)
@@ -101,18 +102,18 @@ zll.set_debug()
 zll.scale_factor = lumi_[lumi_val]
 zll.set_fillStyle(0)
 zll.setLineStyle(1)
-zll.set_color(r.TColor.GetColor("#85dc6e"))
+zll.set_color(ROOT.kAzure-9)
 zll.set_treename("zll")
 zll.set_chain_from_list_CONDOR(filelist_dir+ "zll/", rawdir)
 backgrounds.append(zll)
 
-# Zll
+# Ztt
 ztt = background.Background("ztt", "Z#tau#tau")
 ztt.set_debug()
 ztt.scale_factor = lumi_[lumi_val]
 ztt.set_fillStyle(0)
 ztt.setLineStyle(1)
-ztt.set_color(r.TColor.GetColor("#5E9AD6"))
+ztt.set_color(ROOT.kAzure-5)
 ztt.set_treename("ztt")
 ztt.set_chain_from_list_CONDOR(filelist_dir+ "ztt/", rawdir)
 backgrounds.append(ztt)
@@ -123,7 +124,7 @@ wjets.set_debug()
 wjets.scale_factor = lumi_[lumi_val]
 wjets.set_fillStyle(0)
 wjets.setLineStyle(1)
-wjets.set_color(r.TColor.GetColor("#619bd3"))
+wjets.set_color(ROOT.kOrange)
 wjets.set_treename("wjets")
 wjets.set_chain_from_list_CONDOR(filelist_dir+ "wjets/", rawdir)
 backgrounds.append(wjets)
@@ -134,7 +135,7 @@ htt = background.Background("htt", "H#tau#tau")
 htt.scale_factor = lumi_[lumi_val]
 htt.set_fillStyle(0)
 htt.setLineStyle(1)
-htt.set_color(r.kGreen-9)
+htt.set_color(ROOT.kRed)
 htt.set_treename("htt")
 htt.set_chain_from_list_CONDOR(filelist_dir+ "htt/", rawdir)
 backgrounds.append(htt)
@@ -145,7 +146,7 @@ hww = background.Background("hww", "HWW")
 hww.scale_factor = lumi_[lumi_val]
 hww.set_fillStyle(0)
 hww.setLineStyle(1)
-hww.set_color(r.kGreen-5)
+hww.set_color(ROOT.kBlue+3)
 hww.set_treename("hww")
 hww.set_chain_from_list_CONDOR(filelist_dir+ "hww/", rawdir)
 backgrounds.append(hww)
@@ -169,7 +170,7 @@ backgrounds.append(hww)
 #s0.setSignal()
 #s0.scale_factor = lumi_[lumi_val] * 10
 #s0.set_fillStyle(0)
-#s0.set_color(r.kBlue)
+#s0.set_color(ROOT.kGreen)
 #s0.set_treename("s0")
 #s0.set_chain_from_list_CONDOR(filelist_dir + "higgs_lfv", signal_rawdir)
 #backgrounds.append(s0)
@@ -252,13 +253,19 @@ singlelep_trig = '(%s || %s)'%(singlelep15_trig, singlelep16_trig)
 Baseline_Sel = 'l_pt[0] >= 45 && l_pt[1] >= 15 '\
               + '&& 30 < MLL && MLL < 150 '\
               + '&& nCentralBJets==0 '\
-              + '&& (dilep_flav != 0 || (el1pT_trackclus_ratio) < 1.2) '\
+              + '&& (dilep_flav != 0 || (el1pT_trackclus_ratio < 1.2)) '\
               + '&&' + singlelep_trig
 VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 
 # Define regions
 
 reg = region.Region()
+reg.name = "no_sel"
+reg.displayname = "No Selections"
+reg.tcut = "1"
+regions.append(reg)
+reg = region.Region()
+
 reg.name = "trig_only"
 reg.displayname = "Single Lepton Triggers"
 reg.tcut = singlelep_trig
@@ -305,24 +312,24 @@ vars = {}
 ### Define variables for plots
 # Standard kinematics
 HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY,   xUnits, xLabel, yLabel')
-HistOp1D.__new__.__defaults__=   ('baseline', 25,     0,  -1, None, None, False,  '',     '',     'Events')
+HistOp1D.__new__.__defaults__=   ('baseline', 12,     -2,  10, None, None, False,  '',     '',     'Events')
 
 HistOpMap = {
     # Event level
     'RunNumber'       : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event run number',                  regions='baseline'),
     'event_number'    : HistOp1D(nBinsX=1000, x0=0,  x1=1000000000,    xUnits='',    xLabel='Event number',              regions='baseline_emu, baseline_mue'),
     'isMC'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='is Monte Carlo',                    regions='baseline'),
-    'eventweight'     : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event weight',                      regions='baseline'),
+    'eventweight'     : HistOp1D(nBinsX=100, x0=-0.001,  x1=0.002,    xUnits='',    xLabel='Event weight',                      regions='no_sel, baseline', logY=True),
     'dsid'            : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Sample DSID',                       regions='baseline'),
-    'treatAsYear'     : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='treatAsYear',                       regions='baseline'),
+    'treatAsYear'     : HistOp1D(nBinsX=11, x0=2007.5,x1=2018.5,xUnits='',   xLabel='treatAsYear',                       regions='no_sel'),
     # Multiplicity
     'n_baseLeptons'   : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{baseline leptons}',              regions='baseline'),
     'n_leptons'       : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{signal leptons}',                regions='baseline'),
     # Leptons
-    'l_pt'            : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='Lepton p_{T}',                      regions='baseline'),
+    'l_pt'            : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Lepton p_{T}',                      regions='baseline'),
     ## Electrons
-    'el1_track_pt'    : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='Leading electron track p_{T}',      regions='baseline'),
-    'el1_clus_pt'     : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='Leading electron cluster p_{T}',    regions='baseline'),
+    'el1_track_pt'    : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron track p_{T}',      regions='baseline'),
+    'el1_clus_pt'     : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron cluster p_{T}',    regions='baseline'),
     'preEl_Et'        : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='E_{T}^{preElectron}',               regions='trig_only'),
     'preEl_pt'        : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{preElectron}',               regions='trig_only'),
     'preEl_clusEtaBE' : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{preEl clusterBE}',            regions='trig_only'),
@@ -370,7 +377,7 @@ HistOpMap = {
     'isME'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='Dilepton flavor is mu el',          regions='baseline'),
     'MtLep0'          : HistOp1D(nBinsX=15, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='m_{T}(l_{0},MET)',                  regions='baseline'),
     'MtLep1'          : HistOp1D(nBinsX=20, x0=0.0,  x1=140.0, xUnits='GeV', xLabel='m_{T}(l_{1},MET)',                  regions='baseline'),
-    'MLL'             : HistOp1D(nBinsX=18, x0=20.0, x1=160.0, xUnits='GeV', xLabel='M_{ll}',                            regions='trig_only, baseline, baseline_mue, baseline_emu'),
+    'MLL'             : HistOp1D(nBinsX=28, x0=20.0, x1=300.0, xUnits='GeV', xLabel='M_{ll}',                            regions='no_sel, trig_only, baseline, baseline_mue, baseline_emu'),
     'ptll'            : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='pT_{ll}',                           regions='baseline'),
     # MET + leptons
     'MET'             : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='E_{T}^{miss}',                      regions='baseline'),
@@ -407,9 +414,9 @@ HistOpMap = {
     # Leptons
     'preEl_EcaloClus'           : HistOp1D(nBinsX=20, x0= 0,   x1=200, xUnits='GeV', xLabel='E_{preEl CaloCluster}',          regions='trig_only'),
     'preEl_etaCaloClus'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0, xUnits='',    xLabel='#eta_{preEl CaloCluster}',       regions='trig_only'),
-    'baseEl_etconetopo20'       : HistOp1D(nBinsX=20, x0= 0,   x1=200, xUnits='GeV', xLabel='E_T^{baselineEl} conetopo20' ,   regions='trig_only'),
+    'baseEl_etconetopo20'       : HistOp1D(nBinsX=20, x0= -5,   x1=100, xUnits='GeV', xLabel='E_T^{baselineEl} conetopo20' ,   regions='trig_only'),
     'baseEl_ptvarcone20'        : HistOp1D(nBinsX=20, x0= 0,   x1=200, xUnits='GeV', xLabel='p_T^{baselineEl} ptvarcone20' ,  regions='trig_only'),
-    'el1pT_trackclus_ratio'     : HistOp1D(nBinsX=25, x0=0,    x1=3,   xUnits='', xLabel='#frac{el_{subleading pT}^{track}}{el_{subleading pT}^{cluster}}', regions='trig_only, baseline_mue'),
+    'el1pT_trackclus_ratio'     : HistOp1D(nBinsX=25, x0=0,    x1=3,   xUnits='', xLabel='el_{subleading pT}^{track} / el_{subleading pT}^{cluster}', regions='trig_only, baseline_mue'),
     'baseMu_etconetopo20'       : HistOp1D(nBinsX=20, x0= 0,   x1=200, xUnits='GeV', xLabel='E_T^{baselineMu} conetopo20' ,   regions='trig_only'),
     'baseMu_ptvarcone30'        : HistOp1D(nBinsX=20, x0= 0,   x1=200, xUnits='GeV', xLabel='p_T^{baselineMu} ptvarcone30' ,  regions='trig_only'),
 
@@ -443,16 +450,18 @@ HistOpMap = {
 
 #vars_to_plot = ['eventweight', 'Lep0Pt', 'Lep0Eta', 'nCentralLJets']
 #vars_to_plot = ['Lep0Pt', 'Lep1Pt', 'MET', 'MLL', 'nCentralLJets', 'nCentralBJets', 'j_pt[0]']
-vars_to_plot = ['preEl_EcaloClus', 'preEl_etaCaloClus', 'preEl_Et', 'preEl_pt',
-                'preEl_clusEtaBE', 'preEl_eta', 'baseEl_etconetopo20',
-                'baseEl_ptvarcone20', 'baseEl_ID', 'el_type', 'el_origin',
-                'el1_track_pt', 'el1_clus_pt', 'el1pT_trackclus_ratio',
-                'preMu_pt', 'preMuon_ID', 'baseMu_pt', 'baseMu_eta',
-                'baseMu_etconetopo20', 'baseMu_ptvarcone30', 'baseMuon_ID',
-                'mu_type', 'mu_origin', 'preTau_q', 'preTau_nTracks',
-                'baseTau_pT', 'baseTau_eta', 'baseTau_nTracks', 'baseTau_ID',
-                'tau_pT', 'taulep1_pT_ratio', 'preJet_pt', 'preJet_eta',
-                'preJet_JVT', 'baseJet_eta', 'baseJet_mv2c10']
+#vars_to_plot = ['treatAsYear', 'MLL']
+vars_to_plot = ['eventweight']
+#vars_to_plot = ['preEl_EcaloClus', 'preEl_etaCaloClus', 'preEl_Et', 'preEl_pt',
+#                'preEl_clusEtaBE', 'preEl_eta', 'baseEl_etconetopo20',
+#                'baseEl_ptvarcone20', 'baseEl_ID', 'el_type', 'el_origin',
+#                'el1_track_pt', 'el1_clus_pt', 'el1pT_trackclus_ratio',
+#                'preMu_pt', 'preMuon_ID', 'baseMu_pt', 'baseMu_eta',
+#                'baseMu_etconetopo20', 'baseMu_ptvarcone30', 'baseMuon_ID',
+#                'mu_type', 'mu_origin', 'preTau_q', 'preTau_nTracks',
+#                'baseTau_pT', 'baseTau_eta', 'baseTau_nTracks', 'baseTau_ID',
+#                'tau_pT', 'taulep1_pT_ratio', 'preJet_pt', 'preJet_eta',
+#                'preJet_JVT', 'baseJet_eta', 'baseJet_mv2c10']
 
 for var in vars_to_plot:
     ops = HistOpMap[var]

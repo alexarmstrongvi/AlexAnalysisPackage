@@ -22,7 +22,7 @@ fax_input_files     = analysis_dir+'inputs/'
 local_input_files   = analysis_dir+'inputs_local/'
 output_dir          = analysis_run_dir+'outputs/'
 logs_dir            = analysis_run_dir+'logs/'
-dsid_dir            = analysis_run_dir+'dsid_filelist/'
+dsid_dir            = analysis_run_dir+'dsid_lists/'
 missing_dsids_file  = output_dir+'missing.txt'
 
 event_list_dir      = analysis_run_dir+"lists/"
