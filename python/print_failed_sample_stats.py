@@ -5,8 +5,6 @@ import os
 import sys
 import global_variables as g
 
-LFV = True
-
 directory_with_logs = g.logs_dir
 missing_dsid_file = g.missing_dsids_file
 
@@ -78,8 +76,10 @@ def main():
         print "%3i/%3i (%3.1f%%)\twith %s"%(fail_count[fm],len(dsid_list),percentage,fm)
     percentage  = 100*len(unmatched_dsids)/float(len(dsid_list))
     percentage2 = 100*len(missed_dsids)/float(len(dsid_list))
-    print "%3i/%3i (%3.1f%%)\t     Unmatched"%(len(unmatched_dsids),len(dsid_list),percentage)
-    print "%3i/%3i (%3.1f%%)\t     Missed\n"%(len(missed_dsids),len(dsid_list),percentage2)
+    print "%3i/%3i (%3.1f%%)\t     Unmatched - unrecognized error message"%(
+            len(unmatched_dsids),len(dsid_list),percentage)
+    print "%3i/%3i (%3.1f%%)\t     Missed - No log file for DSID\n"%(
+            len(missed_dsids),len(dsid_list),percentage2)
     print "Unmatched:", unmatched_dsids
     print "Missed:", missed_dsids
 

@@ -14,6 +14,7 @@ class Plot1D :
         self.x_label = "x-Label"
         self.y_label = "Entries"
         self.doLogY = False
+        self.add_overflow = True
         self.leg_is_left = False
         self.leg_is_bottom_right = False
         self.leg_is_bottom_left = False

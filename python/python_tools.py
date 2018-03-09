@@ -3,6 +3,7 @@
 import os
 import glob
 import re
+from contextlib import contextmanager
 
 def main():
     print "Testing Tools"
@@ -14,6 +15,15 @@ def main():
     print list_of_files
     list_of_files = strip_strings_to_substrings(list_of_files,'[aeiou]')
     print list_of_files
+
+@contextmanager
+def cd(newdir):
+    prevdir = os.getcwd()
+    os.chdir(os.path.expanduser(newdir))
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
 
 # output list of directories in directory
 def get_list_of_subdirectories(directory,search_string='*/'):

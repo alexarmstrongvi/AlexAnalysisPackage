@@ -13,6 +13,7 @@ LOCAL_DSID_DIR = '/data/uclhc/uci/user/dantrim/susynt_productions/n0235/'
 # (Optional) Name of directory containing data and mc samples; 
 LOCAL_DSID_SUBDIRS = {'data':'data',
                       'mc'  :'mc'}
+local_prefix = 'root://${ATLAS_XROOTD_CACHE}/'
 
 # Important paths (shouldn't need to modify)
 analysis_dir = analysis_path+'analysis/'
@@ -96,10 +97,10 @@ groups['zll'] = [
 ]
 groups['ztt'] = [
     344772, 344776, 344780,
-    #304021,
+    304021,
     #364128, 364129, 364130, 364131, 364132, 364133, 364134, 364135, 364136,
-    364137, 364138, 364139, 364140, 364141, 364210, 364211, 364212, 364213,
-    364214, 364215,
+    364137, 364138, 364139, 364140, 364141, 
+    364210, 364211, 364212, 364213, 364214, 364215,
 ] 
 groups['wjets'] = [
     # Temporary fake sample
@@ -138,6 +139,8 @@ groups['data16'] = [
 ################################################################################
 # Useful functions 
 ################################################################################
+def get_all_dsids():
+    return [x for k, v in groups.iteritems() for x in v]
 def get_mc_groups():
     mc_groups = {}
     for key, lst in groups.iteritems():

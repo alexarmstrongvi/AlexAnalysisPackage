@@ -626,7 +626,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         # if g_doSys and 'fakes' not in b.name and (integral>0) : getSystHists(plot, reg, b, integral, h)
 
         # Add overflow
-        pu.add_overflow_to_lastbin(h)
+        if plot.add_overflow:
+            pu.add_overflow_to_lastbin(h)
 
         # if "fakes" in b.name :
         #     h_nom_fake = h.Clone("fakes_nominal_histo")
@@ -710,7 +711,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
     # Add overflow
-    pu.add_overflow_to_lastbin(hd)
+    if plot.add_overflow:
+        pu.add_overflow_to_lastbin(hd)
 
     gdata = pu.convert_errors_to_poisson(hd)
     #gdata.SetLineWidth(2)

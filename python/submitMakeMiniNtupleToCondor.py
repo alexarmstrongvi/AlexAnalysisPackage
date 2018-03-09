@@ -8,7 +8,7 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = False # submit only DSIDs stored in outputs/missing.txt
+submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
 # Where to submit condor jobs
 doBrick       = True 
 doLocal       = False 
@@ -59,16 +59,16 @@ def main() :
 
         for dataset in sample_lists :
             fullname = str(os.path.abspath(dataset))
-            print "    > %s"%dataset
 
+            # Only submit datasets indicated in global_variables or missing_dsids 
             if submitMissing:
-                submitDS = False
-                for dsid in missing_dsids:
-                    if dsid in dataset:
-                        submitDS = True
-                if not submitDS:
+                if not any(dsid in dataset for dsid in missing_dsids):
+                    continue
+            else:
+                if not any(dsid in dataset for dsid in g.get_all_dsids()):
                     continue
 
+            print "    > %s"%dataset
             dataset = "." + dataset[dataset.find(in_job_filelist_dir):]
             print "    >> %s"%dataset
 

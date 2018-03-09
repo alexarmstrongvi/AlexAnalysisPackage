@@ -486,12 +486,12 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& el : baseElectrons) {
-        if (!el->veryLooseLLH) out.push_back(0);
-        else if (el->veryLooseLLH && !el->looseLLH) out.push_back(1);
-        else if (el->looseLLH && !el->looseLLHBLayer) out.push_back(2);
-        else if (el->looseLLHBLayer && !el->mediumLLH) out.push_back(3);
-        else if (el->mediumLLH && !el->tightLLH) out.push_back(4);
-        else if (el->tightLLH) out.push_back(5);
+        if (!el->veryLooseLLH) out.push_back(5);
+        else if (el->veryLooseLLH && !el->looseLLHBLayer) out.push_back(4);
+        else if (el->looseLLHBLayer && !el->looseLLH) out.push_back(3);
+        else if (el->looseLLH && !el->mediumLLH) out.push_back(2);
+        else if (el->mediumLLH && !el->tightLLH) out.push_back(1);
+        else if (el->tightLLH) out.push_back(0);
       }
       return out;
     };
@@ -566,15 +566,15 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
   *cutflow << NewVar("PreMuon ID (non-inclusive)"); {
-    *cutflow << HFTname("preMuon_ID");
+    *cutflow << HFTname("preMu_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& mu : preMuons) {
-        if (!mu->veryLoose) out.push_back(0);
-        else if (mu->veryLoose && !mu->loose) out.push_back(1);
+        if (!mu->veryLoose) out.push_back(4);
+        else if (mu->veryLoose && !mu->loose) out.push_back(3);
         else if (mu->loose && !mu->medium) out.push_back(2);
-        else if (mu->medium && !mu->tight) out.push_back(3);
-        else if (mu->tight) out.push_back(4);
+        else if (mu->medium && !mu->tight) out.push_back(1);
+        else if (mu->tight) out.push_back(0);
       }
       return out;
     };
@@ -624,11 +624,11 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& mu : baseMuons) {
-        if (!mu->veryLoose) out.push_back(0);
-        else if (mu->veryLoose && !mu->loose) out.push_back(1);
+        if (!mu->veryLoose) out.push_back(4);
+        else if (mu->veryLoose && !mu->loose) out.push_back(3);
         else if (mu->loose && !mu->medium) out.push_back(2);
-        else if (mu->medium && !mu->tight) out.push_back(3);
-        else if (mu->tight) out.push_back(4);
+        else if (mu->medium && !mu->tight) out.push_back(1);
+        else if (mu->tight) out.push_back(0);
       }
       return out;
     };
@@ -711,10 +711,10 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& tau : baseTaus) {
-        if (!tau->loose) out.push_back(0);
-        else if (tau->loose && !tau->medium) out.push_back(1);
-        else if (tau->medium && !tau->tight) out.push_back(2);
-        else if (tau->tight) out.push_back(3);
+        if (!tau->loose) out.push_back(3);
+        else if (tau->loose && !tau->medium) out.push_back(2);
+        else if (tau->medium && !tau->tight) out.push_back(1);
+        else if (tau->tight) out.push_back(0);
       }
       return out;
     };

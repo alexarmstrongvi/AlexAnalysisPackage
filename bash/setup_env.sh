@@ -1,5 +1,5 @@
 # Setup Atlas software
-export ANALYSIS_DIR='X_ANALYSIS_DIR_X'
+export ANALYSIS_DIR='/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis'
 dir=$PWD
 cd $ANALYSIS_DIR
 if [ -z "$alrb_AvailableToolsPre" ]; then
