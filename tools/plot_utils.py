@@ -40,11 +40,11 @@ def ratio_canvas(name = "c") :
 # ----------------------------------------------
 #  TH1F Methods
 # ----------------------------------------------
-def th1f(name, title, nbin, nlow, nhigh, xtitle, ytitle) :
+def th1d(name, title, nbin, nlow, nhigh, xtitle, ytitle) :
     '''
     Book a TH1F and return it
     '''
-    h = ROOT.TH1F(name, title, nbin, nlow, nhigh)
+    h = ROOT.TH1D(name, title, nbin, nlow, nhigh)
     h.SetFillColorAlpha(ROOT.kRed, 20)
     font = 42
     h.SetTitleFont(font)

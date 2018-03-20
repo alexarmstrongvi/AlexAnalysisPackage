@@ -14,7 +14,7 @@ if [ -z "$X509_USER_PROXY" ]; then
     echo -e "\nSetting up grid proxy"
     voms-proxy-init -voms atlas -valid 96:00
 else
-    echo -e "\nGrid proxy is already setup"
+    echo -e "\nGrid proxy is already setup ($X509_USER_PROXY)"
 fi
 
 

@@ -8,7 +8,7 @@ import global_variables as g
 
 directory_with_inputs = g.input_files
 directory_with_files =  g.analysis_run_dir+"ntuples/"
-output_directory =      g.analysis_run_dir+"ntuples/"
+output_directory =      g.analysis_run_dir+"ntuples/grouped_samples/"
 
 missing_dsid = open(g.missing_dsids_file,'w')
 
@@ -57,12 +57,16 @@ def main() :
             chain.Add(root_f)
        
         # Create TChain file for each group
-        #output_file = r.TFile("%s%s.root"%(output_directory,group),"RECREATE")
-        #chain.SetName("%s"%group)
-        #chain.Write()
-        ##chain.CloneTree(-1,"fast");
+        
+        file_name = "%s%s.root"%(output_directory,group)
+        output_file = r.TFile(file_name,"RECREATE")
+        chain.SetName("%s"%group)
+        chain.Write()
+        #chain.CloneTree(-1,"fast");
+        #print "TChain written to", file_name 
         #output_file.Write() 
         print "\tProcess tree has %d total entries"%chain.GetEntries()
+        output_file.Close()
 
 if __name__ == '__main__':
     main()

@@ -202,7 +202,7 @@ class Background :
         # Get list of flat ntuple file names indicated in dsid list
         bkg_files = []
         for dataset_id in dsid_list :
-            if self.isSignal() and not (dsid_ == dataset_id) : continue
+            #if self.isSignal() and not (dsid_ == dataset_id) : continue
             for f in rawdir_files :
                 if 'entrylist' in f : continue
                 if 'CENTRAL' not in f : continue

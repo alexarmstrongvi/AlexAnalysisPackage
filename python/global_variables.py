@@ -1,5 +1,6 @@
 #!/bin/bash/env python
 import ROOT
+import os
 
 ################################################################################
 # User-defined analysis specific settings
@@ -46,10 +47,11 @@ input_files = local_input_files
 groups = {}
 groups['higgs_lfv'] = [
     344084, 344085, 344086, 344087, 344088, 344089, 344090, 344091,
-    345077, 345078, 
-    345124, 345125, 
-    345213, 345214, 345215, 345216,
-    345218, 345219
+    # Samples below used for systematics
+    #345077, 345078, 
+    #345124, 345125, 
+    #345213, 345214, 345215, 345216,
+    #345218, 345219
 ]
 groups['htt'] = [
     341122, 
@@ -75,12 +77,14 @@ groups['singletop'] = [
 ]
 groups['ww'] = [
     361600,
+    361073,
 ]
 groups['wz'] = [
     361601,
     361607,
 ]
 groups['zz'] = [
+    361077, 
     361603, 361604, 
     361610,
 ]
@@ -92,10 +96,11 @@ groups['zll'] = [
     364198, 364199, 364200, 364201, 364202, 364203,
     364204, 364205, 364206, 364207, 364208, 364209,
     #304018, 304019, 304020, replaced with 344441-3
-    344441, 344442, 344443,
+    344441, 344442, 
     345099, 345100, 345101, 345102,
 ]
 groups['ztt'] = [
+    344443,
     344772, 344776, 344780,
     304021,
     #364128, 364129, 364130, 364131, 364132, 364133, 364134, 364135, 364136,
@@ -162,6 +167,13 @@ def get_data_groups():
             continue
         data_groups[key] = lst
     return data_groups
+def get_local_files():
+    """ Get a list of full paths to the locally stored samples"""
+    local_files = []
+    for key, group in LOCAL_DSID_SUBDIRS.items():
+        path = '%s%s/'%(LOCAL_DSID_DIR, group)
+        local_files += ['%s%s'%(path,sample) for sample in os.listdir(path) if sample.endswith('_nt')]
+    return local_files
 
 # Set ATLAS style
 def setATLASStyle(path="/data/uclhc/uci/user/armstro1/ATLASStyle/"):

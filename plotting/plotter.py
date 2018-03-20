@@ -29,209 +29,209 @@ import tools.plot as plot
 
 ################################################################################
 ## Unused functions
-def getSystHists(plot, reg, b, nom_yield, nom_hist) :
-    for s in b.systList :
-        hist_name = ""
-        if "abs" in plot.variable and "DPB_vSS" not in plot.variable :
-            replace_var = plot.variable.replace("abs(","")
-            replace_var = replace_var.replace(")","")
-            hist_name = replace_var
-        elif plot.variable == "DPB_vSS - 0.9*abs(cosThetaB)" :
-            hist_name = "DPB_minus_COSB"
-        else : hist_name = plot.variable
-        h_up = pu.th1f("h_"+b.treename+"_"+hist_name+"_"+s.name+"_up", "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
-        h_dn = pu.th1f("h_"+b.treename+"_"+hist_name+"_"+s.name+"_dn", "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
-
-        h_up.SetMinimum(plot.y_range_min)
-        h_up.SetMaximum(plot.y_range_max)
-        h_up.GetXaxis().SetTitle(plot.x_label)
-        h_up.GetXaxis().SetTitleFont(42)
-        h_up.GetXaxis().SetLabelFont(42)
-        h_up.GetXaxis().SetLabelSize(0.035)
-        h_up.GetXaxis().SetTitleSize(0.048 * 0.85)
-        h_up.GetXaxis().SetLabelOffset(-999)
-        h_up.GetXaxis().SetTitleOffset(-999)
-
-        h_up.GetYaxis().SetTitle(plot.y_label)
-        h_up.GetYaxis().SetTitleFont(42)
-        h_up.GetYaxis().SetLabelFont(42)
-        h_up.GetYaxis().SetTitleOffset(1.4)
-        h_up.GetYaxis().SetLabelOffset(0.013)
-        h_up.GetYaxis().SetLabelSize(1.2 * 0.035)
-        h_up.GetYaxis().SetTitleSize(0.055 * 0.85)
-
-        h_dn.SetMinimum(plot.y_range_min)
-        h_dn.SetMaximum(plot.y_range_max)
-        h_dn.GetXaxis().SetTitle(plot.x_label)
-        h_dn.GetXaxis().SetTitleFont(42)
-        h_dn.GetXaxis().SetLabelFont(42)
-        h_dn.GetXaxis().SetLabelSize(0.035)
-        h_dn.GetXaxis().SetTitleSize(0.048 * 0.85)
-        h_dn.GetXaxis().SetLabelOffset(-999)
-        h_dn.GetXaxis().SetTitleOffset(-999)
-
-        h_dn.GetYaxis().SetTitle(plot.y_label)
-        h_dn.GetYaxis().SetTitleFont(42)
-        h_dn.GetYaxis().SetLabelFont(42)
-        h_dn.GetYaxis().SetTitleOffset(1.4)
-        h_dn.GetYaxis().SetLabelOffset(0.013)
-        h_dn.GetYaxis().SetLabelSize(1.2 * 0.035)
-        h_dn.GetYaxis().SetTitleSize(0.055 * 0.85)
-
-        #for hsys in [h_up, h_dn] :
-        #    yax = hsys.GetYaxis()
-        #    xax = hsys.GetXaxis()
-
-        #    yax.SetTitleSize(0.05)
-        #    yax.SetLabelSize(0.045)
-        #    yax.SetLabelOffset(0.008)
-        #    yax.SetTitleOffset(1.2)
-        #    yax.SetLabelFont(42)
-        #    yax.SetTitleFont(42)
-        #    yax.SetNdivisions(5)
-
-        if s.isWeightSys() :
-            name_up = s.up_name
-            name_up = "syst_" + name_up.replace('syst_', "")
-            name_dn = s.down_name
-            name_dn = "syst_" + name_dn.replace('syst_', "")
-            weight_up = ""
-            weight_dn = ""
-            if "PILEUPUP" in name_up :
-                weight_up = " eventweightNOPUPW * pupw_up "
-            else :
-                #print " +++ getSystHists isWeightSys UP not applying PRW +++ "
-                #weight_up = " eventweightNOPUPW * %s"%(str(name_dn))
-                weight_up = " eventweight * %s"%(str(name_up))
-
-                if "vv" in b.name and "SF" in reg.name :
-                    print "SYS add mu_VVSF to VV"
-                    weight_up = weight_up + " * 1.02"
-                elif "vv" in b.name and "SF" not in reg.name :
-                    print "SYS add mu_VVDF to VV"
-                    weight_up = weight_up + " * 1.02"
-                elif "ttbar" in b.name :
-                    print "SYS add mu_TTBAR to %s"%b.name
-                    weight_up = weight_up + " * 1.06"
-
-                #if "ttbar" in b.name :
-                #    weight_up = weight_up + " * 0.99"
-                #elif "vv" in b.name :
-                #    if "sf" in reg.name.lower() :
-                #        weight_up = weight_up + " * 1.23"
-                #    else :
-                #        weight_up = weight_up + " * 1.27"
-
-            if "PILEUPDOWN" in name_dn :
-                weight_dn = " eventweightNOPUPW * pupw_down "
-            else :
-                #print " +++ getSystHists isWeightSys DOWN not applying PRW +++ "
-                #weight_dn = " eventweightNOPUPW * %s"%(str(name_dn))
-                weight_dn = " eventweight * %s"%(str(name_dn))
-
-                if "vv" in b.name and "SF" in reg.name :
-                    print "SYS add mu_VVSF to VV"
-                    weight_dn = weight_dn + " * 1.02"
-                elif "vv" in b.name and "SF" not in reg.name :
-                    print "SYS add mu_VVDF to VV"
-                    weight_dn = weight_dn + " * 1.02"
-                elif "ttbar" in b.name :
-                    print "SYS add mu_TTBAR to %s"%b.name
-                    weight_dn = weight_dn + " * 1.06"
-
-                #if "ttbar" in b.name :
-                #    weight_dn = weight_dn + " * 0.99"
-                #elif "vv" in b.name :
-                #    if "sf" in reg.name.lower() :
-                #        weight_dn = weight_dn + " * 1.23"
-                #    else :
-                #        weight_dn = weight_dn + " * 1.27"
-
-            cut_up = "(" + reg.tcut + ") * %s * %s"%(weight_up, str(b.scale_factor))
-            cut_dn = "(" + reg.tcut + ") * %s * %s"%(weight_dn, str(b.scale_factor))
-            #cut_up = "(" + reg.tcut + ") * eventweight * " + str(name_up) + " * " + str(b.scale_factor)
-            #cut_dn = "(" + reg.tcut + ") * eventweight * " + str(name_dn) + " * " + str(b.scale_factor)
-
-            cut_up = r.TCut(cut_up)
-            cut_dn = r.TCut(cut_dn)
-            sel = r.TCut("1")
-
-            cmd_up = "%s>>%s"%(plot.variable, h_up.GetName())
-            cmd_dn = "%s>>%s"%(plot.variable, h_dn.GetName())
-
-            s.tree.Draw(cmd_up, cut_up * sel)
-            s.tree.Draw(cmd_dn, cut_dn * sel)
-
-            # add overflow to these guys' last bins
-            pu.add_overflow_to_lastbin(h_up)
-            pu.add_overflow_to_lastbin(h_dn)
-
-            print "    %s   (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
-
-            s.up_histo = h_up
-            s.down_histo = h_dn
-
-        elif s.isKinSys() :
-            #print " +++ getSystHists isKinSys not applying PRW +++ "
-            #cut = "(" + reg.tcut + ") * eventweightNOPUPW * " + str(b.scale_factor)
-            cut = "(" + reg.tcut + ") * eventweight * " + str(b.scale_factor)
-
-            if "vv" in b.name and "SF" in reg.name :
-                print "SYS add mu_VVSF to VV"
-                cut = cut + " * 1.02"
-            elif "vv" in b.name and "SF" not in reg.name :
-                print "SYS add mu_VVDF to VV"
-                cut = cut + " * 1.02"
-            elif "ttbar" in b.name :
-                cut = cut + " * 1.06"
-            #if "ttbar" in b.name :
-            #    cut = cut + " * 0.99"
-            #elif "vv" in b.name :
-            #    if "sf" in reg.name.lower() :
-            #        cut = cut + " * 1.23"
-            #    else :
-            #        cut = cut + " * 1.27"
-
-            cut = r.TCut(cut)
-            sel = r.TCut("1")
-            cmd_up = "%s>>%s"%(plot.variable, h_up.GetName())
-            cmd_dn = "%s>>%s"%(plot.variable, h_dn.GetName())
-
-            s.tree_up.Draw(cmd_up, cut * sel)
-            pu.add_overflow_to_lastbin(h_up)
-            s.up_histo = h_up
-
-            is_one_side = False
-            if "JER" in syst.name or ("MET_" in syst.name and "Reso" in syst.name)  : is_one_side = True
-            if "ResoPerp" in syst.name or "ResoPara" in syst.name : is_one_side = True
-            if not s.isOneSided() :
-            #if not is_one_side :
-                s.tree_down.Draw(cmd_dn, cut * sel)
-                pu.add_overflow_to_lastbin(h_dn)
-                s.down_histo = h_dn
-            else :
-                s.down_histo = nom_hist.Clone("%s_down_hist"%s.name)
-                h_dn = s.down_histo
-
-            if s.isOneSided() :
-                print "    %s (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
-            else :
-                print "    %s  (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
-
-def check_2d_consistency(plot, data, backgrounds) :
-    if plot.sample == "Data" and data.treename == "":
-        print 'check_2d_consistency ERROR    Requested sample is ("Data") and the data sample is empty. Exitting.'
-        sys.exit()
-    sample_in_backgrounds = False
-    for b in backgrounds :
-        if plot.sample == b.name and plot.sample != "Data" : sample_in_backgrounds = True
-    if not sample_in_backgrounds and plot.sample != "Data" :
-        print 'check_2d_consistency ERROR    Requested sample ("%s") is not in the backgrounds list:'%plot.sample
-        print backgrounds
-        print 'check_2d_consistency ERROR    Exitting.'
-        sys.exit()
-
-    print 'check_2d_consistency    Samples consistent with plot.'
+#def getSystHists(plot, reg, b, nom_yield, nom_hist) :
+#    for s in b.systList :
+#        hist_name = ""
+#        if "abs" in plot.variable and "DPB_vSS" not in plot.variable :
+#            replace_var = plot.variable.replace("abs(","")
+#            replace_var = replace_var.replace(")","")
+#            hist_name = replace_var
+#        elif plot.variable == "DPB_vSS - 0.9*abs(cosThetaB)" :
+#            hist_name = "DPB_minus_COSB"
+#        else : hist_name = plot.variable
+#        h_up = pu.th1d("h_"+b.treename+"_"+hist_name+"_"+s.name+"_up", "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+#        h_dn = pu.th1d("h_"+b.treename+"_"+hist_name+"_"+s.name+"_dn", "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+#
+#        h_up.SetMinimum(plot.y_range_min)
+#        h_up.SetMaximum(plot.y_range_max)
+#        h_up.GetXaxis().SetTitle(plot.x_label)
+#        h_up.GetXaxis().SetTitleFont(42)
+#        h_up.GetXaxis().SetLabelFont(42)
+#        h_up.GetXaxis().SetLabelSize(0.035)
+#        h_up.GetXaxis().SetTitleSize(0.048 * 0.85)
+#        h_up.GetXaxis().SetLabelOffset(-999)
+#        h_up.GetXaxis().SetTitleOffset(-999)
+#
+#        h_up.GetYaxis().SetTitle(plot.y_label)
+#        h_up.GetYaxis().SetTitleFont(42)
+#        h_up.GetYaxis().SetLabelFont(42)
+#        h_up.GetYaxis().SetTitleOffset(1.4)
+#        h_up.GetYaxis().SetLabelOffset(0.013)
+#        h_up.GetYaxis().SetLabelSize(1.2 * 0.035)
+#        h_up.GetYaxis().SetTitleSize(0.055 * 0.85)
+#
+#        h_dn.SetMinimum(plot.y_range_min)
+#        h_dn.SetMaximum(plot.y_range_max)
+#        h_dn.GetXaxis().SetTitle(plot.x_label)
+#        h_dn.GetXaxis().SetTitleFont(42)
+#        h_dn.GetXaxis().SetLabelFont(42)
+#        h_dn.GetXaxis().SetLabelSize(0.035)
+#        h_dn.GetXaxis().SetTitleSize(0.048 * 0.85)
+#        h_dn.GetXaxis().SetLabelOffset(-999)
+#        h_dn.GetXaxis().SetTitleOffset(-999)
+#
+#        h_dn.GetYaxis().SetTitle(plot.y_label)
+#        h_dn.GetYaxis().SetTitleFont(42)
+#        h_dn.GetYaxis().SetLabelFont(42)
+#        h_dn.GetYaxis().SetTitleOffset(1.4)
+#        h_dn.GetYaxis().SetLabelOffset(0.013)
+#        h_dn.GetYaxis().SetLabelSize(1.2 * 0.035)
+#        h_dn.GetYaxis().SetTitleSize(0.055 * 0.85)
+#
+#        #for hsys in [h_up, h_dn] :
+#        #    yax = hsys.GetYaxis()
+#        #    xax = hsys.GetXaxis()
+#
+#        #    yax.SetTitleSize(0.05)
+#        #    yax.SetLabelSize(0.045)
+#        #    yax.SetLabelOffset(0.008)
+#        #    yax.SetTitleOffset(1.2)
+#        #    yax.SetLabelFont(42)
+#        #    yax.SetTitleFont(42)
+#        #    yax.SetNdivisions(5)
+#
+#        if s.isWeightSys() :
+#            name_up = s.up_name
+#            name_up = "syst_" + name_up.replace('syst_', "")
+#            name_dn = s.down_name
+#            name_dn = "syst_" + name_dn.replace('syst_', "")
+#            weight_up = ""
+#            weight_dn = ""
+#            if "PILEUPUP" in name_up :
+#                weight_up = " eventweightNOPUPW * pupw_up "
+#            else :
+#                #print " +++ getSystHists isWeightSys UP not applying PRW +++ "
+#                #weight_up = " eventweightNOPUPW * %s"%(str(name_dn))
+#                weight_up = " eventweight * %s"%(str(name_up))
+#
+#                if "vv" in b.name and "SF" in reg.name :
+#                    print "SYS add mu_VVSF to VV"
+#                    weight_up = weight_up + " * 1.02"
+#                elif "vv" in b.name and "SF" not in reg.name :
+#                    print "SYS add mu_VVDF to VV"
+#                    weight_up = weight_up + " * 1.02"
+#                elif "ttbar" in b.name :
+#                    print "SYS add mu_TTBAR to %s"%b.name
+#                    weight_up = weight_up + " * 1.06"
+#
+#                #if "ttbar" in b.name :
+#                #    weight_up = weight_up + " * 0.99"
+#                #elif "vv" in b.name :
+#                #    if "sf" in reg.name.lower() :
+#                #        weight_up = weight_up + " * 1.23"
+#                #    else :
+#                #        weight_up = weight_up + " * 1.27"
+#
+#            if "PILEUPDOWN" in name_dn :
+#                weight_dn = " eventweightNOPUPW * pupw_down "
+#            else :
+#                #print " +++ getSystHists isWeightSys DOWN not applying PRW +++ "
+#                #weight_dn = " eventweightNOPUPW * %s"%(str(name_dn))
+#                weight_dn = " eventweight * %s"%(str(name_dn))
+#
+#                if "vv" in b.name and "SF" in reg.name :
+#                    print "SYS add mu_VVSF to VV"
+#                    weight_dn = weight_dn + " * 1.02"
+#                elif "vv" in b.name and "SF" not in reg.name :
+#                    print "SYS add mu_VVDF to VV"
+#                    weight_dn = weight_dn + " * 1.02"
+#                elif "ttbar" in b.name :
+#                    print "SYS add mu_TTBAR to %s"%b.name
+#                    weight_dn = weight_dn + " * 1.06"
+#
+#                #if "ttbar" in b.name :
+#                #    weight_dn = weight_dn + " * 0.99"
+#                #elif "vv" in b.name :
+#                #    if "sf" in reg.name.lower() :
+#                #        weight_dn = weight_dn + " * 1.23"
+#                #    else :
+#                #        weight_dn = weight_dn + " * 1.27"
+#
+#            cut_up = "(" + reg.tcut + ") * %s * %s"%(weight_up, str(b.scale_factor))
+#            cut_dn = "(" + reg.tcut + ") * %s * %s"%(weight_dn, str(b.scale_factor))
+#            #cut_up = "(" + reg.tcut + ") * eventweight * " + str(name_up) + " * " + str(b.scale_factor)
+#            #cut_dn = "(" + reg.tcut + ") * eventweight * " + str(name_dn) + " * " + str(b.scale_factor)
+#
+#            cut_up = r.TCut(cut_up)
+#            cut_dn = r.TCut(cut_dn)
+#            sel = r.TCut("1")
+#
+#            cmd_up = "%s>>%s"%(plot.variable, h_up.GetName())
+#            cmd_dn = "%s>>%s"%(plot.variable, h_dn.GetName())
+#
+#            s.tree.Draw(cmd_up, cut_up * sel)
+#            s.tree.Draw(cmd_dn, cut_dn * sel)
+#
+#            # add overflow to these guys' last bins
+#            pu.add_overflow_to_lastbin(h_up)
+#            pu.add_overflow_to_lastbin(h_dn)
+#
+#            print "    %s   (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
+#
+#            s.up_histo = h_up
+#            s.down_histo = h_dn
+#
+#        elif s.isKinSys() :
+#            #print " +++ getSystHists isKinSys not applying PRW +++ "
+#            #cut = "(" + reg.tcut + ") * eventweightNOPUPW * " + str(b.scale_factor)
+#            cut = "(" + reg.tcut + ") * eventweight * " + str(b.scale_factor)
+#
+#            if "vv" in b.name and "SF" in reg.name :
+#                print "SYS add mu_VVSF to VV"
+#                cut = cut + " * 1.02"
+#            elif "vv" in b.name and "SF" not in reg.name :
+#                print "SYS add mu_VVDF to VV"
+#                cut = cut + " * 1.02"
+#            elif "ttbar" in b.name :
+#                cut = cut + " * 1.06"
+#            #if "ttbar" in b.name :
+#            #    cut = cut + " * 0.99"
+#            #elif "vv" in b.name :
+#            #    if "sf" in reg.name.lower() :
+#            #        cut = cut + " * 1.23"
+#            #    else :
+#            #        cut = cut + " * 1.27"
+#
+#            cut = r.TCut(cut)
+#            sel = r.TCut("1")
+#            cmd_up = "%s>>%s"%(plot.variable, h_up.GetName())
+#            cmd_dn = "%s>>%s"%(plot.variable, h_dn.GetName())
+#
+#            s.tree_up.Draw(cmd_up, cut * sel)
+#            pu.add_overflow_to_lastbin(h_up)
+#            s.up_histo = h_up
+#
+#            is_one_side = False
+#            if "JER" in syst.name or ("MET_" in syst.name and "Reso" in syst.name)  : is_one_side = True
+#            if "ResoPerp" in syst.name or "ResoPara" in syst.name : is_one_side = True
+#            if not s.isOneSided() :
+#            #if not is_one_side :
+#                s.tree_down.Draw(cmd_dn, cut * sel)
+#                pu.add_overflow_to_lastbin(h_dn)
+#                s.down_histo = h_dn
+#            else :
+#                s.down_histo = nom_hist.Clone("%s_down_hist"%s.name)
+#                h_dn = s.down_histo
+#
+#            if s.isOneSided() :
+#                print "    %s (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
+#            else :
+#                print "    %s  (+%.2f, -%.2f)"%(s.name, h_up.Integral(0,-1)-nom_yield, nom_yield-h_dn.Integral(0,-1))
+#
+#def check_2d_consistency(plot, data, backgrounds) :
+#    if plot.sample == "Data" and data.treename == "":
+#        print 'check_2d_consistency ERROR    Requested sample is ("Data") and the data sample is empty. Exitting.'
+#        sys.exit()
+#    sample_in_backgrounds = False
+#    for b in backgrounds :
+#        if plot.sample == b.name and plot.sample != "Data" : sample_in_backgrounds = True
+#    if not sample_in_backgrounds and plot.sample != "Data" :
+#        print 'check_2d_consistency ERROR    Requested sample ("%s") is not in the backgrounds list:'%plot.sample
+#        print backgrounds
+#        print 'check_2d_consistency ERROR    Exitting.'
+#        sys.exit()
+#
+#    print 'check_2d_consistency    Samples consistent with plot.'
 
 ################################################################################
 def histos_for_legend(histos) :
@@ -297,7 +297,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
                 hist_name_y = y_repl
             else : hist_name_y = plot.yVariable
 
-            hx = pu.th1f("h_"+b.treename+"_"+hist_name_x, "", int(plot.n_binsX), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+            hx = pu.th1d("h_"+b.treename+"_"+hist_name_x, "", int(plot.n_binsX), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
             hx.Sumw2
             cut = "(" + reg.tcut + ") * eventweight * " + str(b.scale_factor)
             cut = r.TCut(cut)
@@ -308,7 +308,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
             g = r.TGraphErrors()
 
             for i in range(hx.GetNbinsX()) :
-                hy = pu.th1f("h_" + b.treename + "_" + hist_name_y, "", 100, -200, 200,  plot.y_label, "")
+                hy = pu.th1d("h_" + b.treename + "_" + hist_name_y, "", 100, -200, 200,  plot.y_label, "")
                 cut_up = hx.GetBinLowEdge(i+1) + hx.GetBinWidth(i+1)
                 cut_down = hx.GetBinLowEdge(i+1)
                 cut = "(" + reg.tcut + " && ( %s >= %s && %s <= %s)"%(plot.xVariable, cut_down, plot.xVariable, cut_up)  + ") * eventweight * " + str(b.scale_factor)
@@ -350,7 +350,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
             hist_name_y = y_repl
         else : hist_name_y = plot.yVariable
 
-        hx = pu.th1f("h_data_"+hist_name_x, "", int(plot.n_binsX), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        hx = pu.th1d("h_data_"+hist_name_x, "", int(plot.n_binsX), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         hx.Sumw2
         cut = "(" + reg.tcut + ") * eventweight"
         cut = r.TCut(cut)
@@ -361,7 +361,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
         g = r.TGraphErrors()
 
         for i in range(hx.GetNbinsX()) :
-            hy = pu.th1f("h_data_" + hist_name_y, "", 100, -200, 200,  plot.y_label, "")
+            hy = pu.th1d("h_data_" + hist_name_y, "", 100, -200, 200,  plot.y_label, "")
             cut_up = hx.GetBinLowEdge(i+1) + hx.GetBinWidth(i+1)
             cut_down = hx.GetBinLowEdge(i+1)
             cut = "(" + reg.tcut + " && ( %s >= %s && %s <= %s)"%(plot.xVariable, cut_down, plot.xVariable, cut_up)  + ") * eventweight"
@@ -497,13 +497,6 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
             total number of plots
 
     returns (None)
-
-    Outline:
-        - Intialize plot components
-        - Get background MC stack
-        - Get data hist
-        -
-        - Get signal hist
     '''
 
 
@@ -573,7 +566,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         # Initilize histogram
         h_name = "h_"+reg.name+'_'+b.treename+"_"+plot.variable
         hists_to_clear.append(h_name)
-        h = pu.th1f(h_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h = pu.th1d(h_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
 
         h.SetLineColor(b.color)
         h.GetXaxis().SetLabelOffset(-999)
@@ -692,7 +685,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # Get data hist
 
     hd_name = "h_"+reg.name+'_data_'+plot.variable
-    hd = pu.th1f(hd_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+    hd = pu.th1d(hd_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
     hd.Sumw2
 
     cut = "(" + reg.tcut + ")"
@@ -708,6 +701,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
     #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
     # Add overflow
@@ -900,7 +894,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
             hist_name = "DPB_minus_COSB"
         else : hist_name = plot.variable
 
-        h = pu.th1f("h_"+s.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h = pu.th1d("h_"+s.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         h.SetLineWidth(2)
         h.SetLineStyle(2)
         h.SetLineColor(s.color)
@@ -935,7 +929,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     print "Yields for %s region"%reg.displayname
     print 30*'-'
     for yld in yield_tbl:
-        if 'total' in yld.lower():
+        if 'total' in yld.lower() or 'Data/MC' in yld:
             print 20*'-'
         print yld
     print 30*'-'
@@ -954,7 +948,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # add some text/labels
     #uglify
     pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
-    pu.draw_text(text="Preliminary",x=0.325,y=0.85,size=0.05,font=42)
+    pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.05,font=42)
     #pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.06,font=42)
     pu.draw_text(text="#sqrt{s} = 13 TeV, 36.1 fb^{-1}", x=0.18, y=0.79, size=0.04)
     #pu.draw_text(text="L = 36 fb^{-1}, #sqrt{s} = 13 TeV",x=0.18,y=0.79, size=0.04)
@@ -1099,7 +1093,7 @@ def make_plotsComparison(plot, reg, data, backgrounds) :
             hist_name = "DPB_minus_COSB"
         else : hist_name = plot.variable
 
-        h = pu.th1f("h_"+b.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h = pu.th1d("h_"+b.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         h.SetLineColor(b.color)
         h.SetLineWidth(2)
         h.SetLineStyle(b.line_style)
@@ -1241,7 +1235,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
             has_signals = True
             continue
 
-        h = pu.th1f("h_"+b.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h = pu.th1d("h_"+b.treename+"_"+hist_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         h.SetLineColor(r.kBlack)
         h.SetLineWidth(1)
         h.SetFillColor(b.color)
@@ -1293,7 +1287,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
 
     #### DATA
     if data :
-        hd = pu.th1f("h_data_"+reg.name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        hd = pu.th1d("h_data_"+reg.name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         hd.Sumw2
         cut = "(" + reg.tcut + ")"
         cut = r.TCut(cut)
@@ -1326,7 +1320,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
         else :
             hist_name = plot.variable
 
-        h = pu.th1f("h_" + s.treename + "_" + hist_name, "", int(plot.nbins),
+        h = pu.th1d("h_" + s.treename + "_" + hist_name, "", int(plot.nbins),
                         plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
         h.SetLineWidth(2)
         h.SetLineStyle(2)

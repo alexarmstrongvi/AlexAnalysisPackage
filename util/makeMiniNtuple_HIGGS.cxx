@@ -321,6 +321,8 @@ int main(int argc, char* argv[])
   ADD_TRIGGER_VAR(HLT_e17_lhloose_mu14)
   ADD_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1)
   ADD_TRIGGER_VAR(HLT_e7_lhmedium_mu24)
+  ADD_TRIGGER_VAR(HLT_2e12_lhloose_L12EM10VH)
+  // TODO: Add to SusyNts HLT_2mu10)
 
   // Single Electron Triggers
   ADD_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH)
@@ -338,6 +340,8 @@ int main(int argc, char* argv[])
   ADD_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14)
   // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1)
   ADD_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24)
+  ADD_TRIGGER_VAR(HLT_2e17_lhvloose_nod0)
+  // TODO: Add to SusyNts HLT_2mu14)
 
   // Single Electron Triggers
   ADD_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose)
@@ -455,7 +459,7 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("preEl_eta");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
-      for (auto& el : preElectrons) {out.push_back(el->clusEtaBE);}
+      for (auto& el : preElectrons) {out.push_back(el->Eta());}
       return out;
     };
     *cutflow << SaveVar();
@@ -497,6 +501,22 @@ int main(int argc, char* argv[])
     };
     *cutflow << SaveVar();
   }
+  *cutflow << NewVar("Electron ID (non-inclusive)"); {
+    *cutflow << HFTname("El_ID");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for (auto& el : signalElectrons) {
+        if (!el->veryLooseLLH) out.push_back(5);
+        else if (el->veryLooseLLH && !el->looseLLHBLayer) out.push_back(4);
+        else if (el->looseLLHBLayer && !el->looseLLH) out.push_back(3);
+        else if (el->looseLLH && !el->mediumLLH) out.push_back(2);
+        else if (el->mediumLLH && !el->tightLLH) out.push_back(1);
+        else if (el->tightLLH) out.push_back(0);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Signal Electrons
@@ -523,9 +543,9 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
       if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
           const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
-          return ele ? ele->trackPt : -2;
+          return ele ? ele->trackPt : -DBL_MAX;
       } else {
-          return -1;
+          return -DBL_MAX;
       }
     };
     *cutflow << SaveVar();
@@ -535,9 +555,9 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
       if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
           const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
-          return ele ? ele->clusE : -2;
+          return ele ? ele->clusE : -DBL_MAX;
       } else {
-          return -1;
+          return -DBL_MAX;
       }
     };
     *cutflow << SaveVar();
@@ -547,9 +567,9 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
       if (signalLeptons.size() > 1 && signalLeptons.at(1)->isEle()) {
           const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(signalLeptons.at(1));
-          return ele ? ele->trackPt / ele->clusE : -2;
+          return ele ? ele->trackPt / ele->clusE : -DBL_MAX;
       } else {
-          return -1;
+          return -DBL_MAX;
       }
     };
     *cutflow << SaveVar();
@@ -620,7 +640,7 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
   *cutflow << NewVar("Baseline Muon ID (non-inclusive)"); {
-    *cutflow << HFTname("baseMuon_ID");
+    *cutflow << HFTname("baseMu_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& mu : baseMuons) {
@@ -635,6 +655,21 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
 
+  *cutflow << NewVar("Muon ID (non-inclusive)"); {
+    *cutflow << HFTname("Mu_ID");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for (auto& mu : signalMuons) {
+        if (!mu->veryLoose) out.push_back(4);
+        else if (mu->veryLoose && !mu->loose) out.push_back(3);
+        else if (mu->loose && !mu->medium) out.push_back(2);
+        else if (mu->medium && !mu->tight) out.push_back(1);
+        else if (mu->tight) out.push_back(0);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
   //////////////////////////////////////////////////////////////////////////////
   // Signal Muons
   *cutflow << NewVar("Muon type"); {
@@ -1121,7 +1156,7 @@ int main(int argc, char* argv[])
       for (auto& jet : preJets) {
         if (jet->Pt() < 60 && fabs(jet->Eta()) <= 2.4) out.push_back(jet->jvt);
         else
-          out.push_back(0);
+          out.push_back(-DBL_MAX);
       }
       return out;
     };
@@ -1238,7 +1273,7 @@ int main(int argc, char* argv[])
         if (baseJets.size() > 1) {
             return JetP4.M();
         } else {
-            return -1.0;
+            return -DBL_MAX;
         }
     };
     *cutflow << SaveVar();
@@ -1249,7 +1284,7 @@ int main(int argc, char* argv[])
         if (baseJets.size() > 1) {
             return fabs(Jet0.Eta() - Jet1.Eta());
         } else {
-            return -1.0;
+            return -DBL_MAX;
         }
     };
     *cutflow << SaveVar();

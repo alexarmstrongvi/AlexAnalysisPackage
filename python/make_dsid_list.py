@@ -13,7 +13,9 @@ import python_tools as tools
 
 def get_desired_samples_map(args):
     """ Get map of DSID lists from global list"""
-    if args.data:
+    if args.all:
+        return g.groups
+    elif args.data:
         return g.get_data_groups()
     elif args.bkgd:
         return g.get_bkgd_groups()
@@ -126,6 +128,9 @@ def main():
     parser.add_argument('--daod',
                         action='store_true',
                         help='output only sample DSIDs to be produced')
+    parser.add_argument('--all',
+                        action='store_true',
+                        help='output all DSIDs in global_variables')
     parser.add_argument('--data',
                         action='store_true',
                         help='output only data DSIDs')
@@ -156,6 +161,8 @@ def main():
             prefix = 'fax'
         elif args.empty:
             prefix = 'empty'
+        elif args.all:
+            prefix = 'all'
         elif args.data:
             prefix = 'data'
         elif args.bkgd:

@@ -1,8 +1,9 @@
 #1/bin/bash/env python
 
-import os
+import os, sys
 import glob
 import re
+import subprocess
 from contextlib import contextmanager
 
 def main():
@@ -24,6 +25,49 @@ def cd(newdir):
         yield
     finally:
         os.chdir(prevdir)
+
+def rucio_is_setup() :
+    print "Checking that rucio is setup"
+    default = ""
+    rucio_home = os.getenv('RUCIO_HOME', default)
+    if rucio_home == default :
+        print "ERROR rucio is not setup, please set it up before running this script"
+        return False
+    else :
+        print " > rucio found: %s"%rucio_home
+        return True
+
+def grid_proxy_setup() :
+    print "Checking for valid grid proxy"
+    default = ""
+    proxy = os.getenv('X509_USER_PROXY', default)
+    if proxy == default :
+        print "ERROR grid proxy is not setup, please set one up before running this script"
+        return False
+    else :
+        print " > proxy found: %s"%proxy
+        return True
+
+def get_cmd_output(cmd):
+    """ Return output from shell command """
+    tmp_file_dump = 'tmp_shell_command_dump.txt'
+    shell_cmd = '%s > %s'%(cmd, tmp_file_dump)
+    print "TESTING :: Running shell"
+    subprocess.call(shell_cmd, shell=True)
+    print "TESTING :: Ran shell"
+    output = []
+    with open(tmp_file_dump,'r') as f:
+        output = f.readlines() 
+    shell_cmd = 'rm %s'%tmp_file_dump
+    subprocess.call(shell_cmd, shell=True) 
+    return output
+
+def check_dir(path):
+    if not os.path.isdir(path):
+        print "Unable to find directory", path
+        sys.exit()
+    return os.path.abspath(path)
+
 
 # output list of directories in directory
 def get_list_of_subdirectories(directory,search_string='*/'):
@@ -174,13 +218,29 @@ def get_matrix_shape(matrix):
     return row_size, column_size
 
 # Analysis specific
+def get_susynt_event_id(event):
+    """
+    Get a unique event name for susyNt input
+    args:
+        event (SusyNt::Event) - event object
+    return
+        str: unique event name
+    """
+    Event = event.event
+    run_num = Event.run
+    event_num = Event.eventNumber
+    lumi_block = Event.lb
+    
+    unique_ID = "run%s_evt%s_lb%s"%(run_num, event_num, lumi_block)
+    return unique_ID 
+
 def get_dsid_from_sample(sample):
     """ Extract DSID from sample name"""
     sample = sample.strip()
-    search_str = '[0-9]{6}(?=\.)'
+    search_str = '[1-9][0-9]{5}(?=\.)'
     dsid = strip_string_to_substring(sample,search_str)
     if not dsid:
-        dsid = strip_string_to_substring(sample,'[0-9]{6}')
+        dsid = strip_string_to_substring(sample,'[1-9][0-9]{5}')
     return dsid
 
 def get_dsid_sample_map(sample_list):
@@ -225,11 +285,16 @@ def get_sample_group(sample):
     # Data
     searches['data15'] = [['data15']]
     searches['data16'] = [['data16']]
-    # Higgs -> tautau
-    searches['Htt'] = [ ['H125'],['tautau','tt'] ]
-    # Higgs -> WW
+    # Higgs
+    searches['H Inclusive'] = [ ['H125'],['_inc'] ]
+    searches['Htt'] = [ ['H125'],['tautau','2tau'] ]
     searches['HWW'] = [ ['H125'],['WW'] ]
-    # Z -> tautau + jets
+    searches['Hee'] = [ ['H125'],['ee'] ]
+    searches['Hmumu'] = [ ['H125'],['mumu'] ]
+    # Drell-Yan
+    searches['Drell-Yan -> ee'] = [['DYee']]
+    searches['Drell-Yan -> mumu'] = [['DYmumu']]
+    searches['Drell-Yan -> tautau'] = [['DYtautau']]
     # Z -> tautau + jets
     searches['Ztt'] = [['Ztautau','Ztt']]
     # Z -> ee + jets
@@ -247,7 +312,7 @@ def get_sample_group(sample):
     # Diboson
     searches['Diboson'] = [['!H125'],['WW','ZZ','WZ','ZW','[lv]{4}','[WZ][pqlv]*[WZ]']]
     # Signal: LFV Higgs
-    searches['LFV Higgs'] = [['H125'],['taue','etau','mutau','taumu']]
+    searches['LFV Higgs'] = [['H125'],['taue','etau','mutau','taumu','emu','mue']]
 
     matched_category = []
     for category, search in searches.iteritems():

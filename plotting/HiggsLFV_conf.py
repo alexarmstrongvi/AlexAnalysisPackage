@@ -177,19 +177,21 @@ backgrounds.append(hww)
 #backgrounds.append(fakes)
 
 # Samples currently need to be remade
-#s0 = background.Background("higgs_lfv", "Higgs LFV")
-#s0.setSignal()
-#s0.scale_factor = lumi_ * 10
-#s0.set_fillStyle(0)
-#s0.set_color(ROOT.kGreen)
-#s0.set_treename("s0")
-#s0.set_chain_from_dsid_list(g.groups['s0'], signal_rawdir)
-#backgrounds.append(s0)
+signal_branching_ratio = 0.01
+signal_SF = 10
+s0 = background.Background("higgs_lfv", "Higgs LFV (%dX)"%signal_SF)
+s0.setSignal()
+s0.scale_factor = lumi_ * signal_branching_ratio * signal_SF 
+s0.set_fillStyle(0)
+s0.set_color(ROOT.kGreen)
+s0.set_treename("s0")
+s0.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_rawdir)
+backgrounds.append(s0)
 
 
 #### DATA
 data = background.Data()
-data.set_color(r.kBlack)
+data.set_color(ROOT.kBlack)
 data.set_treename("data")
 #data.set_chain_from_list_CONDOR(filelist_dir + "data/", data_rawdir)
 data.set_chain_from_list_CONDOR2([filelist_dir + "data15/", filelist_dir + "data16/"] , [data_rawdir,data_rawdir])
@@ -225,11 +227,12 @@ emu15_trig  = 'HLT_e17_lhloose_mu14'
 emu16_trig  = 'HLT_e17_lhloose_nod0_mu14'
 # Single lepton triggers
 e15_trig    = '(HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose)'
-mu15_trig   = '(HLT_mu20_iloose_L1MU15 || HLT_mu50)'
+mu15_trig   = '(HLT_mu20_iloose_L1MU15 || HLT_mu40)'
 e16_trig    = '(HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0)'
 mu16_trig   = '(HLT_mu26_ivarmedium || HLT_mu50)'
 
 # Triggers with added pT requirements
+
 e15_trig_emu_pT   = '(%s && dilep_flav == 0 && Lep0Pt >= 25)'%e15_trig
 mu15_trig_emu_pT  = '(%s && dilep_flav == 0 && Lep0Pt < 25 && Lep1Pt >= 21)'%mu15_trig
 e16_trig_emu_pT   = '(%s && dilep_flav == 0 && Lep0Pt >= 27)'%e16_trig
@@ -251,21 +254,29 @@ mu16_trig_pT = '(%s || %s)'%(mu16_trig_emu_pT, mu16_trig_mue_pT)
 emu15_trig_pT = '(%s || %s)'%(emu15_trig_emu_pT, emu15_trig_mue_pT)
 emu16_trig_pT = '(%s || %s)'%(emu16_trig_emu_pT, emu16_trig_mue_pT)
 
-dilep15_trig      = '(treatAsYear==2015 && %s)'%emu15_trig_pT
-dilep16_trig     = '(treatAsYear==2016 && %s)'%emu16_trig_pT
-singlelep15_trig = '(treatAsYear==2015 && (%s || %s))'%(e15_trig_pT,mu15_trig_pT)
-singlelep16_trig = '(treatAsYear==2016 && (%s || %s))'%(e16_trig_pT,mu16_trig_pT)
-
+dilep15_trig      = '(treatAsYear==2015 && %s)'%emu15_trig
+dilep16_trig     = '(treatAsYear==2016 && %s)'%emu16_trig
+singlelep15_trig = '(treatAsYear==2015 && (%s || %s))'%(e15_trig,mu15_trig)
+singlelep16_trig = '(treatAsYear==2016 && (%s || %s))'%(e16_trig,mu16_trig)
 dilep_trig = '(%s || %s)'%(dilep15_trig, dilep16_trig)
 singlelep_trig = '(%s || %s)'%(singlelep15_trig, singlelep16_trig)
 
+dilep15_trig_pT      = '(treatAsYear==2015 && %s)'%emu15_trig_pT
+dilep16_trig_pT     = '(treatAsYear==2016 && %s)'%emu16_trig_pT
+singlelep15_trig_pT = '(treatAsYear==2015 && (%s || %s))'%(e15_trig_pT,mu15_trig_pT)
+singlelep16_trig_pT = '(treatAsYear==2016 && (%s || %s))'%(e16_trig_pT,mu16_trig_pT)
+dilep_trig_pT = '(%s || %s)'%(dilep15_trig_pT, dilep16_trig_pT)
+singlelep_trig_pT = '(%s || %s)'%(singlelep15_trig_pT, singlelep16_trig_pT)
+
+
 
 # Region building blocks
-Baseline_Sel = 'Lep0Pt >= 45 && Lep1Pt >= 15 '\
-              + '&& (30 < MLL && MLL < 150) '\
-              + '&& nCentralBJets==0 '\
-              + '&& (dilep_flav != 1 || (el1pT_trackclus_ratio < 1.2)) '\
-              + '&&' + singlelep_trig
+Baseline_Sel = ('Lep0Pt >= 45 && Lep1Pt >= 15 '
+              + '&& (30 < MLL && MLL < 150) '
+              + '&& nCentralBJets==0 '
+              + '&& ( !'+mue+' || el1pT_trackclus_ratio < 1.2) '
+              + '&&' + DF_OS
+              + '&&' + singlelep_trig_pT) 
 VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 
 # Define regions
@@ -273,13 +284,31 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 reg = region.Region()
 reg.name = "no_sel"
 reg.displayname = "No Selections"
-reg.tcut = "1"
+reg.tcut = DF_OS
 regions.append(reg)
-reg = region.Region()
 
+reg = region.Region()
 reg.name = "trig_only"
 reg.displayname = "Single Lepton Triggers"
-reg.tcut = singlelep_trig
+reg.tcut = singlelep_trig_pT + "&&" + DF_OS
+regions.append(reg)
+
+reg = region.Region()
+reg.name = "topCR"
+reg.displayname = "Top CR"
+reg.tcut = "nCentralBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + singlelep_trig
+regions.append(reg)
+
+reg = region.Region()
+reg.name = "zCR_ee"
+reg.displayname = "Z CR (Channel: El-El)"
+reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + singlelep_trig
+regions.append(reg)
+
+reg = region.Region()
+reg.name = "zCR_mumu"
+reg.displayname = "Z CR (Channel: Mu-Mu)"
+reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + singlelep_trig
 regions.append(reg)
 
 reg = region.Region()
@@ -331,12 +360,13 @@ HistOpMap = {
     'isMC'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='is Monte Carlo',                    regions='baseline'),
     'eventweight'     : HistOp1D(nBinsX=100, x0=-0.001,  x1=0.002,    xUnits='',    xLabel='Event weight',                      regions='no_sel, baseline', logY=True),
     'dsid'            : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Sample DSID',                       regions='baseline'),
-    'treatAsYear'     : HistOp1D(nBinsX=11, x0=2007.5,x1=2018.5,xUnits='',   xLabel='treatAsYear',                       regions='no_sel, trig_only, baseline, baseline_emu, baseline_mue'),
+    'treatAsYear'     : HistOp1D(nBinsX=11, x0=2007.5,x1=2018.5,xUnits='',   xLabel='treatAsYear',                       regions='zCR_mumu, zCR_ee, topCR, trig_only, baseline, baseline_mue, baseline_emu'),
     # Multiplicity
+    'n_preLeptons'    : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{pre-leptons}',                   regions='no_sel'),
     'n_baseLeptons'   : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{baseline leptons}',              regions='baseline'),
-    'n_leptons'       : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{signal leptons}',                regions='baseline'),
+    'n_leptons'       : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{signal leptons}',                regions='baseline, baseline_emu, baseline_mue'),
     # Leptons
-    'l_pt'            : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Lepton p_{T}',                      regions='baseline'),
+    'l_pt'            : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Lepton p_{T}',                      regions='baseline, baseline_emu, baseline_mue'),
     ## Electrons
     'el1_track_pt'    : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron track p_{T}',      regions='baseline'),
     'el1_clus_pt'     : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron cluster p_{T}',    regions='baseline'),
@@ -349,10 +379,10 @@ HistOpMap = {
     'el_origin'       : HistOp1D(nBinsX=9,  x0=-0.5, x1=8.5,   xUnits='',    xLabel='electron truth origin',             regions='trig_only'),
     ## Muons
     'preMu_pt'        : HistOp1D(nBinsX=50, x0=0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{preMuon}',                   regions='no_sel', add_overflow=False),
-    'preMuon_ID'      : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{pre}^{ID} (non-inclusive)',     regions='no_sel'),
+    'preMu_ID'      : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{pre}^{ID} (non-inclusive)',     regions='no_sel'),
     'baseMu_pt'       : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{BaselineMuon}',              regions='no_sel'),
     'baseMu_eta'      : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{BaselineMuon}',               regions='no_sel'),
-    'baseMuon_ID'     : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{Baseline}^{ID}(non-inclusive)', regions='no_sel', logY=True),
+    'baseMu_ID'     : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{Baseline}^{ID}(non-inclusive)', regions='no_sel', logY=True),
     'mu_type'         : HistOp1D(nBinsX=9,  x0=-0.5, x1=8.5,   xUnits='',    xLabel='muon truth type',                   regions='trig_only'),
     'mu_origin'       : HistOp1D(nBinsX=9,  x0=-0.5, x1=8.5,   xUnits='',    xLabel='muon truth origin',                 regions='trig_only'),
     ## Taus
@@ -371,8 +401,8 @@ HistOpMap = {
     'l_origin'        : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Lepton origin',                     regions='baseline'),
     'l_q'             : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Lepton charge',                     regions='baseline'),
     'LepLepSign'      : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leptons sign product',              regions='baseline'),
-    'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}',               regions='no_sel, trig_only, baseline'),
-    'Lep1Pt'          : HistOp1D(nBinsX=20, x0=0.0,  x1=100.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}',            regions='no_sel, trig_only, baseline'),
+    'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}',               regions='zCR_ee, zCR_mumu, topCR, no_sel, trig_only, baseline', logY=True),
+    'Lep1Pt'          : HistOp1D(nBinsX=20, x0=0.0,  x1=100.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}',            regions='zCR_ee, zCR_mumu, topCR, no_sel, trig_only, baseline', logY=True),
     'Lep0Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{leading lep}',                regions='no_sel, trig_only'),
     'Lep1Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{subleading lep}',             regions='no_sel, trig_only'),
     'Lep0Phi'         : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#phi^{leading lep}',                regions='no_sel, trig_only'),
@@ -387,10 +417,11 @@ HistOpMap = {
     'isME'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='Dilepton flavor is mu el',          regions='baseline'),
     'MtLep0'          : HistOp1D(nBinsX=15, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='m_{T}(l_{0},MET)',                  regions='baseline'),
     'MtLep1'          : HistOp1D(nBinsX=20, x0=0.0,  x1=140.0, xUnits='GeV', xLabel='m_{T}(l_{1},MET)',                  regions='baseline'),
-    'MLL'             : HistOp1D(nBinsX=30, x0=0.0, x1=300.0, xUnits='GeV', xLabel='M_{ll}',                            regions='trig_only, baseline'),
-    'ptll'            : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='pT_{ll}',                           regions='baseline'),
+    'MLL'             : HistOp1D(nBinsX=100, x0=0.0, x1=300.0, xUnits='GeV', xLabel='M_{ll}',                            regions='trig_only, baseline', add_overflow=False),
+    #'MLL'             : HistOp1D(nBinsX=100, x0=50, x1=150.0, xUnits='GeV', xLabel='M_{ll}',                            regions='zCR_ee, zCR_mumu'),
+    'ptll'            : HistOp1D(nBinsX=50, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='pT_{ll}',                           regions='baseline', logY=True),
     # MET + leptons
-    'MET'             : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='E_{T}^{miss}',                      regions='baseline'),
+    'MET'             : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='E_{T}^{miss}',                      regions='topCR'),
     'METPhi'          : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='MET_{#phi}',                        regions='baseline'),
     'MCollASym'       : HistOp1D(nBinsX=25, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='LFV Collinear Mass m_{coll}',       regions='baseline'),
     'dpt_ll'          : HistOp1D(nBinsX=20, x0=0.0,  x1=150.0, xUnits='GeV', xLabel='#Deltap_{T}^{ll}',                  regions='baseline'),
@@ -408,15 +439,18 @@ HistOpMap = {
     'jet_N2p4Eta25Pt' : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{jet} (p_{T}>25GeV, |#eta|<2.5)', regions='baseline'),
     'signalJetN'      : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{sig jets}',                      regions='baseline'),
     'jetN_g30'        : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{jet} (p_{T}>30GeV)',             regions='baseline'),
-    'nCentralLJets'   : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CL jet}',                        regions='baseline'),
-    'nCentralBJets'   : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CB jet}',                        regions='trig_only, baseline'),
+    'nCentralLJets'   : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CL jet}',                        regions='trig_only, baseline', logY=True),
+    'nCentralBJets'   : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CB jet}',                        regions='topCR, trig_only, baseline', logY=True),
     'btag'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='B-tagged jet',                      regions='baseline'),
-    'nForwardJets'    : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{F jet}',                         regions='baseline'),
-    'j_pt[0]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{leading jet}',               regions='baseline'),
-    'j_pt'            : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Jet p_{T}',                         regions='baseline'),
+    'nForwardJets'    : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{F jet}',                         regions='baseline, baseline_emu, baseline_mue'),
+    'j_pt[0]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{leading jet}',               regions='topCR', logY=True),
+    'j_pt[1]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{subleading jet}',            regions='topCR', logY=True),
+    'j_pt[2]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{3rd leading jet}',           regions='trig_only, baseline', logY=True),
+    'j_pt[3]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{4th leading jet}',           regions='trig_only, baseline', logY=True),
+    'j_pt'            : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Jet p_{T}',                         regions='baseline, baseline_emu, baseline_mue'),
     'mjj'             : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='Dijet mass',                        regions='baseline'),
     'dEtaJJ'          : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#Delta#eta(j0,j1)',                 regions='baseline'),
-    'j_eta'           : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='Jet #eta',                          regions='baseline'),
+    'j_eta'           : HistOp1D(nBinsX=100, x0=-5.0, x1=5.0,   xUnits='',    xLabel='Jet #eta',                          regions='baseline, baseline_emu, baseline_mue'),
     'j_jvt'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Jet JVT',                           regions='baseline'),
     'j_jvf'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Jet JVF',                           regions='baseline'),
     'j_phi'           : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='Jet #phi',                          regions='baseline'),
@@ -424,68 +458,55 @@ HistOpMap = {
     # Leptons
     'preEl_EcaloClus'           : HistOp1D(nBinsX=50, x0= 0,   x1=50, xUnits='GeV', xLabel='E_{preEl CaloCluster}',          regions='no_sel', add_overflow=False),
     'preEl_etaCaloClus'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0, xUnits='',    xLabel='#eta_{preEl CaloCluster}',       regions='no_sel'),
-    'baseEl_etconetopo20'       : HistOp1D(nBinsX=50, x0= -5,   x1=10, xUnits='GeV', xLabel='E_T^{baselineEl} conetopo20' ,   regions='no_sel', logY=True),
-    'baseEl_ptvarcone20'        : HistOp1D(nBinsX=25, x0= -1,   x1=4, xUnits='GeV', xLabel='p_T^{baselineEl} ptvarcone20' ,  regions='no_sel', logY=True),
-    'baseMu_etconetopo20'       : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='E_T^{baselineMu} conetopo20' ,   regions='no_sel'),
-    'baseMu_ptvarcone30'        : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='p_T^{baselineMu} ptvarcone30' ,  regions='no_sel', logY=True),
-    'el1pT_trackclus_ratio'     : HistOp1D(nBinsX=30, x0=0,    x1=3,   xUnits='', xLabel='el_{subleading pT}^{track} / el_{subleading pT}^{cluster}', regions='trig_only, baseline_mue', logY=True),
-
-    'hLT_mu18_mu8noL1'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu18 mu8noL1 trigger',                 regions='baseline'),
-    'hLT_2e12_lhloose_L12EM10VH'       : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='2e12 lhloose L12EM10VH trigger',       regions='baseline'),
-    'hLT_e17_lhloose_mu14'             : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e17 lhloose mu14 trigger',             regions='baseline'),
-    'hLT_mu20_mu8noL1'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu20 mu8noL1 trigger',                 regions='baseline'),
-    'hLT_2e15_lhvloose_L12EM13VH'      : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='2e15 lhvloose L12EM13VH trigger',      regions='baseline'),
-    'hLT_2e17_lhvloose_nod0'           : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='2e17 lhvloose nod0 trigger',           regions='baseline'),
-    'hLT_mu22_mu8noL1'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu22 mu8noL1 trigger',                 regions='baseline'),
-    'hLT_e17_lhloose_nod0_mu14'        : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e17 lhloose nod0 mu14 trigger',        regions='baseline'),
-    'hLT_e60_lhmedium'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e60 lhmedium trigger',                 regions='baseline'),
-    'hLT_e24_lhmedium_L1EM20VH'        : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e24 lhmedium L1EM20VH trigger',        regions='baseline'),
-    'hLT_e24_lhmedium_iloose_L1EM18VH' : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e24 lhmedium iloose L1EM18VH trigger', regions='baseline'),
-    'hLT_mu20_iloose_L1MU15'           : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu20 iloose L1MU15 trigger',           regions='baseline'),
-    'hLT_mu24_imedium'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 imedium trigger',                 regions='baseline'),
-    'hLT_mu26_imedium'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu26 imedium trigger',                 regions='baseline'),
-    'hLT_e24_lhtight_nod0_ivarloose'   : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e24 lhtight nod0 ivarloose trigger',   regions='baseline'),
-    'hLT_e26_lhtight_nod0_ivarloose'   : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e26 lhtight nod0 ivarloose trigger',   regions='baseline'),
-    'hLT_e60_lhmedium_nod0'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e60 lhmedium nod0 trigger',            regions='baseline'),
-    'hLT_e120_lhloose'                 : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e120 lhloose trigger',                 regions='baseline'),
-    'hLT_e140_lhloose_nod0'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='e140 lhloose nod0 trigger',            regions='baseline'),
-    'hLT_mu24_iloose'                  : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 iloose trigger',                  regions='baseline'),
-    'hLT_mu24_iloose_L1MU15'           : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 iloose L1MU15 trigger',           regions='baseline'),
-    'hLT_mu24_ivarloose'               : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 ivarloose trigger',               regions='baseline'),
-    'hLT_mu24_ivarloose_L1MU15'        : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 ivarloose L1MU15 trigger',        regions='baseline'),
-    'hLT_mu24_ivarmedium'              : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu24 ivarmedium trigger',              regions='baseline'),
-    'hLT_mu26_ivarmedium'              : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu26 ivarmedium trigger',              regions='baseline'),
-    'hLT_mu50'                         : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5, xUnits='', xLabel='mu50 trigger',                         regions='baseline')
+    'baseEl_etconetopo20'       : HistOp1D(nBinsX=50, x0= -7,   x1=15, xUnits='GeV', xLabel='E_{T}^{baselineEl} conetopo20' ,   regions='no_sel', logY=True),
+    'baseEl_ptvarcone20'        : HistOp1D(nBinsX=25, x0= -1,   x1=4, xUnits='GeV', xLabel='p_{T}^{baselineEl} ptvarcone20' ,  regions='no_sel', logY=True),
+    'baseMu_etconetopo20'       : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='E_{T}^{baselineMu} conetopo20' ,   regions='no_sel'),
+    'baseMu_ptvarcone30'        : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='p_{T}^{baselineMu} ptvarcone30' ,  regions='no_sel', logY=True),
+    'el1pT_trackclus_ratio'     : HistOp1D(nBinsX=30, x0=0,    x1=3,   xUnits='', xLabel='el_{subleading pT}^{track} / el_{subleading pT}^{cluster}', regions='trig_only, baseline', logY=True),
 }
 
 vars_to_plot = []
-# Variable to get Yields
-vars_to_plot += ['treatAsYear']
+## Variable to get Yields
+#vars_to_plot += ['treatAsYear']
 
-# Quick Plots
-#vars_to_plot += ["baseEl_etconetopo20", "baseEl_ptvarcone20", "preMu_pt"]
+## Quick Plots
+#vars_to_plot += ['nCentralBJets', 'nCentralLJets', 'j_pt[0]', 'j_pt[1]', 'j_pt[2]', 'j_pt[3]']
+vars_to_plot += ['MLL']
 
-# Trigger Variables
+## Z CR
+#vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
+
+## Top CR
+#vars_to_plot += ['nCentralBJets', 'Lep0Pt', 'Lep1Pt', 'j_pt[0]', 'j_pt[1]', 'MET']
+
+## Trigger Variables
 #vars_to_plot += ["Lep0Pt", "Lep0Phi", "Lep0Eta", "Lep1Pt", "Lep1Phi", "Lep1Eta"]
 #vars_to_plot += ["El_ID", "Mu_ID", "El_etconetopo20", "El_ptvarcone20", "Mu_ptvarcone30", "Mu_etconetopo20"]
 
-#Baseline Selection
+## Baseline Selection
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL', 'nCentralBJets', 'el1pT_trackclus_ratio']
 
-# Basic Kinematics
-#vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MET', 'j_pt[0]'] 
+## Multiplicity Plots
+#vars_to_plot += ['nCentralLJets', 'nCentralBJets', 'nForwardJets', 'n_leptons']
 
-#Object Definitions Plots
-#vars_to_plot += ['preEl_EcaloClus', 'preEl_etaCaloClus', 'preEl_Et', 'preEl_pt',
+## Basic Kinematics
+#vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MET', 'j_pt', 'Lep0Eta', 'Lep1Eta', 'j_eta',] 
+
+## Object Definitions Plots
+#vars_to_plot += ['n_preLeptons',
+#                'preEl_EcaloClus', 'preEl_etaCaloClus', 'preEl_Et', 'preEl_pt',
 #                'preEl_clusEtaBE', 'preEl_eta', 'baseEl_etconetopo20',
 #                'baseEl_ptvarcone20', 'baseEl_ID', 'el_type', 'el_origin',
 #                'el1_track_pt', 'el1_clus_pt', 
-#                'preMu_pt', 'preMuon_ID', 'baseMu_pt', 'baseMu_eta',
-#                'baseMu_etconetopo20', 'baseMu_ptvarcone30', 'baseMuon_ID',
+#                'preMu_pt', 'preMu_ID', 'baseMu_pt', 'baseMu_eta',
+#                'baseMu_etconetopo20', 'baseMu_ptvarcone30', 'baseMu_ID',
 #                'mu_type', 'mu_origin', 'preTau_q', 'preTau_nTracks',
 #                'baseTau_pT', 'baseTau_eta', 'baseTau_nTracks', 'baseTau_ID',
 #                'tau_pT', 'taulep1_pT_ratio', 'preJet_pt', 'preJet_eta',
 #                'preJet_JVT', 'baseJet_eta', 'baseJet_mv2c10']
+
+# Remove duplicate names
+vars_to_plot = list(set(vars_to_plot))
 
 for var in vars_to_plot:
     ops = HistOpMap[var]

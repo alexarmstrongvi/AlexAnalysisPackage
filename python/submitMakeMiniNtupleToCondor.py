@@ -65,7 +65,7 @@ def main() :
                 if not any(dsid in dataset for dsid in missing_dsids):
                     continue
             else:
-                if not any(dsid in dataset for dsid in g.get_all_dsids()):
+                if not any(str(dsid) in dataset for dsid in g.get_all_dsids()):
                     continue
 
             print "    > %s"%dataset
