@@ -1142,7 +1142,7 @@ int main(int argc, char* argv[])
   }
 
   // Jet Variables
-  JetVector baseJets, signalJets, centralLightJets, centralBJets, forwardJets;
+  JetVector baseJets, signalJets, lightJets, BJets, forwardJets;
   TLorentzVector JetP4, Jet1, Jet0;
 
   *cutflow << [&](Superlink* sl, var_void*) {
@@ -1157,16 +1157,16 @@ int main(int argc, char* argv[])
         }
     }
     for (auto& jet : baseJets) {
-          if (sl->tools->m_jetSelector->isCentralLight(jet))  {
-               centralLightJets.push_back(jet);
-          } else if (sl->tools->m_jetSelector->isCentralB(jet)) {
-              centralBJets.push_back(jet);
+          if (sl->tools->m_jetSelector->isLight(jet))  {
+               lightJets.push_back(jet);
+          } else if (sl->tools->m_jetSelector->isB(jet)) {
+              BJets.push_back(jet);
           } else if (sl->tools->m_jetSelector->isForward(jet))  {
               forwardJets.push_back(jet);
           }
     }
-    std::sort(centralLightJets.begin()  , centralLightJets.end()  , comparePt);
-    std::sort(centralBJets.begin()      , centralBJets.end()      , comparePt);
+    std::sort(lightJets.begin()  , lightJets.end()  , comparePt);
+    std::sort(BJets.begin()      , BJets.end()      , comparePt);
     std::sort(forwardJets.begin()       , forwardJets.end()       , comparePt);
   };
 
@@ -1208,21 +1208,21 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
 
-  *cutflow << NewVar("number of central light jets"); {
-    *cutflow << HFTname("nCentralLJets");
-    *cutflow << [](Superlink* sl, var_int*) -> int { return sl->tools->numberOfCLJets(*sl->baseJets)/*(*baseJets)*/; };
+  *cutflow << NewVar("number of light jets"); {
+    *cutflow << HFTname("nLJets");
+    *cutflow << [](Superlink* sl, var_int*) -> int { return sl->tools->numberOfLJets(*sl->baseJets)/*(*baseJets)*/; };
     *cutflow << SaveVar();
   }
 
-  *cutflow << NewVar("number of central b jets"); {
-    *cutflow << HFTname("nCentralBJets");
-    *cutflow << [](Superlink* sl, var_int*) -> int { return sl->tools->numberOfCBJets(*sl->baseJets)/*(*baseJets)*/; };
+  *cutflow << NewVar("number of B jets"); {
+    *cutflow << HFTname("nBJets");
+    *cutflow << [](Superlink* sl, var_int*) -> int { return sl->tools->numberOfBJets(*sl->baseJets)/*(*baseJets)*/; };
     *cutflow << SaveVar();
   }
 
   *cutflow << NewVar("b-tagged jet"); {
     *cutflow << HFTname("Btag");
-    *cutflow << [](Superlink* sl, var_bool*) -> bool { return sl->tools->numberOfCBJets(*sl->baseJets) > 0;};
+    *cutflow << [](Superlink* sl, var_bool*) -> bool { return sl->tools->numberOfBJets(*sl->baseJets) > 0;};
     *cutflow << SaveVar();
   }
 
@@ -1316,13 +1316,13 @@ int main(int argc, char* argv[])
     *cutflow << SaveVar();
   }
 
-  *cutflow << NewVar("jet flavor (0: NA, 1: CL, 2: CB, 3: F)"); {
+  *cutflow << NewVar("jet flavor (0: NA, 1: L, 2: B, 3: F)"); {
     *cutflow << HFTname("j_flav");
     *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
       vector<double> out; int flav = 0;
       for(auto& jet : baseJets) {
-        if(sl->tools->m_jetSelector->isCentralLight(jet))  { flav = 1; }
-        else if(sl->tools->m_jetSelector->isCentralB(jet)) { flav = 2; }
+        if(sl->tools->m_jetSelector->isLight(jet))  { flav = 1; }
+        else if(sl->tools->m_jetSelector->isB(jet)) { flav = 2; }
         else if(sl->tools->m_jetSelector->isForward(jet))  { flav = 3; }
         out.push_back(flav);
         flav=0;
@@ -1337,7 +1337,7 @@ int main(int argc, char* argv[])
   *cutflow << [&](Superlink* /*sl*/, var_void*) {
     preLeptons.clear(); baseLeptons.clear();signalLeptons.clear();
     baseJets.clear();signalJets.clear();
-    centralLightJets.clear();centralBJets.clear();forwardJets.clear();
+    lightJets.clear();BJets.clear();forwardJets.clear();
     lepID_n = 0; lepAntiID_n = 0;
     lepton0_idx = -1, lepton1_idx = -1; 
     lepID_vec.clear(); lepAntiID_vec.clear(); 

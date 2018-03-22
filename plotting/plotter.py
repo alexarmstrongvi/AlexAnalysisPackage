@@ -305,7 +305,7 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
             cmd = "%s>>+%s"%(plot.xVariable, hx.GetName())
             b.tree.Draw(cmd, cut * sel)
 
-            g = r.TGraphErrors()
+            gr = r.TGraphErrors()
 
             for i in range(hx.GetNbinsX()) :
                 hy = pu.th1d("h_" + b.treename + "_" + hist_name_y, "", 100, -200, 200,  plot.y_label, "")
@@ -318,20 +318,20 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
                 b.tree.Draw(cmd, cut * sel)
                 rms = hy.GetRMS()
                 rms_err = hy.GetRMSError()
-                g.SetPoint(i, hx.GetBinCenter(i+1), rms)
-                g.SetPointError(i, 0.5*hx.GetBinWidth(i+1), rms_err)
+                gr.SetPoint(i, hx.GetBinCenter(i+1), rms)
+                gr.SetPointError(i, 0.5*hx.GetBinWidth(i+1), rms_err)
                 hy.Delete()
 
-            g.SetMarkerStyle(8)
-            g.SetMarkerSize(1.15 * g.GetMarkerSize())
-            g.SetMarkerColor(r.TColor.GetColor("#E67067"))
-            g.GetYaxis().SetRangeUser(plot.y_range_min, plot.y_range_max)
+            gr.SetMarkerStyle(8)
+            gr.SetMarkerSize(1.15 * gr.GetMarkerSize())
+            gr.SetMarkerColor(r.TColor.GetColor("#E67067"))
+            gr.GetYaxis().SetRangeUser(plot.y_range_min, plot.y_range_max)
 
-            g.Draw("ap")
+            gr.Draw("ap")
             r.gPad.Update()
-            g.Draw("ap")
-            g.GetYaxis().SetTitle(plot.y_label)
-            g.GetXaxis().SetTitle(plot.x_label)
+            gr.Draw("ap")
+            gr.GetYaxis().SetTitle(plot.y_label)
+            gr.GetXaxis().SetTitle(plot.x_label)
 
 
     if plot.sample == "Data" :
@@ -371,20 +371,20 @@ def make_1dprofileRMS(plot, reg, data, backgrounds ) :
             data.tree.Draw(cmd, cut * sel)
             rms = hy.GetRMS()
             rms_err = hy.GetRMSError()
-            g.SetPoint(i, hx.GetBinCenter(i+1), rms)
-            g.SetPointError(i, 0.5*hx.GetBinWidth(i+1), rms_err)
+            gr.SetPoint(i, hx.GetBinCenter(i+1), rms)
+            gr.SetPointError(i, 0.5*hx.GetBinWidth(i+1), rms_err)
             hy.Delete()
 
-        g.SetMarkerStyle(8)
-        g.SetMarkerSize(1.15 * g.GetMarkerSize())
-        g.SetMarkerColor(r.TColor.GetColor("#5E9AD6"))
-        g.GetYaxis().SetRangeUser(plot.y_range_min, plot.y_range_max)
+        gr.SetMarkerStyle(8)
+        gr.SetMarkerSize(1.15 * gr.GetMarkerSize())
+        gr.SetMarkerColor(r.TColor.GetColor("#5E9AD6"))
+        gr.GetYaxis().SetRangeUser(plot.y_range_min, plot.y_range_max)
 
-        g.Draw("ap")
+        gr.Draw("ap")
         r.gPad.Update()
-        g.Draw("ap")
-        g.GetYaxis().SetTitle(plot.y_label)
-        g.GetXaxis().SetTitle(plot.x_label)
+        gr.Draw("ap")
+        gr.GetYaxis().SetTitle(plot.y_label)
+        gr.GetXaxis().SetTitle(plot.x_label)
 
     pu.draw_text_on_top(text="%s : #bf{%s}"%(plot.name, name_on_plot))
     c.Update()
@@ -577,6 +577,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
 
         # cut and make the sample weighted, applying the scale_factor
         weight_str = "eventweight"
+        #weight_str = "1"
         # weight_str = ""
         # if add_scale_factors :
         #     if "fakes" in b.name :
@@ -611,7 +612,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         # Yield +/- stat error
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
-        n_total_sm_yield += float(integral)
+        if not b.isSignal():
+            n_total_sm_yield += float(integral)
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
         #print "%s: %.2f +/- %.2f"%(b.name, integral, stat_err)
 
@@ -1268,21 +1270,26 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
     #order the histos
     histos = sorted(histos, key=lambda h: h.Integral(), reverse=False)
     for h in histos :
+        print "Adding hist %s with %.2f events"%(hist_name, h.Integral(0,-1))
+        h.Scale(1/h.Integral())
         stack.Add(h)
-    maximum = stack.GetMaximum()
-    y_scale = 1 + 2.0/3.0
-    if maximum:
-        log_round = int(math.ceil(math.log10(maximum)))
-        logy_max = 10**(math.ceil(log_round*y_scale))
-        liny_max = maximum*y_scale
-    else:
-        log_round = 10
-        liny_max = 10
-
-    y_max = logy_max if ploy.doLogY else liny_max
-
-    stack.SetMaximum(y_max)
+    # draw the MC stack and do cosmetics
     stack.SetMinimum(plot.y_range_min)
+
+    # Determine y range for plot
+    max_mult = 2.0 if any([b.isSignal() for b in backgrounds]) else 1.66
+
+    maxy = stack.GetMaximum()
+    if not plot.isLog() :
+        hax.SetMaximum(max_mult*maxy)
+        hax.Draw()
+        stack.SetMaximum(max_mult*maxy)
+    else :
+        hax.SetMaximum(1e3*plot.y_range_max)
+        hax.Draw()
+        stack.SetMaximum(1e3*plot.y_range_max)
+    print "stackMax = ", maxy
+    stack.SetMaximum(1)
     c.Update()
 
     #### DATA
@@ -1301,13 +1308,13 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
         print "\t%9s : %10.2f +/- %6.2f"%('Data', integral, stat_err)
 
     #g = pu.th1_to_tgraph(hd)
-    g = None
+    gr = None
     if data :
-        g = pu.convert_errors_to_poisson(hd)
-        g.SetLineWidth(2)
-        g.SetMarkerStyle(20)
-        g.SetMarkerSize(1.1)
-        g.SetLineColor(1)
+        gr = pu.convert_errors_to_poisson(hd)
+        gr.SetLineWidth(2)
+        gr.SetMarkerStyle(20)
+        gr.SetMarkerSize(1.1)
+        gr.SetLineColor(1)
         leg.AddEntry(g, "Data", "p")
 
     # signals
@@ -1373,8 +1380,8 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
         sh.Draw("hist same")
 
 
-    if g :
-        g.Draw("option same pz")
+    if gr :
+        gr.Draw("option same pz")
     leg.Draw()
 
     pu.draw_text_on_top(text=plot.name)
@@ -1384,7 +1391,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
     c.Update()
     r.gPad.RedrawAxis()
 
-    outname = plot.name + ".eps"
+    outname = plot.name + "_test.eps"
     c.SaveAs(outname)
     out = g.plots_dir + g_outdir
     out = os.path.normpath(out)
@@ -1471,11 +1478,11 @@ def make_plots2D(plot, reg, data, backgrounds) :
     #r.TGaxis.SetMaxDigits(2)
     #h.GetZaxis().SetLabelSize(0.75 * h.GetLabelSize())
 
-    g = r.TGraph2D(1)
-    g.SetMarkerStyle(r.kFullSquare)
-    g.SetMarkerSize(2.0 * g.GetMarkerSize())
-    g.SetHistogram(h)
-    g.Draw(plot.style)
+    gr = r.TGraph2D(1)
+    gr.SetMarkerStyle(r.kFullSquare)
+    gr.SetMarkerSize(2.0 * gr.GetMarkerSize())
+    gr.SetHistogram(h)
+    gr.Draw(plot.style)
 
     h.Draw(plot.style)
 

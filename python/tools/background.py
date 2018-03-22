@@ -127,6 +127,16 @@ class Background :
         chain = r.TChain(tree_name)
         chain.Add(self.file)
         self.tree = chain
+    
+    def set_chain_from_file_list(self, file_list, directory):
+        """
+        Provide a list of file names for the background process
+        and this will look in 'directory' for those exact files
+        """
+        chain = r.TChain("superNt")
+        for f in file_list:
+            chain.Add(directory+f)
+        self.tree = chain
 
     def set_chain_from_list(self, list, directory, dsid_ = "") :
         '''
@@ -469,6 +479,16 @@ class Data :
         infile = r.TFile.Open(self.file)
         chain = r.TChain(name)
         chain.Add(self.file)
+        self.tree = chain
+    
+    def set_chain_from_file_list(self, file_list, directory):
+        """
+        Provide a list of file names for the background process
+        and this will look in 'directory' for those exact files
+        """
+        chain = r.TChain("superNt")
+        for f in file_list:
+            chain.Add(directory+f)
         self.tree = chain
 
     def set_chain_from_list(self, list, directory) :

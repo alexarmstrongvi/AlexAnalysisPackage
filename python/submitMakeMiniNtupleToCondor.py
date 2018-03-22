@@ -8,7 +8,7 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
 # Where to submit condor jobs
 doBrick       = True 
 doLocal       = False 
