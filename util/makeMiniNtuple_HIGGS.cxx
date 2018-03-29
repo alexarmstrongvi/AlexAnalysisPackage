@@ -212,11 +212,11 @@ int main(int argc, char* argv[])
   // Pass that with "<<" into the dereferenced cutflow object.
 
   // xTauFW Cut
-  *cutflow << CutName("xTau: 2 Loose Leptons") << [&](Superlink* sl) -> bool {
+  *cutflow << CutName("xTau: 2+ Loose Leptons") << [&](Superlink* sl) -> bool {
       uint nLooseLeptons = 0;
       for (const auto* mu : *sl->preMuons) {if (mu->loose) nLooseLeptons++;}
       for (const auto* ele : *sl->preElectrons) {if (ele->looseLLH) nLooseLeptons++;}
-      return nLooseLeptons == 2;
+      return nLooseLeptons >= 2;
   };
 
   int cutflags = 0;
@@ -242,11 +242,11 @@ int main(int argc, char* argv[])
   *cutflow << CutName("2+ leptons") << [](Superlink* sl) -> bool {
       return (sl->leptons->size() >= 2);
   };
-  *cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
-      bool DF = sl->leptons->at(0)->isEle() != sl->leptons->at(1)->isEle();
-      bool OS = sl->leptons->at(0)->q != sl->leptons->at(1)->q;
-      return DF && OS;
-  };
+  //*cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
+  //    bool DF = sl->leptons->at(0)->isEle() != sl->leptons->at(1)->isEle();
+  //    bool OS = sl->leptons->at(0)->q != sl->leptons->at(1)->q;
+  //    return DF && OS;
+  //};
   *cutflow << CutName("pass good vertex") << [&](Superlink* sl) -> bool {
       return (sl->tools->passGoodVtx(cutflags));
   };
