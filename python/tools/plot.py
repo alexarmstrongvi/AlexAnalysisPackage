@@ -15,6 +15,7 @@ class Plot1D :
         self.y_label = "Entries"
         self.doLogY = False
         self.add_overflow = True
+        self.add_underflow = False
         self.leg_is_left = False
         self.leg_is_bottom_right = False
         self.leg_is_bottom_left = False
@@ -80,6 +81,13 @@ class Plot1D :
         """
         Return the canvas
         """
+        ## TODO: Test improved implementation
+        #set_up_canvases = [self.canvas, self.ratioCanvas, self.doubleRatioCanvas]
+        #if sum(x != None for x in set_up_canvases) != 1:
+        #    print "Plot getCanvas ERROR    ",
+        #    print "Attempting to return a non-existent or ill-defined canvas!"
+        #    sys.exit()
+
         set_up_canvases = []
         if self.canvas != None : set_up_canvases.append(self.canvas)
         if self.ratioCanvas != None : set_up_canvases.append(self.ratioCanvas)
@@ -107,7 +115,7 @@ class Plot1D :
         max = self.x_range_max
         min = self.x_range_min
         width = self.x_bin_width
-        nbins = floor( (max - min) / (width) + 0.5 ) 
+        nbins = floor( (max - min) / (width) + 0.5 )
         return nbins
 
     def set_name(self, plotname) :
@@ -135,7 +143,7 @@ class Plot2D :
         self.x_range_min = 0.0
         self.x_range_max = 50.0
         self.y_range_min = 0.0
-        self.y_range_max = 0.0 
+        self.y_range_max = 0.0
         self.do_profile = False
         self.do_profileRMS = False
 
@@ -151,7 +159,7 @@ class Plot2D :
         self.region = region
         self.xVariable = xvar
         self.yVariable = yvar
-        self.name = name 
+        self.name = name
 
     def set_sample(self, sample="") :
         '''
@@ -197,18 +205,18 @@ class Plot2D :
         '''
         self.x_label = x
         self.y_label = y
-         
+
 
     def default_plot_name(self) :
         '''
         Default plot name for 2D plots is of the form:
             <region>_<xVar>_<yVar>
         '''
-        return self.region + "_" + self.xVariable + "_" + self.yVariable 
+        return self.region + "_" + self.xVariable + "_" + self.yVariable
 
     def defaultCanvas(self) :
         c = r.TCanvas("c_" + self.name, "", 800, 600)
-        self.canvas = c 
+        self.canvas = c
 
     def get_n_bins(self, width, min, max) :
         '''
@@ -269,7 +277,7 @@ class RatioCanvas :
 
         # set top margins
         up.SetTopMargin(0.7 * up.GetTopMargin())
-        
+
         # set bottom margins
         up.SetBottomMargin(0.09)
         dn.SetBottomMargin(0.4)
@@ -337,7 +345,7 @@ class DoubleRatioCanvas :
         up.SetTopMargin(0.09)
         mid.SetTopMargin(0.05)
         dn.SetTopMargin(0.02)
-        
+
 
 
         up.Draw()
@@ -349,4 +357,4 @@ class DoubleRatioCanvas :
         self.upper_pad = up
         self.middle_pad = mid
         self.lower_pad = dn
-        
+

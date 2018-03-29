@@ -52,10 +52,10 @@ def th1d(name, title, nbin, nlow, nhigh, xtitle, ytitle) :
     # x-axis
     xaxis = h.GetXaxis()
     xaxis.SetTitle(xtitle)
-    xaxis.SetTitleOffset(1.2 * xaxis.GetTitleOffset()) 
+    xaxis.SetTitleOffset(1.2 * xaxis.GetTitleOffset())
     xaxis.SetTitleFont(font)
     xaxis.SetLabelFont(font)
-    
+
     # y-axis
     yaxis = h.GetYaxis()
     yaxis.SetTitle(ytitle)
@@ -93,7 +93,7 @@ def th1_to_tgraph(hist) :
         ex = hist.GetBinWidth(ibin) / 2.0
         g.SetPoint(ibin-1,x,y)
         g.SetPointError(ibin-1,ex,ex,ey,ey)
-    
+
     return g
 
 def convert_errors_to_poisson(hist, scale=False) :
@@ -114,20 +114,17 @@ def convert_errors_to_poisson(hist, scale=False) :
         if scale :
             print "ASSUMING VARIABLE BIN WIDTH NORMALIZATION IN DATA ERRORS"
             print "value = %.2f  width = %.2f  value*width = %.3f"%(value, width, value*width)
-        
-            value_for_error = value*width 
-            #value_for_error = float(width) / value
+
+            value_for_error = value*width
         if value != 0 :
             error_poisson_up = 0.5 * ROOT.TMath.ChisquareQuantile(1-beta,2*(value_for_error+1))-value_for_error
             error_poisson_down = value_for_error - 0.5*ROOT.TMath.ChisquareQuantile(alpha,2*value_for_error)
-            ex = hist.GetBinWidth(ibin) / 2.0 
+            ex = hist.GetBinWidth(ibin) / 2.0
             ex = 0.0 # removing x error bins
 
             if scale :
                 error_poisson_up = error_poisson_up / width
                 error_poisson_down = error_poisson_down / width
-            
-            #print " %.2f %.2f %.2f %.2f %.2f"%(value, width, value_for_error, error_poisson_up, error_poisson_down)
 
             g.SetPoint(ibin-1, hist.GetBinCenter(ibin), value)
             g.SetPointError(ibin-1, ex, ex, error_poisson_down, error_poisson_up)
@@ -229,12 +226,12 @@ def tgraphAsymmErrors_divide(g_num, g_den) :
             if y_num !=0 and y_den != 0 :
                 e_up = sqrt(ey_num_up*ey_num_up + ey_den_up*ey_den_up)*(y_num/y_den)
                 e_dn = sqrt(ey_num_dn*ey_num_dn + ey_den_dn*ey_den_dn)*(y_num/y_den)
-            g3.SetPointError(iv, ex, ex, e_dn, e_up) 
+            g3.SetPointError(iv, ex, ex, e_dn, e_up)
 
             iv += 1
     return g3
-                
-                
+
+
 def buildRatioErrorBand(g_in, g_out) :
     g_out.SetMarkerSize(0)
     for bin in xrange(g_out.GetN()) :
@@ -289,6 +286,26 @@ def add_overflow_to_lastbin(hist) :
     hist.SetBinError(ilast+1, 0)
     hist.SetBinContent(ilast, lastBinValue+overFlowValue)
     hist.SetBinError(ilast, sqrt(lastBinError*lastBinError + overFlowError*overFlowError))
+
+def add_overflow_to_lastbin(hist) :
+    '''
+    Given an input histogram, add the underflow
+    to the last visible bin
+    '''
+    # find the last bin
+    ifirst = 1
+
+    # read in the values
+    firstBinValue = hist.GetBinContent(ifirst)
+    firstBinError = hist.GetBinError(ifirst)
+    underFlowValue = hist.GetBinContent(ifirst-1)
+    underFlowError = hist.GetBinError(ifirst-1)
+
+    # set the values
+    hist.SetBinContent(ifirst-1, 0)
+    hist.SetBinError(ifirst-1, 0)
+    hist.SetBinContent(ifirst, firstBinValue+underFlowValue)
+    hist.SetBinError(ifirst, sqrt(firstBinError**2 + underFlowError**2))
 
 def divide_histograms(hnum, hden, xtitle, ytitle) :
     '''
@@ -373,7 +390,7 @@ def add_to_band(g1, g2) : #, sys_name) :
             else :
                 eyl = eylow
                 eyl = sqrt(eyl*eyl + y0*y0)
-                #print "    > %s - "%sys_name, eyl 
+                #print "    > %s - "%sys_name, eyl
                 g2.SetPointEYlow(i,eyl)
 
 # ----------------------------------------------
@@ -390,7 +407,7 @@ def th2f(name, title, nxbin, xlow, xhigh, nybin, ylow, yhigh, xtitle, ytitle) :
     return h
 
 
-        
+
 
 # ----------------------------------------------
 #  TLegend Methods
@@ -439,7 +456,7 @@ def set_palette(name="", ncontours=999) :
         stops = [0.00, 0.34, 0.61, 0.84, 1.00]
         red   = [1.00, 0.84, 0.61, 0.34, 0.00]
         green = [1.00, 0.84, 0.61, 0.34, 0.00]
-        blue  = [1.00, 0.84, 0.61, 0.34, 0.00] 
+        blue  = [1.00, 0.84, 0.61, 0.34, 0.00]
 #    elif name == "redbluevector" :
 #        #stops = [0.00, 0.34, 0.61, 0.84, 1.00]
 #        stops = [0.00, 0.17, 0.61, 0.84, 1.00]
@@ -461,11 +478,11 @@ def set_palette(name="", ncontours=999) :
         stops = [0.00, 0.34, 0.61, 0.84, 1.00]
         red   = [0.00, 0.00, 0.87, 1.00, 0.51]
         green = [0.00, 0.81, 1.00, 0.20, 0.00]
-        blue  = [0.51, 1.00, 0.12, 0.00, 0.00] 
+        blue  = [0.51, 1.00, 0.12, 0.00, 0.00]
     s = array.array('d', stops)
     R = array.array('d', red)
     g = array.array('d', green)
     b = array.array('d', blue)
     npoints = len(s)
     ROOT.TColor.CreateGradientColorTable(npoints, s, R, g, b, ncontours)
-    ROOT.gStyle.SetNumberContours(ncontours) 
+    ROOT.gStyle.SetNumberContours(ncontours)
