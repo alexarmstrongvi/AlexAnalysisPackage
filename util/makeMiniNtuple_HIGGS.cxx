@@ -21,11 +21,30 @@
 //#include "SusyNtuple/SusyNtObject.h"
 //#include "SusyNtuple/SusyNtTools.h"
 
-#define ADD_TRIGGER_VAR(trig_name) { \
+#define ADD_1LEP_TRIGGER_VAR(trig_name, lep) { \
   *cutflow << NewVar(#trig_name" trigger bit"); { \
       *cutflow << HFTname(#trig_name); \
-      *cutflow << [](Superlink* sl, var_bool*) -> bool { \
-          return sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); }; \
+      *cutflow << [&](Superlink* sl, var_bool*) -> bool { \
+          if(!lep) return false;\
+          bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
+          if (!trig_fired) return false;\
+          bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
+          return trig_matched; }; \
+      *cutflow << SaveVar(); \
+  } \
+}
+// Trig Matching for dilep triggers is buggy
+// so currently not trigger matching
+#define ADD_2LEP_TRIGGER_VAR(trig_name, lep0, lep1) { \
+  *cutflow << NewVar(#trig_name" trigger bit"); { \
+      *cutflow << HFTname(#trig_name); \
+      *cutflow << [&](Superlink* sl, var_bool*) -> bool { \
+          if(!lep0 || ! lep1) return false;\
+          bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
+          return trig_fired;\
+          if (!trig_fired) return false; \
+          bool trig_matched = sl->tools->triggerTool().dilepton_trigger_match(sl->nt->evt(), lep0, lep1, #trig_name);\
+          return trig_matched; }; \
       *cutflow << SaveVar(); \
   } \
 }
@@ -254,7 +273,8 @@ int main(int argc, char* argv[])
       return (sl->tools->passJetCleaning(sl->baseJets));
   };
   *cutflow << CutName("bad muon veto") << [&](Superlink* sl) -> bool {
-      return (sl->tools->passBadMuon(sl->preMuons));
+      //return (sl->tools->passBadMuon(sl->preMuons));
+      return true;
   };
   *cutflow << CutName("2 leptons") << [](Superlink* sl) -> bool {
       return (sl->leptons->size() == 2);
@@ -308,55 +328,6 @@ int main(int argc, char* argv[])
       *cutflow << [](Superlink* sl, var_double*) -> int { return sl->nt->evt()->treatAsYear; };
       *cutflow << SaveVar();
   }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Trigger Variables
-  // ADD_TRIGGER_VAR preprocessor defined
-  //////////////////////////////////////////////////////////////////////////////
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 2015
-
-  // Dilepton Triggers
-  ADD_TRIGGER_VAR(HLT_e17_lhloose_mu14)
-  ADD_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1)
-  ADD_TRIGGER_VAR(HLT_e7_lhmedium_mu24)
-  ADD_TRIGGER_VAR(HLT_2e12_lhloose_L12EM10VH)
-  // TODO: Add to SusyNts HLT_2mu10)
-
-  // Single Electron Triggers
-  ADD_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH)
-  ADD_TRIGGER_VAR(HLT_e60_lhmedium)
-  ADD_TRIGGER_VAR(HLT_e120_lhloose)
-
-  // Single Muon Triggers
-  ADD_TRIGGER_VAR(HLT_mu20_iloose_L1MU15)
-  ADD_TRIGGER_VAR(HLT_mu40)
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 2016
-
-  // Dilepton Triggers
-  ADD_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14)
-  // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1)
-  ADD_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24)
-  ADD_TRIGGER_VAR(HLT_2e17_lhvloose_nod0)
-  // TODO: Add to SusyNts HLT_2mu14)
-
-  // Single Electron Triggers
-  ADD_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose)
-  ADD_TRIGGER_VAR(HLT_e60_lhmedium_nod0)
-  ADD_TRIGGER_VAR(HLT_e140_lhloose_nod0)
-
-  // Single Muon Triggers
-  ADD_TRIGGER_VAR(HLT_mu26_ivarmedium)
-  ADD_TRIGGER_VAR(HLT_mu50)
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Lepton informtion
-  //////////////////////////////////////////////////////////////////////////////
-
   //////////////////////////////////////////////////////////////////////////////
   // Define some space saving variables
   LeptonVector preLeptons, baseLeptons, signalLeptons;
@@ -364,6 +335,7 @@ int main(int argc, char* argv[])
   MuonVector preMuons, baseMuons, signalMuons;
   TauVector preTaus, baseTaus, signalTaus;
   Susy::Met met;
+  Susy::Lepton *el0, *el1, *mu0, *mu1; 
   *cutflow << [&](Superlink* sl, var_void*) {
     preLeptons = *sl->preLeptons;
     baseLeptons =  *sl->baseLeptons;
@@ -382,7 +354,61 @@ int main(int argc, char* argv[])
     signalTaus = *sl->taus;
 
     met = *sl->met;
+    
+    el0 = signalElectrons.size() >= 1 ? signalElectrons.at(0) : nullptr; 
+    el1 = signalElectrons.size() >= 2 ? signalElectrons.at(1) : nullptr; 
+    mu0 = signalMuons.size() >= 1 ? signalMuons.at(0) : nullptr;
+    mu1 = signalMuons.size() >= 2 ? signalMuons.at(1) : nullptr;
   };
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Trigger Variables
+  // ADD_TRIGGER_VAR preprocessor defined
+  //////////////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
+  // 2015
+
+  // Dilepton Triggers
+  ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_mu14, el0, mu0)
+  ADD_2LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1, el0, mu0)
+  ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_mu24, mu0, el0)
+  ADD_2LEP_TRIGGER_VAR(HLT_2e12_lhloose_L12EM10VH, el0, el1)
+  // TODO: Add to SusyNts HLT_2mu10)
+
+  // Single Electron Triggers
+  ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, el0)
+  ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, el0)
+  ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, el0)
+
+  // Single Muon Triggers
+  ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, mu0)
+  ADD_1LEP_TRIGGER_VAR(HLT_mu40, mu0)
+
+  //////////////////////////////////////////////////////////////////////////////
+  // 2016
+
+  // Dilepton Triggers
+  ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14, el0, mu0)
+  // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1, el0, mu0)
+  ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24, mu0, el0)
+  ADD_2LEP_TRIGGER_VAR(HLT_2e17_lhvloose_nod0, el0, el1)
+  // TODO: Add to SusyNts HLT_2mu14)
+
+  // Single Electron Triggers
+  ADD_1LEP_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose, el0)
+  ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium_nod0, el0)
+  ADD_1LEP_TRIGGER_VAR(HLT_e140_lhloose_nod0, el0)
+
+  // Single Muon Triggers
+  ADD_1LEP_TRIGGER_VAR(HLT_mu26_ivarmedium, mu0)
+  ADD_1LEP_TRIGGER_VAR(HLT_mu50, mu0)
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Lepton informtion
+  //////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////
   // Get multiplicity variables
@@ -490,28 +516,12 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& el : baseElectrons) {
-        if (!el->veryLooseLLH) out.push_back(5);
-        else if (el->veryLooseLLH && !el->looseLLHBLayer) out.push_back(4);
-        else if (el->looseLLHBLayer && !el->looseLLH) out.push_back(3);
-        else if (el->looseLLH && !el->mediumLLH) out.push_back(2);
-        else if (el->mediumLLH && !el->tightLLH) out.push_back(1);
-        else if (el->tightLLH) out.push_back(0);
-      }
-      return out;
-    };
-    *cutflow << SaveVar();
-  }
-  *cutflow << NewVar("Electron ID (non-inclusive)"); {
-    *cutflow << HFTname("El_ID");
-    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-      vector<int> out;
-      for (auto& el : signalElectrons) {
-        if (!el->veryLooseLLH) out.push_back(5);
-        else if (el->veryLooseLLH && !el->looseLLHBLayer) out.push_back(4);
-        else if (el->looseLLHBLayer && !el->looseLLH) out.push_back(3);
-        else if (el->looseLLH && !el->mediumLLH) out.push_back(2);
-        else if (el->mediumLLH && !el->tightLLH) out.push_back(1);
-        else if (el->tightLLH) out.push_back(0);
+        if (el->tightLLH) out.push_back(0);
+        else if (el->mediumLLH) out.push_back(1);
+        else if (el->looseLLHBLayer) out.push_back(3);
+        else if (el->looseLLH) out.push_back(2);
+        else if (el->veryLooseLLH) out.push_back(4);
+        else out.push_back(5);
       }
       return out;
     };
@@ -534,6 +544,101 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
       for (auto& el : signalElectrons) {out.push_back(el->mcOrigin); }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Electron ID (non-inclusive)"); {
+    *cutflow << HFTname("El_ID");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for (auto& el : signalElectrons) {
+        if (el->tightLLH) out.push_back(0);
+        else if (el->mediumLLH) out.push_back(1);
+        else if (el->looseLLHBLayer) out.push_back(3);
+        else if (el->looseLLH) out.push_back(2);
+        else if (el->veryLooseLLH) out.push_back(4);
+        else out.push_back(5);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("dRy(sigEl, preMu)"); {
+    *cutflow << HFTname("dRy_sEl_pMu");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {
+        for (auto& mu : preMuons) {
+          out.push_back(el->DeltaRy(*mu));
+        }
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("dRy(sigEl, preMu_shrdTrk)"); {
+    *cutflow << HFTname("dRy_sEl_pMu_shrdtrk");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {
+        for (auto& mu : preMuons) {
+          if(!(el->sharedMuTrk.size()>0)) continue;
+          if(mu->idx > ((int)el->sharedMuTrk.size()-1)) continue;
+          if(el->sharedMuTrk[mu->idx]!=1) continue;
+          out.push_back(el->DeltaRy(*mu));
+        }
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("dRy(sigEl, baseMu not Calo)"); {
+    *cutflow << HFTname("dRy_sEl_bMu_noCalo");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {
+        for (auto& mu : preMuons) {
+          if (!cutflow->nttools().m_muonSelector->isBaseline(mu)) continue;
+          if (cutflow->nttools().isSignal(mu)) continue;
+          if (mu->isCaloTagged) continue;
+          out.push_back(el->DeltaRy(*mu));
+        }
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("dRy(sigEl, baseMu CaloTag)"); {
+    *cutflow << HFTname("dRy_sEl_bMu_Calo");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {
+        for (auto& mu : preMuons) {
+          if (!cutflow->nttools().m_muonSelector->isBaseline(mu)) continue;
+          if (cutflow->nttools().isSignal(mu)) continue;
+          if (!mu->isCaloTagged) continue;
+          out.push_back(el->DeltaRy(*mu));
+        }
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Electron d0sigBSCorr"); {
+    *cutflow << HFTname("el_d0sigBSCorr");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {out.push_back(el->d0sigBSCorr); }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Electron z0SinTheta"); {
+    *cutflow << HFTname("el_z0SinTheta");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& el : signalElectrons) {out.push_back(el->z0SinTheta()); }
       return out;
     };
     *cutflow << SaveVar();
@@ -576,6 +681,7 @@ int main(int argc, char* argv[])
   }
   //////////////////////////////////////////////////////////////////////////////
   // PreMuons
+
   *cutflow << NewVar("preMuon pt"); {
     *cutflow << HFTname("preMu_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
@@ -585,16 +691,26 @@ int main(int argc, char* argv[])
     };
     *cutflow << SaveVar();
   }
+  *cutflow << NewVar("isCaloTagged"); {
+    *cutflow << HFTname("isCaloTagged");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for (auto& mu : preMuons) { out.push_back(mu->isCaloTagged);}
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+
   *cutflow << NewVar("PreMuon ID (non-inclusive)"); {
     *cutflow << HFTname("preMu_ID");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& mu : preMuons) {
-        if (!mu->veryLoose) out.push_back(4);
-        else if (mu->veryLoose && !mu->loose) out.push_back(3);
-        else if (mu->loose && !mu->medium) out.push_back(2);
-        else if (mu->medium && !mu->tight) out.push_back(1);
-        else if (mu->tight) out.push_back(0);
+        if (mu->tight) out.push_back(0);
+        else if (mu->medium) out.push_back(1);
+        else if (mu->loose) out.push_back(2);
+        else if (mu->veryLoose) out.push_back(3);
+        else out.push_back(4); 
       }
       return out;
     };
@@ -644,11 +760,11 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
       for (auto& mu : baseMuons) {
-        if (!mu->veryLoose) out.push_back(4);
-        else if (mu->veryLoose && !mu->loose) out.push_back(3);
-        else if (mu->loose && !mu->medium) out.push_back(2);
-        else if (mu->medium && !mu->tight) out.push_back(1);
-        else if (mu->tight) out.push_back(0);
+        if (mu->tight) out.push_back(0);
+        else if (mu->medium) out.push_back(1);
+        else if (mu->loose) out.push_back(2);
+        else if (mu->veryLoose) out.push_back(3);
+        else out.push_back(4); 
       }
       return out;
     };
@@ -686,6 +802,24 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
       for (auto& mu : signalMuons) {out.push_back(mu->mcOrigin); }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Muon d0sigBSCorr"); {
+    *cutflow << HFTname("mu_d0sigBSCorr");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& mu : signalMuons) {out.push_back(mu->d0sigBSCorr); }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("Muon z0SinTheta"); {
+    *cutflow << HFTname("mu_z0SinTheta");
+    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      vector<double> out;
+      for (auto& mu : signalMuons) {out.push_back(mu->z0SinTheta()); }
       return out;
     };
     *cutflow << SaveVar();
@@ -758,6 +892,24 @@ int main(int argc, char* argv[])
 
   //////////////////////////////////////////////////////////////////////////////
   // Signal Leptons
+  *cutflow << NewVar("Lepton Iso (non-inclusive)"); {
+    *cutflow << HFTname("Lep_Iso");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for (auto& lep : signalLeptons) {
+        bool flag = false;
+        out.push_back(-1); // for tracking all entries and normalizing bins
+        if (lep->isoGradient){flag=true, out.push_back(0);}
+        if (lep->isoGradientLoose){flag=true, out.push_back(1);}
+        if (lep->isoLoose){flag=true, out.push_back(2);}
+        if (lep->isoLooseTrackOnly){flag=true, out.push_back(3);}
+        if (lep->isoFixedCutTightTrackOnly){flag=true; out.push_back(4);}
+        if (!flag) out.push_back(5); 
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
   *cutflow << NewVar("lepton pt"); {
     *cutflow << HFTname("l_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {

@@ -36,6 +36,8 @@ def main():
     out_files = [x for x in log_files if x.endswith('.out')]
     dsid_list = open(missing_dsid_file,'r').readlines()
 
+    assert len(dsid_list), "No DSIDs found in %s"%missing_dsid_file
+
     for dsid in dsid_list: 
         dsid = dsid.strip()
         found_dsid = False
