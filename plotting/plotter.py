@@ -445,7 +445,7 @@ def make_1dprofile(plot, reg, data, backgrounds) :
         data.tree.Draw(cmd, cut * sel, "prof")
         h.SetMarkerColor(r.TColor.GetColor("#5E9AD6"))
 
-  #  r.TGaxis.SetMaxDigits(2)
+    #  r.TGaxis.SetMaxDigits(2)
     h.GetYaxis().SetTitleOffset(1.6 * h.GetYaxis().GetTitleOffset())
     h.GetXaxis().SetTitleOffset(1.2 * h.GetXaxis().GetTitleOffset())
     h.SetMarkerStyle(8)
@@ -629,7 +629,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         rcan.upper_pad.Update()
 
     if not len(histos):
-        print "make_plotsRatio ERROR :: All SM hists are empty"
+        print "make_plotsRatio ERROR :: All SM hists are empty. Skipping"
+        return
     yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
 
     # Order the hists by total events
@@ -1171,7 +1172,7 @@ def make_plotsComparison(plot, reg, data, backgrounds) :
     print "%s saved to : %s"%(outname, os.path.abspath(fullname))
 
 def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=True):
-        '''
+    '''
     Make a stack plot of all backgrounds and data (if defined)
 
     param:
@@ -1211,21 +1212,23 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
     hax.SetMaximum(plot.y_range_max)
-    hax.GetXaxis().SetTitle(plot.x_label)
-    hax.GetXaxis().SetTitleFont(42)
-    hax.GetXaxis().SetLabelFont(42)
-    hax.GetXaxis().SetLabelSize(0.035)
-    hax.GetXaxis().SetTitleSize(0.048 * 0.85)
-    hax.GetXaxis().SetLabelOffset(1.15 * 0.02)
-    hax.GetXaxis().SetTitleOffset(0.85 * xax.GetTitleOffset())
+    xax = hax.GetXaxis()
+    xax.SetTitle(plot.x_label)
+    xax.SetTitleFont(42)
+    xax.SetLabelFont(42)
+    xax.SetLabelSize(0.035)
+    xax.SetTitleSize(0.048 * 0.85)
+    xax.SetLabelOffset(1.15 * 0.02)
+    xax.SetTitleOffset(1.5 * xax.GetTitleOffset())
 
-    hax.GetYaxis().SetTitle(plot.y_label)
-    hax.GetYaxis().SetTitleFont(42)
-    hax.GetYaxis().SetLabelFont(42)
-    hax.GetYaxis().SetTitleOffset(1.4)
-    hax.GetYaxis().SetLabelOffset(0.013)
-    hax.GetYaxis().SetLabelSize(1.2 * 0.035)
-    hax.GetYaxis().SetTitleSize(0.055 * 0.85)
+    yax = hax.GetYaxis()
+    yax.SetTitle(plot.y_label)
+    yax.SetTitleFont(42)
+    yax.SetLabelFont(42)
+    yax.SetTitleOffset(1.4)
+    yax.SetLabelOffset(0.013)
+    yax.SetLabelSize(1.2 * 0.035)
+    yax.SetTitleSize(0.055 * 0.85)
     hax.Draw("AXIS")
     can.Update()
 
@@ -1290,7 +1293,8 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         can.Update()
 
     if not len(histos):
-        print "make_plotsRatio ERROR :: All SM hists are empty"
+        print "make_plotsRatio ERROR :: All SM hists are empty. Skipping"
+        return
 
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
@@ -1300,9 +1304,6 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     can.Update()
 
     yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
-        leg.AddEntry(h, b.displayname, "f")
-        histos.append(h)
-        can.Update()
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
@@ -1418,22 +1419,22 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     max_mult = 2.0 if any([b.isSignal() for b in backgrounds]) else 1.66
     if data:
         maxy = max(hd.GetMaximum(), stack.GetMaximum())
-    else
+    else:
         maxy = stack.GetMaximum()
     if not plot.isLog() :
         hax.SetMaximum(max_mult*maxy)
         hax.Draw()
-        rcan.upper_pad.Update()
+        can.Update()
         stack.SetMaximum(max_mult*maxy)
     else :
         hax.SetMaximum(1e3*plot.y_range_max)
         hax.Draw()
-        rcan.upper_pad.Update()
+        can.Update()
         stack.SetMaximum(1e3*plot.y_range_max)
 
     # Add stack to canvas
     stack.Draw("HIST SAME")
-    rcan.upper_pad.Update()
+    can.Update()
 
     # symmetrize the errors
     for i in xrange(nominalAsymErrors.GetN()) :
@@ -1526,7 +1527,8 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     # Finalize the plot
 
     # draw the data graph
-    gdata.Draw("option same pz 0")
+    if data:
+        gdata.Draw("option same pz 0")
 
     # draw the legend
     leg.Draw()
