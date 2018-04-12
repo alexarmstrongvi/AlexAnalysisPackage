@@ -9,6 +9,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 
 #include <cmath>
+#include <limits.h>
 
 // analysis include(s)
 #include "Superflow/Superflow.h"
@@ -140,7 +141,7 @@ int main(int argc, char* argv[])
         n_events = atoi(optarg);
         break;
       case 'f':
-        add_fakes = true;
+        do_fakes = true;
         break;
       case 'h':
         usage("makeMiniNtuple");
@@ -165,7 +166,7 @@ int main(int argc, char* argv[])
   for (int index = optind; index < argc; index++)
     printf ("makeMiniNtuple\t Non-option argument %s\n", argv[index]);
   if (input_file==nullptr) {
-    printf("makeMiniNtuple\t An input file must be provided with option -f (a list, a DIR or single file)\n");
+    printf("makeMiniNtuple\t An input file must be provided with option -i (a list, a DIR or single file)\n");
     return 0;
   }
 
@@ -176,7 +177,7 @@ int main(int argc, char* argv[])
   printf("makeMiniNtuple\t   Flags:\n");
   printf("makeMiniNtuple\t     Input file (-i)         : %s\n",input_file);
   printf("makeMiniNtuple\t     Number of events (-n)   : %i\n",n_events );
-  printf("makeMiniNtuple\t     Adding fakes (-f)       : %i\n",add_fakes );
+  printf("makeMiniNtuple\t     Adding fakes (-f)       : %i\n",do_fakes );
   printf("makeMiniNtuple\t =================================================================\n");
   //////////////////////////////////////////////////////////////////////////////
 
@@ -264,11 +265,9 @@ int main(int argc, char* argv[])
     *cutflow << CutName("nBaselineLep = nSignalLep") << [](Superlink* sl) -> bool {
         return (sl->leptons->size() == sl->baseLeptons->size());
     };
-  }
-  *cutflow << CutName("2+ leptons") << [](Superlink* sl) -> bool {
-      return (sl->leptons->size() >= 2);
-  };
-  if (!do_fakes) {
+    *cutflow << CutName("2+ leptons") << [](Superlink* sl) -> bool {
+        return (sl->leptons->size() >= 2);
+    };
     //*cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
     //    bool DF = sl->leptons->at(0)->isEle() != sl->leptons->at(1)->isEle();
     //    bool OS = sl->leptons->at(0)->q != sl->leptons->at(1)->q;
@@ -293,7 +292,6 @@ int main(int argc, char* argv[])
         return (sl->taus->size() == 0);
     };
   }
-
   //////////////////////////////////////////////////////////////////////////////
   //
   // Variables stored in output nTuple
@@ -1002,6 +1000,7 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("leptons sign product"); {
     *cutflow << HFTname("LepLepSign");
     *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
+      if (signalLeptons.size() < 2) return -INT_MAX;
       return signalLeptons.at(0)->q*signalLeptons.at(1)->q;
     };
     *cutflow << SaveVar();
@@ -1137,6 +1136,7 @@ int main(int argc, char* argv[])
       else if(signalLeptons.at(0)->isMu() && signalLeptons.at(1)->isEle()){return 1;}  // mu e  case
       else if(signalLeptons.at(0)->isEle() && signalLeptons.at(1)->isEle()){return 2;} // e e   case
       else if(signalLeptons.at(0)->isMu() && signalLeptons.at(1)->isMu()){return 3;}   // mu mu case
+      return 4;
     };
     *cutflow << SaveVar();
   }
@@ -1486,12 +1486,12 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////////////
   // Fake variables
   //////////////////////////////////////////////////////////////////////////////
+  vector<int> lepID_vec, lepAntiID_vec;
+  uint lepID_n = 0, lepAntiID_n = 0;
+  int antiID_idx0 = -1, antiID_idx1 = -1;
   if (do_fakes) {
     ////////////////////////////////////////////////////////////////////////////
     // Useful variables
-    uint lepID_n = 0, lepAntiID_n = 0;
-    vector<int> lepID_vec, lepAntiID_vec;
-    int antiID_idx0 = -1, antiID_idx1 = -1;
 
     // ID Leptons
     *cutflow << [&](Superlink* /*sl*/, var_void*) {
@@ -1499,7 +1499,7 @@ int main(int argc, char* argv[])
         bool lepID_bool = false;
         if (lepton->isEle()) {
           const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(lepton);
-          lepID_bool = cutflow->nttools().m_electronSelector->isSignal(el);
+          lepID_bool = cutflow->nttools().m_electronSelector->isSignal(ele);
         } else if (lepton->isMu()) {
           const Susy::Muon* mu = dynamic_cast<const Susy::Muon*>(lepton);
           lepID_bool = cutflow->nttools().m_muonSelector->isSignal(mu);
@@ -1536,22 +1536,22 @@ int main(int argc, char* argv[])
         bool lepAntiID_bool = pt_pass && eta_pass && OR_pass
                               && passedAntiID_cuts && !passedID_cuts;
         lepAntiID_vec.push_back(lepAntiID_bool);
-        if(lepAntiID_bool) lepAntiID_n++;
+        if(lepAntiID_bool) ++lepAntiID_n;
       }
       std::vector<int>::iterator begin = lepAntiID_vec.begin();
       std::vector<int>::iterator end = lepAntiID_vec.end();
       if (lepAntiID_n >= 1) {
-        antiID_idx0 = std::find(begin, end, 1) - begin;
+        antiID_idx0 = std::find(begin, end, true) - begin;
       }
       if (lepAntiID_n >= 2) {
-        antiID_idx1 = std::find(begin + antiID_idx0 + 1, end, 1) - begin;
+        antiID_idx1 = std::find(begin + antiID_idx0 + 1, end, true) - begin;
       }
     };
     TLorentzVector LepFake0, LepFake1;
     *cutflow << [&](Superlink* /*sl*/, var_void*) {
-      if(lepAntiID_n >= 1) LepFake0 = preLeptons.at(antiID_idx0);
-      if(lepAntiID_n >= 2) LepFake1 = preLeptons.at(antiID_idx1);
-    }
+      if(lepAntiID_n >= 1) LepFake0 = *preLeptons.at(antiID_idx0);
+      if(lepAntiID_n >= 2) LepFake1 = *preLeptons.at(antiID_idx1);
+    };
     //////////////////////////////////////////////////////////////////////////////
     // Variables
     *cutflow << NewVar("Lepton ID status (ID(1), antiID(-1))"); {
@@ -1612,7 +1612,7 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("delta R of Z and aID-Lepton"); {
       *cutflow << HFTname("dR_Zl");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-        if (lepAntiID_n < 1) return -DBL_MAX;
+        if (lepAntiID_n < 1 || signalLeptons.size() < 2) return -DBL_MAX;
         return LepFake0.DeltaR(dileptonP4); };
       *cutflow << SaveVar();
     }
@@ -1620,27 +1620,28 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("delta R of ID-lepton and aID-lepton"); {
       *cutflow << HFTname("aID_drll");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-        if (lepAntiID_n < 1) return -DBL_MAX;
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
         return LepFake0.DeltaR(lepton0); };
       *cutflow << SaveVar();
     }
     *cutflow << NewVar("aID-dilepton flavor"); {
       *cutflow << HFTname("aID_dilep_flav");
       *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if(lepAntiID_n < 1) return -INT_MAX;
+        if(lepAntiID_n < 1 || signalLeptons.size() < 1) return -INT_MAX;
         auto* fakelep0 = preLeptons.at(antiID_idx0);
         auto* lep0 = signalLeptons.at(0);
         if(fakelep0->isEle() && lep0->isMu()){return 0;}       // e mu  case
         else if(fakelep0->isMu() && lep0->isEle()){return 1;}  // mu e  case
         else if(fakelep0->isEle() && lep0->isEle()){return 2;} // e e   case
         else if(fakelep0->isMu() && lep0->isMu()){return 3;}   // mu mu case
+        return 4;
       };
       *cutflow << SaveVar();
     }
     *cutflow << NewVar("ID-aID collinear mass, M_coll"); {
       *cutflow << HFTname("aID_MCollASym");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-        if (lepAntiID_n < 1) return -DBL_MAX;
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
         double deta = fabs(LepFake0.Eta()-lepton0.Eta());
         double dphi = LepFake0.DeltaPhi(lepton0);
         return sqrt(2*LepFake0.Pt()*(lepton0.Pt()+met.Et)*(cosh(deta)-cos(dphi)));
@@ -1650,21 +1651,21 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("mass of ID-aID-dilepton system, M_ll"); {
       *cutflow << HFTname("aID_MLL");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-        if (lepAntiID_n < 1) return -DBL_MAX;
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
         return (LepFake0+lepton0).M(); };
       *cutflow << SaveVar();
     }
     *cutflow << NewVar("Pt of ID-aID-dilepton system, Pt_ll"); {
       *cutflow << HFTname("aID_ptll");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-        if (lepAntiID_n < 1) return -DBL_MAX;
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
         return (LepFake0+lepton0).Pt(); };
       *cutflow << SaveVar();
     }
     *cutflow << NewVar("diff_pt between ID-aID-leptons"); {
       *cutflow << HFTname("aID_dpt_ll");
       *cutflow << [&](Superlink* /*sl*/, var_float*) -> double {
-          if (lepAntiID_n < 1) return -DBL_MAX;
+          if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
           return LepFake0.Pt() - lepton0.Pt();
       };
       *cutflow << SaveVar();
@@ -1710,6 +1711,7 @@ int main(int argc, char* argv[])
         else if(fakelep0->isMu() && fakelep1->isEle()){return 1;}  // mu e  case
         else if(fakelep0->isEle() && fakelep1->isEle()){return 2;} // e e   case
         else if(fakelep0->isMu() && fakelep1->isMu()){return 3;}   // mu mu case
+        return 4;
       };
       *cutflow << SaveVar();
     }
@@ -1764,6 +1766,11 @@ int main(int argc, char* argv[])
     preTaus.clear(); baseTaus.clear(); signalTaus.clear();
     preJets.clear(); baseJets.clear(); signalJets.clear();
     lightJets.clear(); BJets.clear(); forwardJets.clear();
+    if (do_fakes) {
+        lepID_vec.clear(); lepAntiID_vec.clear();
+        lepID_n = 0; lepAntiID_n = 0;
+        antiID_idx0 = -1; antiID_idx1 = -1;
+    }
   };
 
   ///////////////////////////////////////////////////////////////////////
