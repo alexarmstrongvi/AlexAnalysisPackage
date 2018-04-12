@@ -80,7 +80,8 @@ def draw_text_on_top(text="", size=0.04, pushright=1.0, pushup=1.0) :
 
 def th1_to_tgraph(hist) :
     '''
-    The provided histogram is turned into a TGraphErrors object
+    The provided histogram is turned :q
+    into a TGraphErrors object
     '''
 
     g = ROOT.TGraphAsymmErrors()
