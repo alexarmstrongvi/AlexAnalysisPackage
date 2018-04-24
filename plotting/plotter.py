@@ -561,7 +561,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     avoid_bkg = []
     #h_nom_fake = None
 
-    n_total_sm_yield = 0.
+    n_total_sm_yield = n_total_sm_error = 0.
     hists_to_clear = []
 
     # Add MC backgrounds to stack
@@ -617,6 +617,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         integral = h.IntegralAndError(0,-1,stat_err)
         if not b.isSignal():
             n_total_sm_yield += float(integral)
+            n_total_sm_error += float(stat_err)
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
 
         # Add overflow
@@ -631,7 +632,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     if not len(histos):
         print "make_plotsRatio ERROR :: All SM hists are empty. Skipping"
         return
-    yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
+    #yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
+    yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
@@ -666,6 +668,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # print "length of tmp_leg_histos = %d"%len(tmp_leg_histos)
 
 
+
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
 
@@ -697,7 +700,8 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # print the yield +/- stat error
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
-    yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    #yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    yield_tbl.append("%10s: %.2f"%('Data',integral))
     yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
     #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
@@ -743,7 +747,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     for h in histos_for_leg :
         name_for_legend = ""
         for b in backgrounds :
-            if b.treename in h.GetName() :
+            if b.treename in h.GetName()[7:] : #TESTING
                 name_for_legend = b.displayname
         leg.AddEntry(h, name_for_legend, "f")
 
@@ -1250,6 +1254,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     #h_nom_fake = None
 
     n_total_sm_yield = 0.
+    n_total_sm_error = 0.
     hists_to_clear = []
 
     # Add MC backgrounds to stack
@@ -1280,6 +1285,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         integral = h.IntegralAndError(0,-1,stat_err)
         if not b.isSignal():
             n_total_sm_yield += float(integral)
+            n_total_sm_error += float(stat_err)
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
 
         if plot.add_overflow:
@@ -1303,7 +1309,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         stack.Add(h)
     can.Update()
 
-    yield_tbl.append("%10s: %.2f"%('Total SM', n_total_sm_yield))
+    yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
@@ -1374,7 +1380,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
 
         stat_rr = r.Double(0.0)
         integral = h.IntegralAndError(0,-1, stat_err)
-        print "\t%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
+        #print "\t%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
 
         # add overflow
         if plot.add_overflow:
@@ -1555,10 +1561,12 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         out = g.plots_dir + g_outdir
         utils.mv_file_to_dir(outname, out, True)
         fullname = out + "/" + outname
-        print "%s saved to : %s"%(outname, os.path.abspath(fullname))
+        #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
+        #return True 
     else:
-        return can, stack, gdata, nominalAsymErrors
-
+        #return can, stack, gdata, nominalAsymErrors
+        print "HEY"
+    print "End of plotsStack"
 ################################################################################
 def make_plots2D(plot, reg, data, backgrounds) :
 
