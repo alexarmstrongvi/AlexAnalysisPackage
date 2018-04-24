@@ -15,7 +15,7 @@ hours_left=${time_left:12:2}
 #min_left=${time_left:15:2}
 #sec_left=${time_left:18:2}
 
-if [ -z "$X509_USER_PROXY" ]; then
+if [ -z "$time_left" ]; then
     echo -e "\nSetting up grid proxy"
     voms-proxy-init -voms atlas -valid 96:00
 elif [ "$hours_left" == "00" ]; then

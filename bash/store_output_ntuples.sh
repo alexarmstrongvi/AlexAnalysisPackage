@@ -14,17 +14,23 @@ function usage()
     echo -e "Move flat ntuples from outputs into ntuples directory\n"
     echo "./store_output_ntuples.sh"
     echo -e "\t-h --help"
+    echo -e "\t-a : Add to name of output directories [mc_date -> mc_<input>_data]\n"
     echo -e "\t--update : move flat ntuples into current directory instead of new directory\n"
 }
 
 update=false
+name_mod=""
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
     VALUE=`echo $1 | awk -F= '{print $2}'`
+    echo "$PARAM -> $VALUE"
     case $PARAM in
         -h | --help)
             usage
             return 1
+            ;;
+        -a)
+            name_mod="_${VALUE}"
             ;;
         --update)
             update=true
@@ -43,7 +49,8 @@ if [ "$update" = false ]; then
     echo "Creating data and MC directories"
     for group in "data" "mc"; do
         DATE=`date +%Y_%m_%d`
-        DIR="${group}_${DATE}/"
+        DIR="${group}${name_mod}_${DATE}/"
+        echo "$DIR"
         if [ -d "$DIR" ] && [ "$(ls -A ${DIR})" ]; then
             echo "$DIR is already filled"
             cd $dir
@@ -59,8 +66,10 @@ else
 fi
 cd $ANALYSIS_DIR/analysis_run
 # Order is important
-mv outputs/CENTRAL_physics_Main_??????.root ntuples/data/
-mv outputs/CENTRAL_??????.root ntuples/mc/
+mv outputs/CENTRAL_physics_Main_*.root ntuples/data/
+
+mv outputs/CENTRAL_*.root ntuples/mc/
+rm outputs/RunCondorSF.sh outputs/submitFile_TEMPLATE.condor
 
 cd $dir
 echo "Ready for plotting"

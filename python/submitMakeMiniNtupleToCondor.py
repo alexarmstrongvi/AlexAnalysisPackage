@@ -8,7 +8,13 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+
+# Run analysis with fake configuration
+do_wjets_fakes      = False 
+do_zjets_fakes      = True
+assert not (do_wjets_fakes and do_zjets_fakes)
+
 # Where to submit condor jobs
 doBrick       = True 
 doLocal       = False 
@@ -76,6 +82,11 @@ def main() :
             if "mc15_13TeV" in dataset.split("/")[-1]:
                 if "_" in dataset.split("/")[-1].split(".")[3]:
                     suffix = dataset.split("/")[-1].split(".")[3].split("_")[-1]
+            if do_zjets_fakes:
+                suffix = '-f zjets -s zjets'
+            elif do_wjets_fakes:
+                suffix = '-f wjets -s wjets'
+            
 
             if not (str(os.path.abspath(out_dir)) == str(os.environ['PWD'])) :
                 print "You must call this script from the output directory where the ntuples will be stored!"
@@ -95,7 +106,7 @@ def main() :
             run_cmd += ' %s '%tarred_dir
             run_cmd += ' %s '%dataset
             if "-1" not in suffix:
-                run_cmd += ' -s %s '%(suffix) # any extra cmd line optino for Superflow executable
+                run_cmd += ' %s '%(suffix) # any extra cmd line optino for Superflow executable
             run_cmd += '"'
             run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
             lname = dataset.split("/")[-1].replace(".txt", "")
@@ -106,6 +117,7 @@ def main() :
 
             print run_cmd
             subprocess.call(run_cmd, shell=True)
+    subprocess.call("condor_q $USER", shell=True)
 
 def look_for_tarball() :
     if not os.path.isfile("area.tgz") :
@@ -181,8 +193,8 @@ def look_for_condor_executable() :
     f.write('source setRestFrames.sh\n')
     f.write('echo "Calling : cd ${work_dir}"\n')
     f.write('cd ${work_dir}\n')
-    f.write('echo "Calling : ${sflow_exec} -f ${input} ${sflow_options}"\n')
-    f.write('${sflow_exec} -f ${input} ${sflow_options}\n')
+    f.write('echo "Calling : ${sflow_exec} -i ${input} ${sflow_options}"\n')
+    f.write('${sflow_exec} -i ${input} ${sflow_options}\n')
     f.write('echo "final directory structure:"\n')
     f.write('ls -ltrh\n')
     f.close()

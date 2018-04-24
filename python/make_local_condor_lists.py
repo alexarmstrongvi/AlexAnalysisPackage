@@ -14,7 +14,7 @@ License:
 import sys, os, traceback, argparse
 import time
 import global_variables as g
-import python_tools as tools
+import pyToolsBasic as tools
 import subprocess
 
 ################################################################################
@@ -44,8 +44,6 @@ def main ():
                         check_spot = name.find(search_str)+len(search_str)
                         return name[check_spot]
                     sample = sorted(matched_files, key=get_tag_ver)[-1]
-                    print "TESTING :: Matched Files = ", matched_files
-                    print "TESTING :: Selected Sample =", sample
                 # Create list file for condor
                 group_dir = "%s/"%group 
                 sample_dir = "%s_nt/"%sample

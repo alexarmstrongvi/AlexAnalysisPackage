@@ -288,7 +288,7 @@ def add_overflow_to_lastbin(hist) :
     hist.SetBinContent(ilast, lastBinValue+overFlowValue)
     hist.SetBinError(ilast, sqrt(lastBinError*lastBinError + overFlowError*overFlowError))
 
-def add_overflow_to_lastbin(hist) :
+def add_underflow_to_lastbin(hist) :
     '''
     Given an input histogram, add the underflow
     to the last visible bin
