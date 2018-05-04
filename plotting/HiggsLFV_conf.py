@@ -322,7 +322,7 @@ zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
+#zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
 #zjets_FF_CR_add += ' && !(l_type[2] == 2 || l_type == 6)' # Not Isolepton 
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}

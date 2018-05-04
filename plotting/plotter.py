@@ -513,10 +513,9 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
 
     # Canvases
     rcan = plot.ratioCanvas
-    rcan.canvas.cd()
-    rcan.upper_pad.cd()
-    rcan.upper_pad, stack, gdata, nominalAsymErrors = make_plotsStack(
+    rcan.upper_pad, stack, g_data, nominalAsymErrors = make_plotsStack(
         plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=True)
+
 
     # get the total SM histo
     h_sm = stack.GetStack().Last().Clone("h_sm")
@@ -557,7 +556,6 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     pu.draw_line(plot.x_range_min, 1.5, plot.x_range_max, 1.5,style=3,width=1)
 
     # convert to tgraphs to get the ratio
-    g_data = pu.convert_errors_to_poisson(hd)
     g_sm = pu.th1_to_tgraph(h_sm)
     g_ratio = pu.tgraphAsymmErrors_divide(g_data, g_sm)
 
@@ -725,7 +723,7 @@ def make_plotsComparison(plot, reg, data, backgrounds) :
     fullname = out + "/" + outname
     print "%s saved to : %s"%(outname, os.path.abspath(fullname))
 
-def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=True):
+def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=False):
     '''
     Make a stack plot of all backgrounds and data (if defined)
 
@@ -746,7 +744,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
     returns canvas
     '''
     # Sanity Check
-    assert !for_ratio or data, "ERROR :: Need data for ratio plot"
+    assert not for_ratio or data, "ERROR :: Need data for ratio plot"
 
     print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
 
@@ -754,7 +752,12 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
     # Intialize plot components
 
     # Canvas
-    can = plot.canvas
+    if for_ratio:
+        plot.ratioCanvas.canvas.cd()
+        can = plot.ratioCanvas.upper_pad
+        can.cd()
+    else:
+        can = plot.canvas
     can.cd()
     can.SetFrameFillColor(0)
     can.SetFillColor(0)
@@ -823,7 +826,6 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
 
     # Add MC backgrounds to stack
     for b in backgrounds :
-        if s.isSignal() : continue
         # Initilize histogram
         h_name_tmp = re.sub(r'[(){}[\]]+','',plot.variable)
         h_name = "h_"+reg.name+'_'+b.treename+"_"+h_name_tmp
@@ -834,7 +836,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
 
         h.SetLineColor(b.color)
         h.GetXaxis().SetLabelOffset(-999)
-        if s.isSignal():
+        if b.isSignal():
             h.SetLineWidth(2)
             h.SetLineStyle(2)
             h.SetFillStyle(0)
@@ -868,8 +870,8 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
             pu.add_underflow_to_firstbin(h)
 
         # Record all and non-empty histograms
-        if not b.isSignal():
-            leg_sig.AddEntry(h, s.displayname, "l")
+        if b.isSignal():
+            leg_sig.AddEntry(h, b.displayname, "l")
             sig_histos.append(h)
         else:
             all_histos.append(h)
@@ -877,7 +879,8 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=Tru
         can.Update()
 
     if not len(histos):
-        print "make_plotsStack ERROR :: All SM hists are empty. Skipping"
+        print "ERROR :: All SM hists are empty. Skipping"
+        if for_ratio: sys.exit()
         return
 
     # Order the hists by total events
