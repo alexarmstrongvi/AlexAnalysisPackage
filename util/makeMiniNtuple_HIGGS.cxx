@@ -1194,7 +1194,7 @@ int main(int argc, char* argv[])
         using namespace MCTruthPartClassifier;
         
         bool mother_is_el = fabs(M_ID) == 11;
-        bool mother_is_piZero = fabs(M_ID) == 111;
+        //bool mother_is_piZero = fabs(M_ID) == 111;
         bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
         //bool noChargeFlip = M_ID*lepton->q < 0;
         //bool chargeFlip = M_ID*lepton->q > 0;
@@ -1255,10 +1255,10 @@ int main(int argc, char* argv[])
         else if (promptPho) lep_class = 3;
         else if (hadDecay) lep_class = 4;
         // Stand-in while Mother type is not available
-        else if (bkgEl_from_phoConv && mother_is_piZero) lep_class = 5;
-        else if (HF_tau_mu) lep_class = 6;
-        else if (HF_B) lep_class = 7;
-        else if (HF_C) lep_class = 8;
+        //else if (bkgEl_from_phoConv && mother_is_piZero) lep_class = 5;
+        else if (HF_tau_mu) lep_class = 5;
+        else if (HF_B) lep_class = 6;
+        else if (HF_C) lep_class = 7;
         else if (T && O && M_ID) {
             cout << "Unexpected Truth Class: "
                  << "T = " << T << ", "
@@ -1267,6 +1267,7 @@ int main(int argc, char* argv[])
                  << "MO = " << MO << ", "
                  << "M_ID = " << M_ID << endl;
         }
+        if (lep_class == 0 && bkgEl_from_phoConv) lep_class = -1;
         out.push_back(lep_class);
       }
       return out;
