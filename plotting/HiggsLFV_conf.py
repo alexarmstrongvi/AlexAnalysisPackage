@@ -148,7 +148,7 @@ wgamma.set_fillStyle(0)
 wgamma.setLineStyle(1)
 wgamma.set_color(ROOT.kOrange-1)
 wgamma.set_treename("w_gamma")
-wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], rawdir)
+#wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], rawdir)
 
 ## Higgs -> tau tau
 htt = background.Background("htt", "H#tau#tau")
@@ -179,14 +179,13 @@ signal.scale_factor = lumi_ * signal_branching_ratio * signal_SF
 signal.set_fillStyle(0)
 signal.set_color(ROOT.kGreen)
 signal.set_treename("signal")
-signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_rawdir)
+#signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_rawdir)
 
 
 #### DATA
 data = background.Data()
 data.set_color(ROOT.kBlack)
 data.set_treename("data")
-#data.set_chain_from_list_CONDOR(filelist_dir + "data/", data_rawdir)
 data.set_chain_from_list_CONDOR2([filelist_dir + "data15/", filelist_dir + "data16/"] , [data_rawdir,data_rawdir])
 
 
@@ -277,7 +276,7 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 reg = region.Region()
 reg.name = "no_sel"
 reg.displayname = "No Selections"
-reg.tcut = DF_OS
+reg.tcut = '1' #DF_OS
 regions.append(reg)
 
 reg = region.Region()
@@ -320,12 +319,11 @@ zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
 zjets_FF_CRnum_base = 'nLepID == 3'
 zjets_FF_CR_add = '70 < Z_MLL && Z_MLL < 110'
 zjets_FF_CR_add += ' && nBJets == 0'
+zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-FF_CR_eee_ch = 'Z_dilep_flav==2 && Z_Lep2_flav==1'
-FF_CR_mme_ch = 'Z_dilep_flav==2 && Z_Lep2_flav==1'
-FF_CR_eem_ch = 'Z_dilep_flav==3 && Z_Lep2_flav==0'
-FF_CR_mmm_ch = 'Z_dilep_flav==3 && Z_Lep2_flav==0'
+zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
+#zjets_FF_CR_add += ' && !(l_type[2] == 2 || l_type == 6)' # Not Isolepton 
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
@@ -430,8 +428,8 @@ plots = []
 vars = {}
 
 ### Define variables for plots
-HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY,   xUnits, xLabel, yLabel, add_overflow, add_underflow')
-HistOp1D.__new__.__defaults__=   ('baseline', 12,     -2,  10, None, None, False,  '',     '',     'Events', True, False)
+HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY, norm   xUnits, xLabel, yLabel, add_overflow, add_underflow')
+HistOp1D.__new__.__defaults__=   ('baseline', 12,     -2,  10, None, None, False, False, '',     '',     'Events', True, False)
 
 HistOpMap = {
     # Event level
@@ -486,10 +484,13 @@ HistOpMap = {
     'l_flav'          : HistOp1D(nBinsX=5,  x0=-0.5, x1=4.5,   xUnits='',    xLabel='Lepton flavor (0: e, 1: m)',        regions='baseline'),
     'l_type'          : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Lepton type',                       regions='baseline, baseline_emu, baseline_mue', logY=True),
     'l_origin'        : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Lepton origin',                     regions='baseline, baseline_emu, baseline_mue', logY=True),
-    'l_type[0]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Lepton type',                       regions='baseline, baseline_emu, baseline_mue', logY=True),
-    'l_origin[0]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Lepton origin',                     regions='baseline, baseline_emu, baseline_mue', logY=True),
-    'l_type[1]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Lepton type',                       regions='baseline, baseline_emu, baseline_mue', logY=True),
-    'l_origin[1]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Lepton origin',                     regions='baseline, baseline_emu, baseline_mue', logY=True),
+    'l_BkgMotherPdgId' : HistOp1D(nBinsX=41,  x0=-20.5, x1=20.5,    xUnits='',    xLabel='Lepton Mother PdgID', logY=True, add_underflow=True),
+    'l_type[0]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Leading Z Lepton type', logY=True),
+    'l_origin[0]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Leading Z Lepton origin', logY=True),
+    'l_type[1]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Subleading Z Lepton type', logY=True),
+    'l_origin[1]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Subleading Z Lepton origin', logY=True),
+    'l_type[2]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Fake Candidate Lepton type',  logY=True),
+    'l_origin[2]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Fake Candidate Lepton origin', logY=True),
     'Lep_Iso'         : HistOp1D(nBinsX=9,  x0=-1.5, x1=7.5,   xUnits='',    xLabel='Lepton Isolation (non-inclusive)', regions='baseline'),
     'l_q'             : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Lepton charge',                     regions='baseline'),
     'LepLepSign'      : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leptons sign product',              regions='baseline'),
@@ -580,8 +581,8 @@ HistOpMap = {
     'dR_Zl'               : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Z dilepton flavor', logY=True),
     'Z2_dilep_flav'       : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='2nd Z dilepton flavor', logY=True),
-    #'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=True),
-    'Z_Lep2_pT'         : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
+    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=True),
+    #'Z_Lep2_pT'         : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
     'Z_Lep2_eta'        : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='3rd leading lepton #eta', logY=True),
     'Z_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='Z Dilepton Sign : OS(-1) SS(1)', logY=True),
     'Z2_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='2nd Z Dilepton Sign : OS(-1) SS(1)', logY=True),
@@ -602,7 +603,7 @@ backgrounds.append(zee)
 backgrounds.append(zmumu)
 backgrounds.append(ztt)
 backgrounds.append(wjets)
-backgrounds.append(wgamma)
+#backgrounds.append(wgamma)
 backgrounds.append(htt)
 backgrounds.append(hww)
 #backgrounds.append(signal)
@@ -615,15 +616,17 @@ region_ops = []
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 #region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
 #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
-region_ops += ['baseline_mue', 'baseline_emu']
+region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum_eee']
+#region_ops += ['baseline_mue', 'baseline_emu']
+#region_ops += ['no_sel']
 
 vars_to_plot = []
 ## Variable to get Yields
-vars_to_plot += ['treatAsYear']
+#vars_to_plot += ['treatAsYear']
 
 ## Quick Plots
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt']
-#vars_to_plot += ['Z_Lep2_pT']
+vars_to_plot += ['l_BkgMotherPdgId']
 
 ## Z CR
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
@@ -659,8 +662,10 @@ vars_to_plot += ['treatAsYear']
 #vars_to_plot += ['Lep0Pt', 'aID_Lep0Pt', 'aID_MLL', 'aID_drll', 'aID_Lep0Eta', 'MET']
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL', 'drll', 'Lep1Eta', 'MET', 'dilep_flav', 'LepLepSign']
     # Z+Jets
-#vars_to_plot += ['Z_MLL','nBJets','Z_Lep2_mT']
-#vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_dilep_sign', 'Z2_MLL']
+#vars_to_plot += ['MET','Z_Lep2_mT']
+#vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_MLL']
+#vars_to_plot += ['l_type[0]','l_type[1]','l_type[2]']
+#vars_to_plot += ['l_origin[0]','l_origin[1]','l_origin[2]']
 
 ## Object Definitions Plots
 #vars_to_plot += ['n_preLeptons',
@@ -702,7 +707,6 @@ for var in vars_to_plot:
     #for region in ops.regions.split(','):
     for region in region_ops:
         region = region.strip()
-        print "Plotting for region", region
         p = plot.Plot1D()
         p.initialize(region, var, name="%s_%s"%(region, name_))
         p.doLogY = ops.logY
@@ -711,11 +715,11 @@ for var in vars_to_plot:
         p.xax(bin_width, ops.x0, ops.x1)
         p.yax(y0, y1)
         assert data or backgrounds, "No data or backgrounds defined"
-        if data and backgrounds:
-            p.setRatioCanvas(p.name)
+        if data and backgrounds and not any(x in var for x in ['l_type','l_origin']):
+            p.setRatioCanvas(p.name) 
         else:
             p.setDefaultCanvas(p.name)
             
         plots.append(p)
 
-
+print "Configuration File End"

@@ -8,7 +8,7 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
 
 # Run analysis with fake configuration
 do_wjets_fakes      = False 
@@ -48,6 +48,8 @@ def main() :
         missing_dsids     = []
         missing_dsid_file = open(g.missing_dsids_file)
         for dsid in missing_dsid_file:
+            if not dsid.strip().isdigit(): 
+                continue
             missing_dsids.append(dsid.split('\n')[0])
         missing_dsid_file.close()
     look_for_condor_script(brick_ = doBrick, local_ = doLocal, sdsc_ = doSDSC, uc_ = doUC)
@@ -60,8 +62,8 @@ def main() :
         if not s.endswith("/") : suff = "/"
         sample_lists = glob.glob(filelist_dir + s + suff + "*.txt")
         if len(sample_lists) == 0 :
-            print "No sample lists in filelist dir!"
-            sys.exit()
+            print "WARNING :: No sample lists in filelist dir!"
+            continue
 
         for dataset in sample_lists :
             fullname = str(os.path.abspath(dataset))

@@ -222,13 +222,17 @@ class Background :
             else :
                 print "WARNING :: Unable to find file for DSID =", dataset_id
         
-        # Build TChain from listed flat ntuples 
+        # Build TCvhain from listed flat ntuples 
         chain = r.TChain('superNt')
         if len(bkg_files)==0 :
-            print "ERROR Did not find any files for sample with DSID=%s (looking here: %s)"%(dsid_, raw_directory)
-            sys.exit()
+            if dsid_:
+                print "ERROR Did not find any files for sample with DSID=%s (looking here: %s)"%(dsid_, raw_directory)
+            else:
+                print "ERROR :: Did not find any file for %s (looking here: %s)"%(self.displayname, raw_directory)
+            n_files = -1
+            #sys.exit()
         for n_files, file in enumerate(bkg_files) :
-            print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
+            #print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
             #sys.stdout.flush()
             chain.Add(file)
         print "%10s : ADDED %d FILES"%(self.displayname, n_files+1)
@@ -300,7 +304,7 @@ class Background :
             print "ERROR Did not find any files for sample with DSID=%s (looking here: %s)"%(dsid_, raw_directory)
             sys.exit()
         for n_files, file in enumerate(bkg_files) :
-            print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
+            #print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
             #sys.stdout.flush()
             chain.Add(file)
         print "%10s : ADDED %d FILES"%(self.displayname, n_files+1)
@@ -544,7 +548,7 @@ class Data :
                     break
         chain = r.TChain('superNt')
         for n_files, file in enumerate(bkg_files) :
-            print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
+            #print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
             #sys.stdout.flush()
             chain.Add(file)
         print "%10s : ADDED %d FILES"%(self.displayname, n_files+1)
@@ -580,7 +584,7 @@ class Data :
                 sys.exit()
         chain = r.TChain('superNt')
         for n_files, file in enumerate(bkg_files) :
-            print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
+            #print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
             #sys.stdout.flush()
             chain.Add(file)
         print "%10s : ADDED %d FILES"%(self.displayname, n_files+1)

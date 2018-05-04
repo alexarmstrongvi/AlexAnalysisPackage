@@ -45,7 +45,7 @@ def main() :
         print "Running over " + group
         print "\tFound %d dataset ids"%len(dsids)
         
-        #missing_dsid.write("\n"+"="*10+" Sample:  "+group+"  "+"="*10+"\n\n")
+        missing_dsid.write("\n"+"="*10+" Sample:  "+group+"  "+"="*10+"\n\n")
         root_files = get_files(dsids, directory_with_files)
         print "\tFound %d root files for the process"%len(root_files)
 

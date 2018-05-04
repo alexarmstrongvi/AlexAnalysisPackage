@@ -617,7 +617,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
         integral = h.IntegralAndError(0,-1,stat_err)
         if not b.isSignal():
             n_total_sm_yield += float(integral)
-            n_total_sm_error += float(stat_err)
+            n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
 
         # Add overflow
@@ -1018,6 +1018,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     for i in xrange(nominalAsymErrorsNoSys.GetN()) :
         nominalAsymErrorsNoSys.SetPointError(i-1,0,0,0,0)
     ratio_raw = pu.tgraphAsymmErrors_divide(g_data, nominalAsymErrorsNoSys)
+    #ratio_raw = pu.tgraphAsymmErrors_divide(nominalAsymErrorsNoSys,g_data)
     ratio = r.TGraphAsymmErrors()
 
     x1, y1 = r.Double(0.0), r.Double(0.0)
@@ -1285,7 +1286,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         integral = h.IntegralAndError(0,-1,stat_err)
         if not b.isSignal():
             n_total_sm_yield += float(integral)
-            n_total_sm_error += float(stat_err)
+            n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
 
         if plot.add_overflow:
@@ -1299,7 +1300,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         can.Update()
 
     if not len(histos):
-        print "make_plotsRatio ERROR :: All SM hists are empty. Skipping"
+        print "make_plotsStack ERROR :: All SM hists are empty. Skipping"
         return
 
     # Order the hists by total events
@@ -1310,7 +1311,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     can.Update()
 
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
-
+    
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
 
@@ -1377,7 +1378,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         sel = r.TCut("1")
         cmd = "%s>>+%s"%(plot.variable, h.GetName())
         s.tree.Draw(cmd, cut * sel, "goff")
-
+            
         stat_rr = r.Double(0.0)
         integral = h.IntegralAndError(0,-1, stat_err)
         #print "\t%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
@@ -1728,6 +1729,7 @@ def make_plots(plots, regions, data, backgrounds) :
 
         # EventLists for Backgrounds
         for b in backgrounds :
+            save_cut  = r.TCut(sel*cut)
             list_name = "list_" + reg.name + "_" + b.treename
             save_name = g.event_list_dir + list_name + ".root"
             save_name = os.path.normpath(save_name)
@@ -1737,18 +1739,31 @@ def make_plots(plots, regions, data, backgrounds) :
             b.tree.SetEventList(0)
 
             # check if the list already exists
+            load_eventlist = True
             if os.path.isfile(save_name) :
                 rfile = r.TFile.Open(save_name)
-                list = rfile.Get(list_name)
                 print "%10s : EventList found at %s"%(b.name, save_name)
-                if g_dbg : list.Print()
+                if save_cut != rfile.Get("cut"):
+                    print "EventList cuts have changed. Remaking EventList"
+                    load_eventlist = False 
+            else:
+                load_eventlist = False
+
+            if load_eventlist:
+                list = rfile.Get(list_name)
                 b.tree.SetEventList(list)
-            else :
+                if g_dbg : list.Print()
+            else:
+                print "Creating TEventList for", b.name
+                rfile = r.TFile(save_name,'recreate')
                 draw_list = ">> " + list_name
                 b.tree.Draw(draw_list, sel*cut)
-                list = r.gROOT.FindObject(list_name)
+                list = r.gROOT.FindObject(list_name).Clone()
                 b.tree.SetEventList(list)
-                list.SaveAs(save_name)
+                list.Write(list_name)
+                save_cut.Write("cut")
+                rfile.Close()
+
 
         # systematics trees
         # if g_doSys :

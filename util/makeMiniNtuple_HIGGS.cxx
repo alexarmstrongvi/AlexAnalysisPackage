@@ -17,6 +17,7 @@
 #include "SusyNtuple/ChainHelper.h"
 #include "SusyNtuple/string_utils.h"
 #include "SusyNtuple/KinematicTools.h"
+#include "SusyNtuple/MCTruthClassifierDefs.h"
 //#include "SusyNtuple/SusyNt.h"
 //#include "SusyNtuple/SusyDefs.h"
 //#include "SusyNtuple/SusyNtObject.h"
@@ -242,7 +243,7 @@ int main(int argc, char* argv[])
   // Indices 0 and 1 are closest Z pair
   // Index 2 is leading anti-ID or 3rd leading ID lepton
   // Indices 3 and 4 are second closest Z pair
-  vector<Susy::Lepton*> Zlep(5, nullptr);
+  LeptonVector Zlep(5, nullptr);
   TLorentzVector LepFake0, LepFake1;
 
 
@@ -484,7 +485,7 @@ int main(int argc, char* argv[])
   
   //////////////////////////////////////////////////////////////////////////////
   // Define some space saving variables
-  LeptonVector preLeptons, baseLeptons, signalLeptons;
+  LeptonVector preLeptons, baseLeptons, signalLeptons, selectLeptons;
   ElectronVector preElectrons, baseElectrons, signalElectrons;
   MuonVector preMuons, baseMuons, signalMuons;
   TauVector preTaus, baseTaus, signalTaus;
@@ -494,6 +495,9 @@ int main(int argc, char* argv[])
     preLeptons = *sl->preLeptons;
     baseLeptons =  *sl->baseLeptons;
     signalLeptons = *sl->leptons;
+    
+    if (do_fakes_zjets) selectLeptons = Zlep;
+    else selectLeptons = signalLeptons;
 
     preElectrons = *sl->preElectrons;
     baseElectrons =  *sl->baseElectrons;
@@ -1067,8 +1071,8 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("l_pt");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
-      for (auto& lepton : signalLeptons) {
-        out.push_back(lepton->Pt());
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->Pt());
       }
       return out;
     };
@@ -1078,8 +1082,8 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("l_eta");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
-      for(auto& lepton : signalLeptons) {
-        out.push_back(lepton->Eta());
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->Eta());
       }
       return out;
     };
@@ -1089,8 +1093,8 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("l_phi");
     *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
       vector<double> out;
-      for(auto& lepton : signalLeptons) {
-        out.push_back(lepton->Phi());
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->Phi());
       }
       return out;
     };
@@ -1100,8 +1104,8 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("l_flav");
     *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
       vector<int> out;
-      for(auto& lepton : signalLeptons) {
-        out.push_back(lepton->isEle() ? 0 : 1);
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->isEle() ? 0 : 1);
       }
       return out;
     };
@@ -1109,10 +1113,10 @@ int main(int argc, char* argv[])
   }
   *cutflow << NewVar("lepton type"); {
     *cutflow << HFTname("l_type");
-    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-      vector<double> out;
-      for(auto& lepton : signalLeptons) {
-        out.push_back(lepton->mcType);
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->mcType);
       }
       return out;
     };
@@ -1120,10 +1124,10 @@ int main(int argc, char* argv[])
   }
   *cutflow << NewVar("lepton origin"); {
     *cutflow << HFTname("l_origin");
-    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-      vector<double> out;
-      for(auto& lepton : signalLeptons) {
-        out.push_back(lepton->mcOrigin);
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->mcOrigin);
       }
       return out;
     };
@@ -1131,13 +1135,142 @@ int main(int argc, char* argv[])
   }
   *cutflow << NewVar("lepton charge"); {
     *cutflow << HFTname("l_q");
-    *cutflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-      vector<double> out;
-      for(auto& lepton : signalLeptons) {
-          out.push_back(lepton->q);
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->q);
       }
       return out;
       };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("lepton BkgMotherPdgId"); {
+    *cutflow << HFTname("l_BkgMotherPdgId");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->mcBkgMotherPdgId);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("lepton BkgTruthOrigin"); {
+    *cutflow << HFTname("l_BkgTruthOrigin");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->mcBkgTruthOrigin);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("lepton matched2TruthLepton"); {
+    *cutflow << HFTname("l_matched2TruthLepton");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (lepton) out.push_back(lepton->matched2TruthLepton);
+      }
+      return out;
+    };
+    *cutflow << SaveVar();
+  }
+  *cutflow << NewVar("lepton classification"); {
+    *cutflow << HFTname("l_truthClass");
+    *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+      vector<int> out;
+      for(auto& lepton : selectLeptons) {
+        if (!lepton) continue;
+        // Get Truth information
+        int T = lepton->mcType;
+        int O = lepton->mcOrigin;
+        int MO = lepton->mcBkgTruthOrigin;
+        int MT = 0; // Not stored in SusyNt::Lepton
+        int M_ID = lepton->mcBkgMotherPdgId;
+
+        uint lep_class = 0;
+        using namespace MCTruthPartClassifier;
+        
+        bool mother_is_el = fabs(M_ID) == 11;
+        bool mother_is_piZero = fabs(M_ID) == 111;
+        bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
+        //bool noChargeFlip = M_ID*lepton->q < 0;
+        //bool chargeFlip = M_ID*lepton->q > 0;
+        
+        bool promptEl1 = T==IsoElectron; //&& noChargeFlip;
+        bool promptEl2 = (bkgEl_from_phoConv && mother_is_el); //&& noChargeFlip;
+        bool promptEl3 = bkgEl_from_phoConv && MO==FSRPhot;
+        bool promptEl4 = T==NonIsoPhoton && O==FSRPhot;
+        bool promptEl = promptEl1 || promptEl2 || promptEl3 || promptEl4;
+
+        //bool promptChargeFlipEl1 = T==IsoElectron && chargeFlip;
+        //bool promptChargeFlipEl2 = (bkgEl_from_phoConv && mother_is_el) && chargeFlip;
+        //bool promptChargeFlipEl = promptChargeFlipEl1 || promptChargeFlipEl2;
+        
+        bool promptMuon = T==IsoMuon && (
+            O==top || O==WBoson || O==ZBoson || O==Higgs || O==HiggsMSSM || 
+            O==MCTruthPartClassifier::SUSY || O==DiBoson);
+
+        bool promptPho1 = T==IsoPhoton && O==PromptPhot;
+        bool promptPho2 = bkgEl_from_phoConv && MT==IsoPhoton && MO==PromptPhot;
+        bool promptPho3 = bkgEl_from_phoConv && MT==BkgPhoton && MO==UndrPhot;
+        bool promptPho = promptPho1 || promptPho2 || promptPho3;
+
+        bool hadDecay1 = T==BkgElectron && (
+            O==DalitzDec || O==ElMagProc || O==LightMeson || O==StrangeMeson);
+        bool hadDecay2 = bkgEl_from_phoConv && MT==BkgPhoton && (
+            MO==PiZero || MO==LightMeson || MO==StrangeMeson);
+        bool hadDecay3 = T==BkgPhoton && (O==LightMeson || O==PiZero);
+        bool hadDecay4 = T==BkgMuon && (
+            O==LightMeson || O==StrangeMeson || O==PionDecay || O==KaonDecay);
+        bool hadDecay5 = T==Hadron;
+        bool hadDecay = hadDecay1 || hadDecay2 || hadDecay3 || hadDecay4 || hadDecay5;
+
+        bool HF_tau_mu1 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==TauLep;
+        bool HF_tau_mu2 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==TauLep;
+        bool HF_tau_mu3 =  T==NonIsoMuon && O==TauLep;
+        bool HF_tau_mu4 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==Mu;
+        bool HF_tau_mu5 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==Mu;
+        bool HF_tau_mu =  HF_tau_mu1 || HF_tau_mu2 || HF_tau_mu3 || HF_tau_mu4 || HF_tau_mu5;
+
+        bool HF_B1 = T==NonIsoElectron && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
+        bool HF_B2 = T==BkgPhoton && O==BottomMeson;
+        bool HF_B3 = bkgEl_from_phoConv && MT==BkgPhoton && MO==BottomMeson;
+        bool HF_B4 = (T==IsoMuon || T==NonIsoMuon) && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
+        bool HF_B = HF_B1 || HF_B2 || HF_B3 || HF_B4;
+
+        bool HF_C1 = T==NonIsoElectron && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
+        bool HF_C2 = T==BkgElectron && O==CCbarMeson;
+        bool HF_C3 = T==BkgPhoton && (O==CharmedMeson || O==CCbarMeson);
+        bool HF_C4 = bkgEl_from_phoConv && MT==BkgPhoton && (MO==CharmedMeson || MO==CCbarMeson);
+        bool HF_C5 = T==NonIsoMuon && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
+        bool HF_C6 = (T==IsoMuon || T==BkgMuon) && (O==CCbarMeson || MO==CCbarMeson);
+        bool HF_C =  HF_C1 || HF_C2 || HF_C3 || HF_C4 || HF_C5 || HF_C6;
+
+        if (promptEl) lep_class = 1;
+       // else if (promptChargeFlipEl) lep_class = 2;
+        else if (promptMuon) lep_class = 2;
+        else if (promptPho) lep_class = 3;
+        else if (hadDecay) lep_class = 4;
+        // Stand-in while Mother type is not available
+        else if (bkgEl_from_phoConv && mother_is_piZero) lep_class = 5;
+        else if (HF_tau_mu) lep_class = 6;
+        else if (HF_B) lep_class = 7;
+        else if (HF_C) lep_class = 8;
+        else if (T && O && M_ID) {
+            cout << "Unexpected Truth Class: "
+                 << "T = " << T << ", "
+                 << "O = " << O << ", "
+                 << "MT = " << MT << ", "
+                 << "MO = " << MO << ", "
+                 << "M_ID = " << M_ID << endl;
+        }
+        out.push_back(lep_class);
+      }
+      return out;
+    };
     *cutflow << SaveVar();
   }
   //xTauFW variable
@@ -1991,7 +2124,7 @@ int main(int argc, char* argv[])
   ///////////////////////////////////////////////////////////////////////
   // NOTE!: Superflow assumes this expression is the last to be added. 
   *cutflow << [&](Superlink* /*sl*/, var_void*) {
-    preLeptons.clear(); baseLeptons.clear(); signalLeptons.clear();
+    preLeptons.clear(); baseLeptons.clear(); signalLeptons.clear(), selectLeptons.clear();
     preElectrons.clear(); baseElectrons.clear(); signalElectrons.clear();
     preMuons.clear(); baseMuons.clear(); signalMuons.clear();
     preTaus.clear(); baseTaus.clear(); signalTaus.clear();

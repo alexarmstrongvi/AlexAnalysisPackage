@@ -14,6 +14,7 @@ class Plot1D :
         self.x_label = "x-Label"
         self.y_label = "Entries"
         self.doLogY = False
+        self.doNorm = False
         self.add_overflow = True
         self.add_underflow = False
         self.leg_is_left = False
@@ -66,6 +67,15 @@ class Plot1D :
 
     def isLog(self) :
         return self.doLogY
+
+    def Normalize(self) :
+        '''
+        Set y-axis logarithmic
+        '''
+        self.doNorm = True
+
+    def isNorm(self) :
+        return self.doNorm
 
     def setDefaultCanvas(self, name) :
         c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
