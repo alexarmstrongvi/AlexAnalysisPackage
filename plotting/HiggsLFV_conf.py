@@ -322,7 +322,7 @@ zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
+#zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
 #zjets_FF_CR_add += ' && !(l_type[2] == 2 || l_type == 6)' # Not Isolepton 
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
@@ -485,6 +485,7 @@ HistOpMap = {
     'l_type'          : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Lepton type',                       regions='baseline, baseline_emu, baseline_mue', logY=True),
     'l_origin'        : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Lepton origin',                     regions='baseline, baseline_emu, baseline_mue', logY=True),
     'l_BkgMotherPdgId' : HistOp1D(nBinsX=41,  x0=-20.5, x1=20.5,    xUnits='',    xLabel='Lepton Mother PdgID', logY=True, add_underflow=True),
+    'l_truthClass'    : HistOp1D(nBinsX=12,  x0=-1.5, x1=10.5,    xUnits='',    xLabel='Lepton Truth Classification', logY=True),
     'l_type[0]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Leading Z Lepton type', logY=True),
     'l_origin[0]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Leading Z Lepton origin', logY=True),
     'l_type[1]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Subleading Z Lepton type', logY=True),
@@ -626,7 +627,7 @@ vars_to_plot = []
 
 ## Quick Plots
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt']
-vars_to_plot += ['l_BkgMotherPdgId']
+vars_to_plot += ['l_truthClass[2]']
 
 ## Z CR
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
@@ -684,7 +685,16 @@ vars_to_plot += ['l_BkgMotherPdgId']
 vars_to_plot = list(set(vars_to_plot))
 
 for var in vars_to_plot:
-    ops = HistOpMap[var]
+    
+    # Use vector settings when plotting a specific element of the vector
+    # i.e. lepton_flav[1] uses lepton_flav settings if lepton_flav[1]
+    # is not defined
+    if '[' in var and var not in HistOpMap:
+        var_trim = var.split('[')[0]
+        ops = HistOpMap[var_trim]
+    else:    
+        ops = HistOpMap[var]
+
 
     # Set contingent defaults
     y0_def = 0.1 if ops.logY else 0
