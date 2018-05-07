@@ -114,7 +114,25 @@ void printEventInformation(Superlink* sl) {
   printf("==============================================\n");
   return;
 }
-
+///////////////////////////////////////////////////////////////////////
+// Fake Factor functions
+///////////////////////////////////////////////////////////////////////
+bool isDenomEvt(int nIDlep, int nAntiIDlep, std::string region) {
+  if (region == " - " || region == "wjets") {
+    return nIDlep == 1 && nAntiIDlep > 0;
+  } else if (region == "zjets") {
+    return nIDlep == 2 && nAntiIDlep > 0;
+  } else {
+      cout << "WARNING :: Unrecognized region option: " << region << endl;
+      return false;
+  }
+}
+float applyFakeFactor(float fakeLepPt=-FLT_MAX, float fakeLepEta=-FLT_MAX) {
+  // Currently just a place holder
+  (void) fakeLepPt;
+  (void) fakeLepEta;
+  return 0.1;
+}
 ///////////////////////////////////////////////////////////////////////
 // Main function
 ///////////////////////////////////////////////////////////////////////
@@ -144,7 +162,7 @@ int main(int argc, char* argv[])
         n_events = atoi(optarg);
         break;
       case 'f':
-        do_fakes = optarg;        
+        do_fakes = optarg;
         break;
       case 'h':
         usage("makeMiniNtuple");
@@ -180,6 +198,9 @@ int main(int argc, char* argv[])
   else {
     cout << "makeMiniNtuple\t Unrecognized fake options: " << fake_op << '\n';
     return 0;
+  }
+  if (do_fakes && name_suffix == nullptr) {
+    cout << "WARNING :: running fakes with no output file suffix indicated\n";
   }
 
   // Print information
@@ -233,9 +254,9 @@ int main(int argc, char* argv[])
   // SUPERFLOW METHODS BEGIN HERE
   //
   //////////////////////////////////////////////////////////////////////////////
-  
+
   //////////////////////////////////////////////////////////////////////////////
-  // Initialize relevant fake variables. Set inside cutflow 
+  // Initialize relevant fake variables. Set inside cutflow
   vector<int> lepID_vec, lepAntiID_vec;
   uint lepID_n = 0, lepAntiID_n = 0;
   int antiID_idx0 = -1, antiID_idx1 = -1;
@@ -342,14 +363,14 @@ int main(int argc, char* argv[])
         antiID_idx1 = std::find(begin + antiID_idx0 + 1, end, true) - begin;
         LepFake1 = *sl->baseLeptons->at(antiID_idx1);
       }
-      
-      // Find ID lepton combination with MLL closest to Z-peak 
+
+      // Find ID lepton combination with MLL closest to Z-peak
       float Z_diff = FLT_MAX;
       int zlep_idx2 = -1;
       for (uint ii = 0; ii < sl->leptons->size(); ++ii) {
-          Susy::Lepton *lep_ii = sl->leptons->at(ii); 
+          Susy::Lepton *lep_ii = sl->leptons->at(ii);
           for (uint jj = ii+1; jj < sl->leptons->size(); ++jj) {
-              Susy::Lepton *lep_jj = sl->leptons->at(jj); 
+              Susy::Lepton *lep_jj = sl->leptons->at(jj);
               float Z_diff_cf = fabs((*lep_ii+*lep_jj).M() - 91.2);
               if (Z_diff_cf < Z_diff) {
                   Z_diff = Z_diff_cf;
@@ -359,7 +380,7 @@ int main(int argc, char* argv[])
               }
           }
       }
-      if (sl->leptons->size() == 2 && lepAntiID_n >= 1) { 
+      if (sl->leptons->size() == 2 && lepAntiID_n >= 1) {
         Zlep[2] = sl->baseLeptons->at(antiID_idx0);
       } else if (sl->leptons->size() >= 3) {
         Zlep[2] = sl->leptons->at(zlep_idx2);
@@ -368,10 +389,10 @@ int main(int argc, char* argv[])
       // Exclude ID leptons already matched with Z
       Z_diff = FLT_MAX;
       for (uint ii = 0; ii < sl->baseLeptons->size(); ++ii) {
-          Susy::Lepton *lep_ii = sl->baseLeptons->at(ii); 
+          Susy::Lepton *lep_ii = sl->baseLeptons->at(ii);
           if (lep_ii == Zlep[0] || lep_ii == Zlep[1]) continue;
           for (uint jj = ii+1; jj < sl->baseLeptons->size(); ++jj) {
-              Susy::Lepton *lep_jj = sl->baseLeptons->at(jj); 
+              Susy::Lepton *lep_jj = sl->baseLeptons->at(jj);
               if (lep_jj == Zlep[0] || lep_jj == Zlep[1]) continue;
               float Z_diff_cf = fabs((*lep_ii+*lep_jj).M() - 91.2);
               if (Z_diff_cf < Z_diff) {
@@ -466,7 +487,13 @@ int main(int argc, char* argv[])
   *cutflow << NewVar("event weight"); {
     *cutflow << HFTname("eventweight");
     *cutflow << [](Superlink* sl, var_double*) -> double {
-        return sl->weights->product() * sl->nt->evt()->wPileup;
+        float fakeFactor = 1;
+        cout << "TESTING :: Getting event weight\n";
+        if (isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
+          fakeFactor = applyFakeFactor(LepFake0.Pt());
+          cout << "TESTING :: Is denom event! Getting Fake Factor -> " << fakeFactor << '\n';
+        }
+        return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;
         //return sl->weights->product();
     };
     *cutflow << SaveVar();
@@ -482,7 +509,7 @@ int main(int argc, char* argv[])
       *cutflow << [](Superlink* sl, var_double*) -> int { return sl->nt->evt()->treatAsYear; };
       *cutflow << SaveVar();
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Define some space saving variables
   LeptonVector preLeptons, baseLeptons, signalLeptons, selectLeptons;
@@ -495,7 +522,7 @@ int main(int argc, char* argv[])
     preLeptons = *sl->preLeptons;
     baseLeptons =  *sl->baseLeptons;
     signalLeptons = *sl->leptons;
-    
+
     if (do_fakes_zjets) selectLeptons = Zlep;
     else selectLeptons = signalLeptons;
 
@@ -1192,13 +1219,13 @@ int main(int argc, char* argv[])
 
         uint lep_class = 0;
         using namespace MCTruthPartClassifier;
-        
+
         bool mother_is_el = fabs(M_ID) == 11;
         bool mother_is_piZero = fabs(M_ID) == 111;
         bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
         //bool noChargeFlip = M_ID*lepton->q < 0;
         //bool chargeFlip = M_ID*lepton->q > 0;
-        
+
         bool promptEl1 = T==IsoElectron; //&& noChargeFlip;
         bool promptEl2 = (bkgEl_from_phoConv && mother_is_el); //&& noChargeFlip;
         bool promptEl3 = bkgEl_from_phoConv && MO==FSRPhot;
@@ -1208,9 +1235,9 @@ int main(int argc, char* argv[])
         //bool promptChargeFlipEl1 = T==IsoElectron && chargeFlip;
         //bool promptChargeFlipEl2 = (bkgEl_from_phoConv && mother_is_el) && chargeFlip;
         //bool promptChargeFlipEl = promptChargeFlipEl1 || promptChargeFlipEl2;
-        
+
         bool promptMuon = T==IsoMuon && (
-            O==top || O==WBoson || O==ZBoson || O==Higgs || O==HiggsMSSM || 
+            O==top || O==WBoson || O==ZBoson || O==Higgs || O==HiggsMSSM ||
             O==MCTruthPartClassifier::SUSY || O==DiBoson);
 
         bool promptPho1 = T==IsoPhoton && O==PromptPhot;
@@ -1780,15 +1807,15 @@ int main(int argc, char* argv[])
     };
     *cutflow << NewVar("Number of ID leptons"); {
       *cutflow << HFTname("nLepID");
-      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int { 
-          return lepID_n; 
+      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
+          return lepID_n;
       };
       *cutflow << SaveVar();
     }
     *cutflow << NewVar("Number of Anti-ID leptons"); {
       *cutflow << HFTname("nLepAntiID");
-      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int { 
-          return lepAntiID_n; 
+      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
+          return lepAntiID_n;
       };
       *cutflow << SaveVar();
     }
@@ -1797,7 +1824,7 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("Leading anti-ID lepton charge"); {
       *cutflow << HFTname("aID_Lep0Q");
       *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if (lepAntiID_n < 1) return -INT_MAX; 
+        if (lepAntiID_n < 1) return -INT_MAX;
         auto* fakelep0 = baseLeptons.at(antiID_idx0);
         return fakelep0->q;
         };
@@ -1857,7 +1884,7 @@ int main(int argc, char* argv[])
       *cutflow << HFTname("Z_MLL");
       *cutflow << [&](Superlink* /*sl*/, var_double*) -> double {
         if (signalLeptons.size() < 2) return -DBL_MAX;
-        return (*Zlep[0]+*Zlep[1]).M(); 
+        return (*Zlep[0]+*Zlep[1]).M();
       };
       *cutflow << SaveVar();
     }
@@ -1888,7 +1915,7 @@ int main(int argc, char* argv[])
       *cutflow << [&](Superlink* /*sl*/, var_double*) -> double {
         if (signalLeptons.size() < 2) return -DBL_MAX;
         else if (!Zlep[3] or !Zlep[4]) return -5.0;
-        return (*Zlep[3]+*Zlep[4]).M(); 
+        return (*Zlep[3]+*Zlep[4]).M();
       };
       *cutflow << SaveVar();
     }
@@ -1947,14 +1974,14 @@ int main(int argc, char* argv[])
       *cutflow << [&](Superlink* /*sl*/, var_double*) -> double {
         if (Zlep[2]) return Zlep[2]->DeltaR(*Zlep[0]+*Zlep[1]);
         return -DBL_MAX;
-      }; 
+      };
       *cutflow << SaveVar();
     }
     // W + jets variables
     *cutflow << NewVar("aID-ID dilepton flavor"); {
       *cutflow << HFTname("aID_dilep_flav");
       *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -INT_MAX; 
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -INT_MAX;
         auto* fakelep0 = baseLeptons.at(antiID_idx0);
         auto* lep0 = signalLeptons.at(0);
         if(fakelep0->isEle() && lep0->isMu()){return 0;}       // e mu  case
@@ -1968,10 +1995,10 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("aID-ID sign product"); {
       *cutflow << HFTname("aID_LepLepSign");
       *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -INT_MAX; 
+        if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -INT_MAX;
         auto* fakelep0 = baseLeptons.at(antiID_idx0);
         auto* lep0 = signalLeptons.at(0);
-        return fakelep0->q * lep0->q; 
+        return fakelep0->q * lep0->q;
       };
       *cutflow << SaveVar();
     }
@@ -1996,7 +2023,7 @@ int main(int argc, char* argv[])
       *cutflow << HFTname("aID_MLL");
       *cutflow << [&](Superlink* /*sl*/, var_double*) -> double {
         if (lepAntiID_n < 1 || signalLeptons.size() < 1) return -DBL_MAX;
-        return (LepFake0+lepton0).M(); 
+        return (LepFake0+lepton0).M();
       };
       *cutflow << SaveVar();
     }
@@ -2020,7 +2047,7 @@ int main(int argc, char* argv[])
     // 2 antiID lepton case (QCD)
     *cutflow << NewVar("Subleading anti-ID lepton flavor"); {
       *cutflow << HFTname("aID_Lep1Flav");
-      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int { 
+      *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
           if (lepAntiID_n < 2) return -INT_MAX;
           auto* fakelep1 = baseLeptons.at(antiID_idx1);
           return  fakelep1->isEle() ? 0 : 1;
@@ -2030,7 +2057,7 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("Subleading anti-ID lepton charge"); {
       *cutflow << HFTname("aID_Lep1Q");
       *cutflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if (lepAntiID_n < 2) return -INT_MAX; 
+        if (lepAntiID_n < 2) return -INT_MAX;
         auto* fakelep1 = baseLeptons.at(antiID_idx1);
         return fakelep1->q;
         };
@@ -2122,7 +2149,7 @@ int main(int argc, char* argv[])
   ///////////////////////////////////////////////////////////////////////
   // Clear internal variables
   ///////////////////////////////////////////////////////////////////////
-  // NOTE!: Superflow assumes this expression is the last to be added. 
+  // NOTE!: Superflow assumes this expression is the last to be added.
   *cutflow << [&](Superlink* /*sl*/, var_void*) {
     preLeptons.clear(); baseLeptons.clear(); signalLeptons.clear(), selectLeptons.clear();
     preElectrons.clear(); baseElectrons.clear(); signalElectrons.clear();
@@ -2140,7 +2167,7 @@ int main(int argc, char* argv[])
   };
 
   ///////////////////////////////////////////////////////////////////////
-  // END OF CUTFLOW EXPRESSIONS 
+  // END OF CUTFLOW EXPRESSIONS
   ///////////////////////////////////////////////////////////////////////
 
   ///////////////////////////////////////////////////////////////////////
@@ -2171,3 +2198,4 @@ int main(int argc, char* argv[])
   printf("makeMiniNtuple\t =================================================================\n");
   return 0;
 }
+
