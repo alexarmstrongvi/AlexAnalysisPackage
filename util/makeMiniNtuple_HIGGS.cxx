@@ -1259,6 +1259,7 @@ int main(int argc, char* argv[])
         else if (HF_tau_mu) lep_class = 5;
         else if (HF_B) lep_class = 6;
         else if (HF_C) lep_class = 7;
+        else if (bkgEl_from_phoConv) lep_class = -1;
         else if (T && O && M_ID) {
             cout << "Unexpected Truth Class: "
                  << "T = " << T << ", "
@@ -1267,7 +1268,6 @@ int main(int argc, char* argv[])
                  << "MO = " << MO << ", "
                  << "M_ID = " << M_ID << endl;
         }
-        if (lep_class == 0 && bkgEl_from_phoConv) lep_class = -1;
         out.push_back(lep_class);
       }
       return out;
