@@ -14,6 +14,7 @@
 // analysis include(s)
 #include "Superflow/Superflow.h"
 #include "Superflow/Superlink.h"
+#include "LeptonFakeFactorTools/ApplyFakeFactor.h"
 #include "SusyNtuple/ChainHelper.h"
 #include "SusyNtuple/string_utils.h"
 #include "SusyNtuple/KinematicTools.h"
@@ -257,6 +258,17 @@ int main(int argc, char* argv[])
 
   //////////////////////////////////////////////////////////////////////////////
   // Initialize relevant fake variables. Set inside cutflow
+  std::string path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists.root";
+  std::string el_FF_hist = "h_zjets_FF_CR_e_data_Z_Lep2_pT_minus_bkgd";
+  std::string mu_FF_hist = "h_zjets_FF_CR_m_data_Z_Lep2_pT_minus_bkgd";
+
+  ApplyFakeFactor* m_applyFakeFactorTool = 0;
+  m_applyFakeFactorTool = new ApplyFakeFactor("ApplyFakeFactor_lep");
+  m_applyFakeFactorTool->set_savedFakeFactorFileName(path_to_FF_file);
+  m_applyFakeFactorTool->set_saved_elFakeFactorName(el_FF_hist);
+  m_applyFakeFactorTool->set_saved_muFakeFactorName(mu_FF_hist);
+  m_applyFakeFactorTool->initialize().ignore();
+
   vector<int> lepID_vec, lepAntiID_vec;
   uint lepID_n = 0, lepAntiID_n = 0;
   int antiID_idx0 = -1, antiID_idx1 = -1;
@@ -490,7 +502,7 @@ int main(int argc, char* argv[])
         float fakeFactor = 1;
         cout << "TESTING :: Getting event weight\n";
         if (isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
-          fakeFactor = applyFakeFactor(LepFake0.Pt());
+          fakeFactor = m_applyFakeFactorTool->apply(LepFake0.Pt());
           cout << "TESTING :: Is denom event! Getting Fake Factor -> " << fakeFactor << '\n';
         }
         return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;
