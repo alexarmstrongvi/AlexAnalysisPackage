@@ -329,7 +329,9 @@ num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
              'mme' : ['mumu','e','Z_dilep_flav==3 && Z_Lep2_flav==1'],
              'eem' : ['ee','m','Z_dilep_flav==2 && Z_Lep2_flav==0'],
-             'mmm' : ['mumu','m','Z_dilep_flav==3 && Z_Lep2_flav==0']
+             'mmm' : ['mumu','m','Z_dilep_flav==3 && Z_Lep2_flav==0'],
+             'm' : ['ll','m','Z_Lep2_flav==0'],
+             'e' : ['ll','e','Z_Lep2_flav==1'],
         }
 for num_den, num_den_sel in num_den_dict.iteritems():
     for chan, ops in chan_dict.iteritems():
@@ -617,7 +619,7 @@ region_ops = []
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 #region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
 #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
-region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum_eee']
+region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e', 'zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #region_ops += ['baseline_mue', 'baseline_emu']
 #region_ops += ['no_sel']
 
@@ -627,7 +629,7 @@ vars_to_plot = []
 
 ## Quick Plots
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt']
-vars_to_plot += ['l_truthClass[2]']
+#vars_to_plot += ['l_truthClass[2]']
 
 ## Z CR
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
@@ -667,6 +669,7 @@ vars_to_plot += ['l_truthClass[2]']
 #vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_MLL']
 #vars_to_plot += ['l_type[0]','l_type[1]','l_type[2]']
 #vars_to_plot += ['l_origin[0]','l_origin[1]','l_origin[2]']
+vars_to_plot += ['Z_Lep2_pT']
 
 ## Object Definitions Plots
 #vars_to_plot += ['n_preLeptons',

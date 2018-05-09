@@ -8,7 +8,7 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
 
 # Run analysis with fake configuration
 do_wjets_fakes      = False 

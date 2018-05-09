@@ -486,7 +486,7 @@ int main(int argc, char* argv[])
   }
   *cutflow << NewVar("event weight"); {
     *cutflow << HFTname("eventweight");
-    *cutflow << [](Superlink* sl, var_double*) -> double {
+    *cutflow << [&](Superlink* sl, var_double*) -> double {
         float fakeFactor = 1;
         cout << "TESTING :: Getting event weight\n";
         if (isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
