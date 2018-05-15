@@ -14,6 +14,21 @@ fi
 
 # Setup Root and RootCore
 cd $ANALYSIS_DIR/analysis/
-source $ANALYSIS_DIR/analysis/susynt-read/bash/setup_release.sh
+rootver=6.04.16-x86_64-slc6-gcc49-opt
+echo ""
+echo "Setting up ROOT ${rootver}"
+lsetup "root ${rootver} --skipConfirm"
+
+# if rootcore is already set up, clean up the env
+echo ""
+echo "Setting up RootCore"
+if [ -d "${ROOTCOREDIR}" ]; then
+    source ${ROOTCOREDIR}/scripts/unsetup.sh
+fi
+source RootCoreBin/local_setup.sh
+
+#rc find_packages
+#rc clean
+#rc compile
 
 cd $dir

@@ -14,7 +14,7 @@
 // analysis include(s)
 #include "Superflow/Superflow.h"
 #include "Superflow/Superlink.h"
-#include "LeptonFakeFactorTools/ApplyFakeFactor.h"
+#include "AlexAnalysisPackage/ApplyFakeFactor.h"
 #include "SusyNtuple/ChainHelper.h"
 #include "SusyNtuple/string_utils.h"
 #include "SusyNtuple/KinematicTools.h"
@@ -78,6 +78,7 @@ void usage(std::string progName)
   printf("-i        Input file as *.root, list of *.root in a *.txt,\n");
   printf("          or a DIR/ containing *.root (default: none)\n");
   printf("-f        make fake samples [zjets, wjets]\n");
+  printf("-e        estimate fake samples, applying fake factor\n");
   printf("=================================================================\n");
 }
 
@@ -146,11 +147,12 @@ int main(int argc, char* argv[])
   char *input_file  = nullptr;
   char *name_suffix = nullptr;
   char *do_fakes = nullptr;
+  char *estimate_fakes = nullptr;
   SuperflowRunMode run_mode = SuperflowRunMode::nominal; // SuperflowRunMode::all_syst; //SuperflowRunMode::nominal;
   int c;
 
   opterr = 0;
-  while ((c = getopt (argc, argv, "i:s:n:f:h")) != -1)
+  while ((c = getopt (argc, argv, "i:s:n:e:f:h")) != -1)
     switch (c)
       {
       case 'i':
@@ -161,6 +163,9 @@ int main(int argc, char* argv[])
         break;
       case 'n':
         n_events = atoi(optarg);
+        break;
+      case 'e':
+        estimate_fakes = optarg;
         break;
       case 'f':
         do_fakes = optarg;
@@ -212,6 +217,7 @@ int main(int argc, char* argv[])
   printf("makeMiniNtuple\t     Input file (-i)         : %s\n",input_file);
   printf("makeMiniNtuple\t     Number of events (-n)   : %i\n",n_events );
   printf("makeMiniNtuple\t     Adding fakes (-f)       : %s\n",do_fakes );
+  printf("makeMiniNtuple\t     Estimating fakes (-e)   : %s\n",estimate_fakes );
   printf("makeMiniNtuple\t     Appending suffix (-s)   : %s\n",name_suffix );
   printf("makeMiniNtuple\t =================================================================\n");
   //////////////////////////////////////////////////////////////////////////////
@@ -258,13 +264,19 @@ int main(int argc, char* argv[])
 
   //////////////////////////////////////////////////////////////////////////////
   // Initialize relevant fake variables. Set inside cutflow
-  std::string path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists.root";
-  std::string el_FF_hist = "h_zjets_FF_CR_e_data_Z_Lep2_pT_minus_bkgd";
-  std::string mu_FF_hist = "h_zjets_FF_CR_m_data_Z_Lep2_pT_minus_bkgd";
+  std::string path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists";
+  //std::string fake_file = path_to_FF_file+"/FF_hists.root";
+  //std::string el_FF_hist = "h_zjets_FF_CR_e_data_Z_Lep2_pT_minus_bkgd";
+  //std::string mu_FF_hist = "h_zjets_FF_CR_m_data_Z_Lep2_pT_minus_bkgd";
 
+  //std::string fake_file = path_to_FF_file+"/FakeFactors_April12_2017_2.4.29_IncludingJVTSFs.root";
+  std::string fake_file = path_to_FF_file+"/dummy_FF_hists.root";
+  std::string el_FF_hist = "FakeFactor_el";
+  std::string mu_FF_hist = "FakeFactor_mu";
+  
   ApplyFakeFactor* m_applyFakeFactorTool = 0;
   m_applyFakeFactorTool = new ApplyFakeFactor("ApplyFakeFactor_lep");
-  m_applyFakeFactorTool->set_savedFakeFactorFileName(path_to_FF_file);
+  m_applyFakeFactorTool->set_savedFakeFactorFileName(fake_file);
   m_applyFakeFactorTool->set_saved_elFakeFactorName(el_FF_hist);
   m_applyFakeFactorTool->set_saved_muFakeFactorName(mu_FF_hist);
   m_applyFakeFactorTool->initialize().ignore();
@@ -322,7 +334,7 @@ int main(int argc, char* argv[])
   *cutflow << CutName("SCT err") << [&](Superlink* sl) -> bool {
       return (sl->tools->passSCTErr(cutflags));
   };
-  if (do_fakes) {
+  if (do_fakes || estimate_fakes) {
     //////////////////////////////////////////////////////////////////////////////
     // Set relevant fake variables. This cut does not reject any events
     *cutflow << CutName("NoCut (Define Fake Vars)") << [&](Superlink* sl) -> bool {
@@ -433,7 +445,7 @@ int main(int argc, char* argv[])
   }
   if (do_fakes_zjets) {
     *cutflow << CutName("2-ID Leptons + 1 Lepton") << [&](Superlink* /*sl*/) -> bool {
-        return (lepID_n >= 2 && lepID_n+lepAntiID_n >= 3);
+        return (lepID_n >= 2 && (lepID_n+lepAntiID_n) >= 3);
     };
     *cutflow << CutName("SFOS leptons") << [&](Superlink *sl) -> bool {
         (void)sl;
@@ -500,10 +512,14 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("eventweight");
     *cutflow << [&](Superlink* sl, var_double*) -> double {
         float fakeFactor = 1;
-        cout << "TESTING :: Getting event weight\n";
-        if (isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
-          fakeFactor = m_applyFakeFactorTool->apply(LepFake0.Pt());
-          cout << "TESTING :: Is denom event! Getting Fake Factor -> " << fakeFactor << '\n';
+        if (estimate_fakes && isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
+          bool probeIsEl = sl->baseLeptons->at(antiID_idx0)->isEle();
+          LepEnum::LepType typeOfLep = probeIsEl ? LepEnum::Electron : LepEnum::Muon; 
+          fakeFactor = m_applyFakeFactorTool->apply(LepFake0.Pt(), typeOfLep);
+          cout << "TESTING :: applying fake factor to denom event: " << fakeFactor << '\n';
+        } else if (estimate_fakes) {
+          fakeFactor = 0;
+          cout << "TESTING :: applying 0 weight to non-denom event: " << fakeFactor << '\n';
         }
         return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;
         //return sl->weights->product();

@@ -638,7 +638,7 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
     for h in histos :
-        if "fake" in h.GetName() or "Fake" in h.GetName() : continue
+        #if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
         # add items to legend in order of stack
         # name_for_legend = ""
@@ -1176,7 +1176,7 @@ def make_plotsComparison(plot, reg, data, backgrounds) :
     fullname = out + "/" + outname
     print "%s saved to : %s"%(outname, os.path.abspath(fullname))
 
-def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=True):
+def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=True):
     '''
     Make a stack plot of all backgrounds and data (if defined)
 
@@ -1196,6 +1196,9 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
 
     returns canvas
     '''
+    # Sanity Check
+    assert not for_ratio or data, "ERROR :: Need data for ratio plot"
+
     print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
 
     ############################################################################
@@ -1223,8 +1226,12 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     xax.SetLabelFont(42)
     xax.SetLabelSize(0.035)
     xax.SetTitleSize(0.048 * 0.85)
-    xax.SetLabelOffset(1.15 * 0.02)
-    xax.SetTitleOffset(1.5 * xax.GetTitleOffset())
+    if for_ratio:
+        hax.GetXaxis().SetTitleOffset(-999)
+        hax.GetXaxis().SetLabelOffset(-999)
+    else:
+        xax.SetLabelOffset(1.15 * 0.02)
+        xax.SetTitleOffset(1.5 * xax.GetTitleOffset())
 
     yax = hax.GetYaxis()
     yax.SetTitle(plot.y_label)
@@ -1234,13 +1241,19 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     yax.SetLabelOffset(0.013)
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
-    hax.Draw("AXIS")
+    if for_ratio:
+        hax.Draw()
+    else:
+        hax.Draw("AXIS")
     can.Update()
 
     stack = r.THStack("stack_"+plot.name, "")
 
+    # Legend
     leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
     leg.SetNColumns(2)
+    leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
+    leg_sig.SetNColumns(1)
 
     # Yield table
     yield_tbl = []
@@ -1251,24 +1264,33 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     # Initilize lists and defaults
     histos = []
     all_histos = []
+    sig_histos = []
     avoid_bkg = []
+
     #h_nom_fake = None
 
-    n_total_sm_yield = 0.
-    n_total_sm_error = 0.
+    n_total_sm_yield = n_total_sm_error = 0.
     hists_to_clear = []
 
     # Add MC backgrounds to stack
     for b in backgrounds :
         # Initilize histogram
-        h_name = "h_"+reg.name+'_'+b.treename+"_"+plot.variable
+        h_name_tmp = re.sub(r'[(){}[\]]+','',plot.variable)
+        h_name = "h_"+reg.name+'_'+b.treename+"_"+h_name_tmp
         hists_to_clear.append(h_name)
-        h = pu.th1d(h_name, "", int(plot.nbins), plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
+        h = pu.th1d(h_name, "", int(plot.nbins),
+                    plot.x_range_min, plot.x_range_max,
+                    plot.x_label, plot.y_label)
 
         h.SetLineColor(b.color)
         h.GetXaxis().SetLabelOffset(-999)
-        h.SetFillColor(b.color)
-        h.SetFillStyle(1001)
+        if b.isSignal():
+            h.SetLineWidth(2)
+            h.SetLineStyle(2)
+            h.SetFillStyle(0)
+        else:
+            h.SetFillColor(b.color)
+            h.SetFillStyle(1001)
         h.Sumw2
 
         weight_str = "eventweight"
@@ -1289,14 +1311,19 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
             n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
         yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
 
+        # Add overflow
         if plot.add_overflow:
             pu.add_overflow_to_lastbin(h)
         if plot.add_underflow:
             pu.add_underflow_to_firstbin(h)
 
         # Record all and non-empty histograms
-        all_histos.append(h)
-        histos.append(h) if integral > 0 else avoid_bkg.append(b.name)
+        if b.isSignal():
+            leg_sig.AddEntry(h, b.displayname, "l")
+            sig_histos.append(h)
+        else:
+            all_histos.append(h)
+            histos.append(h) if integral > 0 else avoid_bkg.append(b.name)
         can.Update()
 
     if not len(histos):
@@ -1307,11 +1334,13 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     histos = sorted(histos, key=lambda h: h.Integral())
     for h in histos :
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
+        if plot.isNorm(): h.Scale(1.0/float(n_total_sm_yield))
         stack.Add(h)
     can.Update()
 
+
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
-    
+
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
 
@@ -1338,6 +1367,9 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
         #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
+        if plot.isNorm():
+            hd.Scale(1.0/float(integral))
+
         # Add overflow
         if plot.add_overflow:
             pu.add_overflow_to_lastbin(h)
@@ -1353,44 +1385,6 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         gdata.SetLineColor(1)
         leg.AddEntry(gdata, "Data", "p")
         can.Update()
-
-    # signals
-    sig_histos = []
-    for s in backgrounds :
-        if not s.isSignal() : continue
-        hist_name = ""
-        if "abs(" in plot.variable :
-            hist_name = plot.variable.replace("abs(","").replace(")","")
-        else :
-            hist_name = plot.variable
-
-        h = pu.th1d("h_" + s.treename + "_" + hist_name, "", int(plot.nbins),
-                        plot.x_range_min, plot.x_range_max, plot.x_label, plot.y_label)
-        h.SetLineWidth(2)
-        h.SetLineStyle(2)
-        h.SetLineColor(s.color)
-        h.GetXaxis().SetLabelOffset(-999)
-        h.SetFillStyle(0)
-        h.Sumw2
-
-        cut = "(" + reg.tcut + ") * eventweight *" + str(s.scale_factor)
-        cut = r.TCut(cut)
-        sel = r.TCut("1")
-        cmd = "%s>>+%s"%(plot.variable, h.GetName())
-        s.tree.Draw(cmd, cut * sel, "goff")
-            
-        stat_rr = r.Double(0.0)
-        integral = h.IntegralAndError(0,-1, stat_err)
-        #print "\t%s: %.2f +/- %.2f"%(s.name, integral, stat_err)
-
-        # add overflow
-        if plot.add_overflow:
-            pu.add_overflow_to_lastbin(h)
-        if plot.add_underflow:
-            pu.add_underflow_to_firstbin(h)
-
-        leg.AddEntry(h, s.displayname, "l")
-        sig_histos.append(h)
 
     ############################################################################
     # systematics loop
@@ -1473,49 +1467,6 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     hist_sm.SetLineWidth(3)
     hist_sm.Draw("hist same")
 
-    ############################################################################
-    # Get signal hist
-    leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
-    leg_sig.SetNColumns(1)
-
-    sig_histos = []
-    for s in backgrounds:
-        if not s.isSignal() : continue
-
-        hist_name = re.sub(r'[(){}[\]]+','',plot.variable)
-
-        h = pu.th1d("h_"+s.treename+"_"+hist_name, "", int(plot.nbins),
-                    plot.x_range_min, plot.x_range_max,
-                    plot.x_label, plot.y_label)
-        h.SetLineWidth(2)
-        h.SetLineStyle(2)
-        h.SetLineColor(s.color)
-        h.GetXaxis().SetLabelOffset(-999)
-        h.SetFillStyle(0)
-        h.Sumw2
-
-        cut = "(" + reg.tcut + ") * eventweight *" + str(s.scale_factor)
-        cut = r.TCut(cut)
-        sel = r.TCut("1")
-        cmd = "%s>>+%s"%(plot.variable, h.GetName())
-        s.tree.Draw(cmd, cut * sel, "goff")
-
-        # print the yield +/- stat error
-        stat_err = r.Double(0.0)
-        integral = h.IntegralAndError(0,-1,stat_err)
-        yield_tbl.append("%10s: %.2f +/- %.2f"%(s.name, integral, stat_err))
-
-        # add overflow
-        if plot.add_overflow:
-            pu.add_overflow_to_lastbin(h)
-        if plot.add_underflow:
-            pu.add_underflow_to_firstbin(h)
-
-        #leg.AddEntry(h, s.displayname, "l")
-        leg_sig.AddEntry(h, s.displayname, "l")
-        sig_histos.append(h)
-        can.Update()
-
     #draw the signals
     for hsig in sig_histos :
         hsig.Draw("hist same")
@@ -1555,7 +1506,9 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
     can.Update()
     ############################################################################
     # Save histogram
-    if save_canvas:
+    if for_ratio:
+        return can, stack, gdata, nominalAsymErrors
+    else:
         print "\n"
         outname = plot.name + ".eps"
         can.SaveAs(outname)
@@ -1563,11 +1516,7 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, save_canvas=T
         utils.mv_file_to_dir(outname, out, True)
         fullname = out + "/" + outname
         #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
-        #return True 
-    else:
-        #return can, stack, gdata, nominalAsymErrors
-        print "HEY"
-    print "End of plotsStack"
+        #return True
 ################################################################################
 def make_plots2D(plot, reg, data, backgrounds) :
 
@@ -1696,7 +1645,7 @@ def make_plots1D(plot, reg, data, backgrounds, plot_i, n_plots) :
     elif plot.is_comparison :
         make_plotsComparison(plot, reg, data, backgrounds)
     else :
-        make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots)
+        make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots, for_ratio=False)
 
 ################################################################################
 def make_plots(plots, regions, data, backgrounds) :

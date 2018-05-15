@@ -68,12 +68,6 @@ class Plot1D :
     def isLog(self) :
         return self.doLogY
 
-    def Normalize(self) :
-        '''
-        Set y-axis logarithmic
-        '''
-        self.doNorm = True
-
     def isNorm(self) :
         return self.doNorm
 

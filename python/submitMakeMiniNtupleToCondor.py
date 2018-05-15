@@ -3,14 +3,18 @@ import os
 import sys
 import glob
 import subprocess
+import re
 import global_variables as g
 
 # Configuration settings
 ana_name      = "makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax 
-submitMissing = True  # submit only DSIDs stored in outputs/missing.txt
+submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
+dry_run = False
 
 # Run analysis with fake configuration
+estimate_fakes      = True # apply fake factor to denom events
+only_fakes          = True # only output fake ntuples
 do_wjets_fakes      = False 
 do_zjets_fakes      = True
 assert not (do_wjets_fakes and do_zjets_fakes)
@@ -67,6 +71,7 @@ def main() :
 
         for dataset in sample_lists :
             fullname = str(os.path.abspath(dataset))
+            did = dataset.split("/")[-1]
 
             # Only submit datasets indicated in global_variables or missing_dsids 
             if submitMissing:
@@ -80,15 +85,16 @@ def main() :
             dataset = "." + dataset[dataset.find(in_job_filelist_dir):]
             print "    >> %s"%dataset
 
-            suffix = "-1"
-            if "mc15_13TeV" in dataset.split("/")[-1]:
-                if "_" in dataset.split("/")[-1].split(".")[3]:
-                    suffix = dataset.split("/")[-1].split(".")[3].split("_")[-1]
+            ops = ""
+            suffix = []
+            if "mc15_13TeV" in did and "_" in did.split(".")[3]:
+                suffix.append(did.split(".")[3].split("_")[-1])
             if do_zjets_fakes:
-                suffix = '-f zjets -s zjets'
+                suffix.append("zjets")
+                ops = '-f zjets'
             elif do_wjets_fakes:
-                suffix = '-f wjets -s wjets'
-            
+                suffix.append("wjets")
+                ops = '-f wjets'
 
             if not (str(os.path.abspath(out_dir)) == str(os.environ['PWD'])) :
                 print "You must call this script from the output directory where the ntuples will be stored!"
@@ -98,28 +104,45 @@ def main() :
             if s.endswith('DWNLD'): 
                 dataset = dataset + '/' 
                 print "    >> %s"%dataset        
+            
+            isData =  re.search("data1[5-8]", dataset.split("/")[-1])
 
-            run_cmd = "ARGS="
-            run_cmd += '"'
-            run_cmd += ' %s '%out_dir
-            run_cmd += ' %s '%log_dir
-            run_cmd += ' %s '%ana_name
-            #run_cmd += ' %s '%(tar_location + "area.tgz")
-            run_cmd += ' %s '%tarred_dir
-            run_cmd += ' %s '%dataset
-            if "-1" not in suffix:
-                run_cmd += ' %s '%(suffix) # any extra cmd line optino for Superflow executable
-            run_cmd += '"'
-            run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
-            lname = dataset.split("/")[-1].replace(".txt", "")
-            run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
-            run_cmd += ' -append "output = %s%s" '%(log_dir, lname + ".out")
-            run_cmd += ' -append "log = %s%s" '%(log_dir, lname + ".log")
-            run_cmd += ' -append "error = %s%s" '%(log_dir, lname + ".err")
+            for submit_fakes in [False, True]:
+                if submit_fakes and not (estimate_fakes and isData): continue
+                if not submit_fakes and estimate_fakes and only_fakes: continue
+                run_cmd = "ARGS="
+                run_cmd += '"'
+                run_cmd += ' %s '%out_dir
+                run_cmd += ' %s '%log_dir
+                run_cmd += ' %s '%ana_name
+                #run_cmd += ' %s '%(tar_location + "area.tgz")
+                run_cmd += ' %s '%tarred_dir
+                run_cmd += ' %s '%dataset
+                lname = dataset.split("/")[-1].replace(".txt", "")
+                if submit_fakes:
+                    ops_tmp = ops + ' -s %s -e true'%('_'.join(suffix+['FFest']))
+                    lname = '_'.join([lname] + suffix + ['FFest'])
+                elif ops or suffix:
+                    ops_tmp = ops + ' -s %s'%('_'.join(suffix))
+                    lname = '_'.join([lname] + suffix)
+                else:
+                    ops_tmp = ""
 
-            print run_cmd
-            subprocess.call(run_cmd, shell=True)
-    subprocess.call("condor_q $USER", shell=True)
+                run_cmd += ' %s '%(ops_tmp) # any extra cmd line optino for Superflow executable
+                run_cmd += '"'
+                run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
+                run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
+                run_cmd += ' -append "output = %s%s" '%(log_dir, lname + ".out")
+                run_cmd += ' -append "log = %s%s" '%(log_dir, lname + ".log")
+                run_cmd += ' -append "error = %s%s" '%(log_dir, lname + ".err")
+
+                print run_cmd.replace(g.analysis_path, "")
+                if not dry_run: 
+                    subprocess.call(run_cmd, shell=True)
+    if dry_run:
+        print "END OF DRY RUN"
+    else:
+        subprocess.call("condor_q $USER", shell=True)
 
 def look_for_tarball() :
     if not os.path.isfile("area.tgz") :
@@ -188,8 +211,8 @@ def look_for_condor_executable() :
     f.write('ls -ltrh\n')
     f.write('lsetup fax\n')
     f.write('source susynt-read/bash/setup_root.sh\n')
-    f.write('echo "Calling : source RootCore/local_setup.sh"\n')
-    f.write('source RootCore/local_setup.sh\n')
+    f.write('echo "Calling : source RootCoreBin/local_setup.sh"\n')
+    f.write('source RootCoreBin/local_setup.sh\n')
     f.write('echo "Calling : cd AlexAnalysisPackage/bash"\n')
     f.write('cd AlexAnalysisPackage/bash\n')
     f.write('source setRestFrames.sh\n')

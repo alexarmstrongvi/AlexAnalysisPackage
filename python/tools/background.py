@@ -183,7 +183,7 @@ class Background :
             chain.Add(file)
         self.tree = chain
 
-    def set_chain_from_dsid_list(self, dsid_list, raw_directory, dsid_=''):
+    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_str=None, exclude_str=None, dsid_=''):
         '''
         Build chain of background ntuples 
 
@@ -216,13 +216,15 @@ class Background :
             for f in rawdir_files :
                 if 'entrylist' in f : continue
                 if 'CENTRAL' not in f : continue
+                if search_str and search_str not in f : continue
+                if exclude_str and exclude_str in f : continue
                 if str(dataset_id) in f :
                     bkg_files.append(f)
                     break
             else :
                 print "WARNING :: Unable to find file for DSID =", dataset_id
         
-        # Build TCvhain from listed flat ntuples 
+        # Build TChain from listed flat ntuples 
         chain = r.TChain('superNt')
         if len(bkg_files)==0 :
             if dsid_:
@@ -613,6 +615,64 @@ class Data :
         #    print "ADDING DATA FILE: %s"%str(file)
         #    chain.Add(file)
         #self.tree = chain
+
+    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_str=None, exclude_str=None, dsid_=''):
+        '''
+        Build chain of background ntuples 
+
+        Typically, when running over a signal sample for plotting
+        we want only one DSID (corresponding to one grid point) but
+        put all grid points in one filelist. Use the dsid_ to
+        grab the desired signal point. You must call "setSignal()"
+        on the background process before calling this.
+
+        Args:
+            dsid_list (list(int)): list of DSIDs to include in TChain
+            raw_directory (str): Name of dir containing all .root flat ntuples
+            dsid_ (str): dsid label of desired signal point 
+
+        Return:
+            TChain: TChain of flat ntuples from input directory
+        '''
+        self.raw_file_dir = raw_directory
+       
+        # Get list of flat ntuples file names from sample directory
+        rawdir_files = glob.glob(raw_directory + "*.root")
+        if not len(rawdir_files):
+            print "No root files found at",raw_directory
+            sys.exit()
+        
+        # Get list of flat ntuple file names indicated in dsid list
+        bkg_files = []
+        for dataset_id in dsid_list :
+            #if self.isSignal() and not (dsid_ == dataset_id) : continue
+            for f in rawdir_files :
+                if 'entrylist' in f : continue
+                if 'CENTRAL' not in f : continue
+                if search_str and search_str not in f : continue
+                if exclude_str and exclude_str in f : continue
+                if str(dataset_id) in f :
+                    bkg_files.append(f)
+                    break
+            else :
+                print "WARNING :: Unable to find file for DSID =", dataset_id
+        
+        # Build TChain from listed flat ntuples 
+        chain = r.TChain('superNt')
+        if len(bkg_files)==0 :
+            if dsid_:
+                print "ERROR Did not find any files for sample with DSID=%s (looking here: %s)"%(dsid_, raw_directory)
+            else:
+                print "ERROR :: Did not find any file for %s (looking here: %s)"%(self.displayname, raw_directory)
+            n_files = -1
+            #sys.exit()
+        for n_files, file in enumerate(bkg_files) :
+            #print "ADDING FILE [%d]: %s"%(n_files+1, str(file))
+            #sys.stdout.flush()
+            chain.Add(file)
+        print "%10s : ADDED %d FILES"%(self.displayname, n_files+1)
+        self.tree = chain
+
 
     def CheckForDuplicates(self):
         if not self.tree:
