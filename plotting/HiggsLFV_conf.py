@@ -191,7 +191,7 @@ fakes.set_fillStyle(0)
 fakes.setLineStyle(1)
 fakes.set_color(ROOT.kGray)
 fakes.set_treename("fakes")
-fakes.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, search_strs='FFest')
+#fakes.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, search_strs='FFest')
 
 signal_branching_ratio = 0.01
 signal_SF = 1
@@ -519,9 +519,9 @@ HistOpMap = {
     'Lep_Iso'         : HistOp1D(nBinsX=9,  x0=-1.5, x1=7.5,   xUnits='',    xLabel='Lepton Isolation (non-inclusive)'),
     'l_q'             : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Lepton charge'),
     'LepLepSign'      : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leptons sign product'),
-    #'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', logY=True),
+    'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', logY=True),
     #'Lep1Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', logY=True),
-    'Lep0Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', add_overflow=False),
+    #'Lep0Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', add_overflow=False),
     'Lep1Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', add_overflow=False),
     'Lep0Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{leading lep}'),
     'Lep1Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{subleading lep}'),
@@ -631,18 +631,19 @@ backgrounds.append(wjets)
 #backgrounds.append(wgamma)
 backgrounds.append(htt)
 backgrounds.append(hww)
-backgrounds.append(fakes)
+#backgrounds.append(fakes)
 #backgrounds.append(signal)
 #data = None
 
 region_ops = []
 #region_ops += ['wjets_FF_CRden_emu', 'wjets_FF_CRden_mue']
 #region_ops += ['wjets_FF_CRnum_emu', 'wjets_FF_CRnum_mue']
-region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum_eee']
+#region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum_eee']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRnum_eem']
 #region_ops += ['zjets_FF_CRden_mme', 'zjets_FF_CRnum_mme']
-region_ops += ['zjets_FF_CRden_mmm', 'zjets_FF_CRnum_mmm']
+#region_ops += ['zjets_FF_CRden_mmm', 'zjets_FF_CRnum_mmm']
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e', 'zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
+region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
 #region_ops += ['baseline_mue', 'baseline_emu']
 #region_ops += ['no_sel']
 
@@ -651,7 +652,7 @@ vars_to_plot = []
 #vars_to_plot += ['treatAsYear']
 
 ## Quick Plots
-#vars_to_plot += ['Lep0Pt', 'Lep1Pt']
+vars_to_plot += ['Lep0Pt']
 
 ## Z CR
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
@@ -692,7 +693,7 @@ vars_to_plot = []
 #vars_to_plot += ['MET','Z_Lep2_mT']
 #vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_MLL']
 #vars_to_plot += ['l_truthClass']
-vars_to_plot += ['Z_Lep2_pT']
+#vars_to_plot += ['Z_Lep2_pT']
 
 ## Object Definitions Plots
 #vars_to_plot += ['n_preLeptons',
