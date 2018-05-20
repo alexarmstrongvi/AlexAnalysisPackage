@@ -23,7 +23,7 @@ ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 # Local classes for plotting
 import tools.plot as plot
-from tools.samples import Data, Background, Signal
+from tools.sample import Data, Background, Signal
 import tools.region as region
 import tools.systematic as systematic
 
@@ -570,7 +570,7 @@ HistOpMap = {
 # background gets appended to the samples list
 data_dsids = g.groups['data15']+g.groups['data16']
 data.set_chain_from_dsid_list(data_dsids, data_rawdir, exclude_strs='FFest')
-fakes.set_chain_from_dsid_list(data_dsids, data_rawdir, search_strs='FFest')
+#fakes.set_chain_from_dsid_list(data_dsids, data_rawdir, search_strs='FFest')
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], rawdir)
 stop.set_chain_from_dsid_list(g.groups['singletop'], rawdir)
 wtop.set_chain_from_dsid_list(g.groups['Wt'], rawdir)

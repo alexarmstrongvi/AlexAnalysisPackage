@@ -38,7 +38,7 @@ class Sample :
     # Setup TChain/TTree
     def set_chain_from_root_file(self, file_name, flat_ntuple_dir):
         full_name = flat_ntuple_dir+file_name
-        set_chain_from_list([full_name])
+        self.set_chain_from_list([full_name])
 
     def set_chain_from_dsid_list(self, dsid_list, flat_ntuple_dir, search_strs='', exclude_strs=''):
         '''
@@ -51,8 +51,6 @@ class Sample :
         Returns:
             TChain: TChain of flat ntuples from input directory
         '''
-        self.flat_ntuple_dir = flat_ntuple_dir
-
         # Get list of flat ntuples file names from sample directory
         flat_ntuples = glob.glob(flat_ntuple_dir + "*.root")
         assert len(flat_ntuples), "No root files found at %s"%flat_ntuple_dir
@@ -60,21 +58,26 @@ class Sample :
         # Select out flat ntuples found in DSID list
         chosen_ntuples = []
         #TODO: Make inputs lists instead of converting here
+
         search_str_list = [s.strip() for s in search_strs.split(",")]
         exclude_str_list = [s.strip() for s in exclude_strs.split(",")]
         for dsid in dsid_list:
             for fname in flat_ntuples:
-                if any(s not in fname for s in search_str_list): continue
-                if any(s in fname for s in exclude_str_list) : continue
+                if any(s not in fname for s in search_str_list if s): continue
+                if any(s in fname for s in exclude_str_list if s) : continue
                 if str(dsid) in fname :
-                    chosen_ntuples.append(flat_ntuple_dir+fname);
-                break
+                    chosen_ntuples.append(fname);
+                    break
             else:
                 print "WARNING :: Unable to find file for DSID =", dsid
+        if not chosen_ntuples:
+            print "WARNING :: No samples found for", self.name
+        
+        self.set_chain_from_list(chosen_ntuples)
 
     def set_chain_from_file_list(self, file_list, flat_ntuple_dir):
         full_file_list = [flat_ntuple_dir+f for f in file_list]
-        set_chain_from_list(full_file_list)
+        self.set_chain_from_list(full_file_list)
 
     def set_chain_from_list(self, files):
         chain = r.TChain("superNt") #TODO: Remove hard-coded value
