@@ -23,7 +23,7 @@ ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 # Local classes for plotting
 import tools.plot as plot
-import tools.background as background
+from tools.samples import Data, Background, Signal
 import tools.region as region
 import tools.systematic as systematic
 
@@ -49,19 +49,15 @@ lumi_ = 36180
 #   signal, data)
 ################################################################################
 # Data
-data = background.Data()
-data.set_color(ROOT.kBlack)
-data.set_treename("data")
-data_dsids = g.groups['data15']+g.groups['data16']
+data = Data()
+data.treename = "data"
 
 ################################################################################
 # Fakes
 ## Fakes
-fakes = background.Background("fakes", "Fakes")
-fakes.set_fillStyle(0)
-fakes.setLineStyle(1)
-fakes.set_color(ROOT.kGray)
-fakes.set_treename("fakes")
+fakes = Background("fakes", "Fakes")
+fakes.color = ROOT.kGray
+fakes.treename = "fakes"
 
 ################################################################################
 # Signal
@@ -69,131 +65,99 @@ signal_branching_ratio = 0.01
 signal_SF = 1
 signal_label = "Higgs LFV" if signal_SF == 1 else "Higgs LFV (%dX)"%signal_SF
 
-signal = background.Background("higgs_lfv", signal_label)
-signal.setSignal()
+signal = Signal("higgs_lfv", signal_label)
 signal.scale_factor = lumi_ * signal_branching_ratio * signal_SF
-signal.set_fillStyle(0)
-signal.set_color(ROOT.kGreen)
-signal.set_treename("signal")
+signal.color = ROOT.kGreen
+signal.treename = "signal"
 
 ################################################################################
 # Backgrounds
 
 #######################################
 # Initialize all backgrounds
-ttbar   = background.Background("ttbar", "t#bar{t}")
-stop    = background.Background("st", "Single top")
-wtop    = background.Background("wt", "Wt")
-WW      = background.Background("ww", "WW")
-ZZ      = background.Background("zz", "ZZ")
-WZ      = background.Background("wz", "WZ")
-zee     = background.Background("zee", "Zee")
-zmumu   = background.Background("zmumu", "Zmumu")
-ztt     = background.Background("ztt", "Z#tau#tau")
-wjets   = background.Background("wjets", "W+jets")
-wgamma  = background.Background("wgamma", "W+gamma")
-htt     = background.Background("htt", "H#tau#tau")
-hww     = background.Background("hww", "HWW")
-
-#######################################
-# Configure the backgrounds
 # ttbar
+ttbar = Background("ttbar", "t#bar{t}")
 ttbar.scale_factor = lumi_
-ttbar.set_fillStyle(0)
-ttbar.setLineStyle(1)
-ttbar.set_color(ROOT.kOrange+2)
-ttbar.set_treename("ttbar")
+ttbar.color = ROOT.kOrange+2
+ttbar.treename = "ttbar"
 
 # singletop
+stop = Background("st", "Single top")
 stop.scale_factor = lumi_
-stop.set_fillStyle(0)
-stop.setLineStyle(1)
-stop.set_color(ROOT.kOrange+1)
-stop.set_treename("ST")
+stop.color = ROOT.kOrange+1
+stop.treename = "ST"
 
 # W+top
+wtop = Background("wt", "Wt")
 wtop.scale_factor = lumi_
-wtop.set_fillStyle(0)
-wtop.setLineStyle(1)
-wtop.set_color(ROOT.kOrange+8)
-wtop.set_treename("wt")
+wtop.color = ROOT.kOrange+8
+wtop.treename = "wt"
 
 # WW
+WW = Background("ww", "WW")
 WW.scale_factor = lumi_
-WW.set_fillStyle(0)
-WW.setLineStyle(1)
-WW.set_color(ROOT.kSpring-6)
-WW.set_treename("WW")
+WW.color = ROOT.kSpring-6
+WW.treename = "WW"
 
 # ZZ
+ZZ = Background("zz", "ZZ")
 ZZ.scale_factor = lumi_
-ZZ.set_fillStyle(0)
-ZZ.setLineStyle(1)
-ZZ.set_color(ROOT.kSpring-4)
-ZZ.set_treename("ZZ")
+ZZ.color = ROOT.kSpring-4
+ZZ.treename = "ZZ"
 
 # WZ
+WZ = Background("wz", "WZ")
 WZ.scale_factor = lumi_
-WZ.set_fillStyle(0)
-WZ.setLineStyle(1)
-WZ.set_color(ROOT.kSpring-5)
-WZ.set_treename("WZ")
+WZ.color = ROOT.kSpring-5
+WZ.treename = "WZ"
 
 # Zll
-#zll.scale_factor = lumi_
-#zll.set_fillStyle(0)
-#zll.setLineStyle(1)
-#zll.set_color(ROOT.kAzure-9)
-#zll.set_treename("zll")
+zll = Background("zll", "Zll")
+zll.scale_factor = lumi_
+zll.color = ROOT.kAzure-9
+zll.treename = "zll"
 
 # Zee
+zee = Background("zee", "Zee")
 zee.scale_factor = lumi_
-zee.set_fillStyle(0)
-zee.setLineStyle(1)
-zee.set_color(ROOT.kAzure-7)
-zee.set_treename("zee")
+zee.color = ROOT.kAzure-7
+zee.treename = "zee"
 
 # Zmumu
+zmumu = Background("zmumu", "Zmumu")
 zmumu.scale_factor = lumi_
-zmumu.set_fillStyle(0)
-zmumu.setLineStyle(1)
-zmumu.set_color(ROOT.kAzure-9)
-zmumu.set_treename("zmumu")
+zmumu.color = ROOT.kAzure-9
+zmumu.treename = "zmumu"
 
 # Ztt
+ztt = Background("ztt", "Z#tau#tau")
 ztt.scale_factor = lumi_
-ztt.set_fillStyle(0)
-ztt.setLineStyle(1)
-ztt.set_color(ROOT.kAzure-5)
-ztt.set_treename("ztt")
+ztt.color = ROOT.kAzure-5
+ztt.treename = "ztt"
 
 # Wjets
+wjets = Background("wjets", "W+jets")
 wjets.scale_factor = lumi_
-wjets.set_fillStyle(0)
-wjets.setLineStyle(1)
-wjets.set_color(ROOT.kOrange)
-wjets.set_treename("wjets")
+wjets.color = ROOT.kOrange
+wjets.treename = "wjets"
 
 # W+gamma
+wgamma = Background("wgamma", "W+gamma")
 wgamma.scale_factor = lumi_
-wgamma.set_fillStyle(0)
-wgamma.setLineStyle(1)
-wgamma.set_color(ROOT.kOrange-1)
-wgamma.set_treename("w_gamma")
+wgamma.color = ROOT.kOrange-1
+wgamma.treename = "w_gamma"
 
 # Higgs -> tau tau
+htt = Background("htt", "H#tau#tau")
 htt.scale_factor = lumi_
-htt.set_fillStyle(0)
-htt.setLineStyle(1)
-htt.set_color(ROOT.kRed)
-htt.set_treename("htt")
+htt.color = ROOT.kRed
+htt.treename = "htt"
 
 # Higgs -> W W
+hww = Background("hww", "HWW")
 hww.scale_factor = lumi_
-hww.set_fillStyle(0)
-hww.setLineStyle(1)
-hww.set_color(ROOT.kBlue+3)
-hww.set_treename("hww")
+hww.color = ROOT.kBlue+3
+hww.treename = "hww"
 
 
 ################################################################################
@@ -604,6 +568,7 @@ HistOpMap = {
 ## Build the TChain/TTree for each sample
 # To remove sample from plot, comment out its formation here and where the
 # background gets appended to the samples list
+data_dsids = g.groups['data15']+g.groups['data16']
 data.set_chain_from_dsid_list(data_dsids, data_rawdir, exclude_strs='FFest')
 fakes.set_chain_from_dsid_list(data_dsids, data_rawdir, search_strs='FFest')
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], rawdir)
@@ -655,9 +620,7 @@ vars_to_plot = list(set(vars_to_plot))
 ################################################################################
 # Create plots
 ################################################################################
-
-
-
+plots = []
 for var in vars_to_plot:
 
     # Use vector settings when plotting a specific element of the vector

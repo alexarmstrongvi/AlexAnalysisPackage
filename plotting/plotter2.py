@@ -39,11 +39,11 @@ r.TH1F.__init__._creates = False
 r.TGraphErrors.__init__._creates = False
 r.TGraphAsymmErrors.__init__._creates = False
 
-# Local classes for plotting  
+# Local classes for plotting
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.background as background
+import tools.samples as sample
 import tools.region as region
 import tools.plot as plot
 from global_variables import event_list_dir, plots_dir
@@ -218,8 +218,8 @@ class PlotParts():
         self.error_graph = None
         self.leg = None
     def draw_all(self, region_name):
-        if not self.hist_axis: 
-            print "ERROR :: Hist axis not provided. Cannot draw "    
+        if not self.hist_axis:
+            print "ERROR :: Hist axis not provided. Cannot draw "
             return
         self.hist_axis.Draw('AXIS')
         if self.mc_stack: self.mc_stack.Draw("hist && same")
@@ -270,11 +270,11 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
     stack_plot_parts = PlotParts()
     #stack_plot_parts = None
     #hist_axis = None
-    #mc_stack = None 
-    #mc_hist = None 
-    #signal_hists = [] 
-    #data_hist = None 
-    #error_graph = None 
+    #mc_stack = None
+    #mc_hist = None
+    #signal_hists = []
+    #data_hist = None
+    #error_graph = None
     #leg = None
     draw_stack(can, plot, reg, data, backgrounds, stack_plot_parts)
     #stack_plot_parts.draw_all()
@@ -612,7 +612,7 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
     plot_parts.hist_axis = hax
     plot_parts.mc_stack = stack
     plot_parts.mc_hist = hist_sm
-    plot_parts.signal_hists = sig_histos 
+    plot_parts.signal_hists = sig_histos
     plot_parts.data_hist = gdata
     plot_parts.error_graph = nominalAsymErrors
     plot_parts.leg = leg

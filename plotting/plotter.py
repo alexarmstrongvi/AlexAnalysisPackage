@@ -23,7 +23,7 @@ r.TGraphAsymmErrors.__init__._creates = False
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.background as background
+import tools.samples as sample
 import tools.region as region
 import tools.plot as plot
 
@@ -246,7 +246,6 @@ def histos_for_legend(histos) :
     returns:
         list(TH1F)
     '''
-
 
     if len(histos) == 7 :
         indices = [0, 4, 1, 5, 2, 6, 3]
@@ -1694,7 +1693,7 @@ def make_plots(plots, regions, data, backgrounds) :
                 print "%10s : EventList found at %s"%(b.name, save_name)
                 if save_cut != rfile.Get("cut"):
                     print "EventList cuts have changed. Remaking EventList"
-                    load_eventlist = False 
+                    load_eventlist = False
             else:
                 load_eventlist = False
 

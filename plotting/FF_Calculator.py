@@ -6,18 +6,18 @@ Examples
     python <TODO:script name>
 TODO: Description (for long scripts)
 
-Author: 
+Author:
     Alex Armstrong <alarmstr@cern.ch>
 TODO: Licence:
     This script is in the public domain, free from copyrights or restrictions.
-    Copyright: (C) <TODO:date>; University of California, Irvine 
+    Copyright: (C) <TODO:date>; University of California, Irvine
 ================================================================================
 """
 
 import sys, os, traceback, argparse
 import time
 import itertools
-import array 
+import array
 import ROOT as r
 import global_variables as g
 from collections import defaultdict
@@ -29,14 +29,14 @@ r.gStyle.SetOptStat(False)
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.background as background
+import tools.samples as sample
 import tools.region as region
 import tools.plot as plot
 
 ################################################################################
 def main ():
     """ Main Function """
-    
+
     global args
     global plots, regions, backgrounds, data
     ############################################################################
@@ -51,7 +51,7 @@ def main ():
     for ch_name, ch_hists in hists.iteritems():
         for h_name, hist in ch_hists.iteritems():
             print "INFO :: %s - %s - Integral = %.2f"%(ch_name, h_name, hist.Integral())
-    
+
     # Divide to get FF
     FF_hists = make_FF_hists(hists)
     for ch_name, ch_hists in FF_hists.iteritems():
@@ -69,11 +69,11 @@ def main ():
 ################################################################################
 # FUNCTIONS
 def check_input_args():
-    """ 
+    """
     Check that user inputs are as expected
     """
     if not os.path.isfile(args.config):
-        print "ERROR :: configuration file not found: %s"%(args.config) 
+        print "ERROR :: configuration file not found: %s"%(args.config)
         sys.exit()
 
 def set_eventlists(data, backgrounds, reg):
@@ -89,10 +89,10 @@ def set_eventlists(data, backgrounds, reg):
         list_name = "list_" + reg.name + "_" + sample.treename
         save_name = g.event_list_dir + list_name + ".root"
         save_name = os.path.normpath(save_name)
-    
+
         # Reset event list
         sample.tree.SetEventList(0)
-    
+
         # check if the list already exists
         if os.path.isfile(save_name) :
             rfile = r.TFile.Open(save_name)
@@ -118,9 +118,9 @@ def get_FF_hists(data, backgrounds, regions, plots):
             if reg.name != plot.region: continue
             h_name = "h_"+reg.name+'_'+sample.treename+"_"+plot.variable
             print "INFO :: Makeing histogram:", h_name
-            
-            h = pu.th1d(h_name, "", int(plot.nbins), 
-                        plot.x_range_min, plot.x_range_max, 
+
+            h = pu.th1d(h_name, "", int(plot.nbins),
+                        plot.x_range_min, plot.x_range_max,
                         plot.x_label, plot.y_label)
             h.SetLineColor(sample.color)
             h.Sumw2
@@ -128,7 +128,7 @@ def get_FF_hists(data, backgrounds, regions, plots):
                 cut = "(" + reg.tcut + ")"
             else:
                 cut = "(" + reg.tcut + ") * eventweight * " + str(sample.scale_factor)
-           
+
             cut = r.TCut(cut)
             sel = r.TCut("1")
             draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())
@@ -151,7 +151,7 @@ def prepare_hists(hists):
     newBinsEl = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
     newBinsMu = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
     samples_to_subtract = ['WZ','ZZ','ttbar']
-    
+
     rebin_hists = defaultdict(dict)
     bkgd_subtracted = defaultdict(dict)
     for ch_name, ch_hists in hists.iteritems():
@@ -169,7 +169,7 @@ def prepare_hists(hists):
             # Capture relevent hists
             if 'data' in h_name:
                 h_tmp = rebin_hists[ch_name][h_name].Clone(hist.GetName()+"_minus_bkgd")
-                bkgd_subtracted[ch_name]['%s_minus_bkgd'%h_name] = h_tmp 
+                bkgd_subtracted[ch_name]['%s_minus_bkgd'%h_name] = h_tmp
                 print "INFO :: Data yield for %s before background subtraction: %.2f"%(h_name, h_tmp.Integral())
             if any(x in h_name for x in samples_to_subtract):
                 if hist_is_num(h_name):
@@ -193,12 +193,12 @@ def make_FF_hists(hists):
         FF_hists_ch = {}
         for h_name, hist in ch_hists.iteritems():
             if not any(x in h_name for x in hists_to_divide): continue
-            if hist_is_num(h_name):  
+            if hist_is_num(h_name):
                 ff_name = h_name.replace("num","")
                 FF_hists_ch[ff_name] = hist.Clone(ff_name)
         for h_name, hist in ch_hists.iteritems():
             if not any(x in h_name for x in hists_to_divide): continue
-            if not hist_is_num(h_name):  
+            if not hist_is_num(h_name):
                 ff_name = h_name.replace('den','')
                 FF_hists_ch[ff_name].Divide(hist)
         FF_hists[ch_name] = FF_hists_ch
@@ -213,7 +213,7 @@ def finalize_hists(hists, ff_hists):
     can.SetRightMargin(0.05)
     can.SetBottomMargin(1.3*can.GetBottomMargin())
     can.Update()
-    
+
     ofile = r.TFile(args.ofile_name,'RECREATE')
     all_hists = combine_dicts(hists, ff_hists)
     for ch_name, ch_hists in all_hists.iteritems():
@@ -264,11 +264,11 @@ if __name__ == '__main__':
         parser.add_argument('-o', '--ofile_name',
                             default="FF_hists.root",
                             help="Output file name")
-        parser.add_argument('-v', '--verbose', 
-                            action='store_true', default=False, 
+        parser.add_argument('-v', '--verbose',
+                            action='store_true', default=False,
                             help='verbose output')
         args = parser.parse_args()
-        
+
         check_input_args()
         plots = []
         data = None
@@ -281,13 +281,13 @@ if __name__ == '__main__':
         assert (data and backgrounds and regions and plots), (
             "ERROR :: configuration file not loaded correctly"
         )
-        
-        if args.verbose: 
+
+        if args.verbose:
             print '>'*40
             print 'Running {}...'.format(os.path.basename(__file__))
             print time.asctime()
         main()
-        if args.verbose: 
+        if args.verbose:
             print time.asctime()
             time = (time.time() - start_time)
             print 'TOTAL TIME: %fs'%time,
