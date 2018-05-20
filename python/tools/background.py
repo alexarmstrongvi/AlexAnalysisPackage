@@ -183,7 +183,7 @@ class Background :
             chain.Add(file)
         self.tree = chain
 
-    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_str=None, exclude_str=None, dsid_=''):
+    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_strs='', exclude_strs='', dsid_=''):
         '''
         Build chain of background ntuples 
 
@@ -216,8 +216,8 @@ class Background :
             for f in rawdir_files :
                 if 'entrylist' in f : continue
                 if 'CENTRAL' not in f : continue
-                if search_str and search_str not in f : continue
-                if exclude_str and exclude_str in f : continue
+                if any(s.strip() not in f for s in search_strs.split(",")) : continue
+                if exclude_strs and any(s.strip() in f for s in exclude_strs.split(",")) : continue
                 if str(dataset_id) in f :
                     bkg_files.append(f)
                     break
@@ -616,7 +616,7 @@ class Data :
         #    chain.Add(file)
         #self.tree = chain
 
-    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_str=None, exclude_str=None, dsid_=''):
+    def set_chain_from_dsid_list(self, dsid_list, raw_directory, search_strs='', exclude_strs='', dsid_=''):
         '''
         Build chain of background ntuples 
 
@@ -649,8 +649,8 @@ class Data :
             for f in rawdir_files :
                 if 'entrylist' in f : continue
                 if 'CENTRAL' not in f : continue
-                if search_str and search_str not in f : continue
-                if exclude_str and exclude_str in f : continue
+                if any(s.strip() not in f for s in search_strs.split(",")) : continue
+                if any(s.strip() in f for s in exclude_strs.split(",")) : continue
                 if str(dataset_id) in f :
                     bkg_files.append(f)
                     break

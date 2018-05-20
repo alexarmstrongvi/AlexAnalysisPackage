@@ -77,7 +77,7 @@ void usage(std::string progName)
   printf("-s        Append suffix to output filename\n");
   printf("-i        Input file as *.root, list of *.root in a *.txt,\n");
   printf("          or a DIR/ containing *.root (default: none)\n");
-  printf("-f        make fake samples [zjets, wjets]\n");
+  printf("-f        make fake samples [zjets_num, z_jets_den]\n");
   printf("-e        estimate fake samples, applying fake factor\n");
   printf("=================================================================\n");
 }
@@ -120,20 +120,14 @@ void printEventInformation(Superlink* sl) {
 // Fake Factor functions
 ///////////////////////////////////////////////////////////////////////
 bool isDenomEvt(int nIDlep, int nAntiIDlep, std::string region) {
-  if (region == " - " || region == "wjets") {
+  if (region == " - ") {
     return nIDlep == 1 && nAntiIDlep > 0;
-  } else if (region == "zjets") {
+  } else if (region == "zjets_") {
     return nIDlep == 2 && nAntiIDlep > 0;
   } else {
       cout << "WARNING :: Unrecognized region option: " << region << endl;
       return false;
   }
-}
-float applyFakeFactor(float fakeLepPt=-FLT_MAX, float fakeLepEta=-FLT_MAX) {
-  // Currently just a place holder
-  (void) fakeLepPt;
-  (void) fakeLepEta;
-  return 0.1;
 }
 ///////////////////////////////////////////////////////////////////////
 // Main function
@@ -147,12 +141,12 @@ int main(int argc, char* argv[])
   char *input_file  = nullptr;
   char *name_suffix = nullptr;
   char *do_fakes = nullptr;
-  char *estimate_fakes = nullptr;
+  bool estimate_fakes = false;
   SuperflowRunMode run_mode = SuperflowRunMode::nominal; // SuperflowRunMode::all_syst; //SuperflowRunMode::nominal;
   int c;
 
   opterr = 0;
-  while ((c = getopt (argc, argv, "i:s:n:e:f:h")) != -1)
+  while ((c = getopt (argc, argv, "i:s:n:ef:h")) != -1)
     switch (c)
       {
       case 'i':
@@ -165,7 +159,7 @@ int main(int argc, char* argv[])
         n_events = atoi(optarg);
         break;
       case 'e':
-        estimate_fakes = optarg;
+        estimate_fakes = true;
         break;
       case 'f':
         do_fakes = optarg;
@@ -196,17 +190,32 @@ int main(int argc, char* argv[])
     printf("makeMiniNtuple\t An input file must be provided with option -i (a list, a DIR or single file)\n");
     return 0;
   }
+
+  // Determine fake flags
   std::string fake_op = do_fakes ? do_fakes : " - ";
-  bool do_fakes_zjets = false, do_fakes_wjets = false;
+  bool do_fakes_zjets = false;
+
   if (fake_op == " - ");
-  else if (fake_op == "zjets") do_fakes_zjets = true;
-  else if (fake_op == "wjets") do_fakes_wjets = true;
+  else if (fake_op == "zjets_den" || fake_op == "zjets_num") do_fakes_zjets = true;
   else {
     cout << "makeMiniNtuple\t Unrecognized fake options: " << fake_op << '\n';
     return 0;
   }
-  if (do_fakes && name_suffix == nullptr) {
+  
+  bool fake_numerator = false, fake_denominator = false;
+  if (fake_op == "zjets_den") fake_denominator = true;
+  else if (fake_op == "zjets_num" || fake_op == "zjets") fake_numerator = true;
+  
+
+  if ((do_fakes_zjets || estimate_fakes) && name_suffix == nullptr) {
     cout << "WARNING :: running fakes with no output file suffix indicated\n";
+    return 0;
+  } else if (do_fakes_zjets && !(fake_numerator || fake_denominator)) {
+    cout << "ERROR :: Running fakes without knowing numerator or denominator flag";
+    return 0;
+  } else if (fake_numerator && estimate_fakes) {
+    cout << "ERROR :: Cannot estimate fakes when running over numerator events";
+    return 0;
   }
 
   // Print information
@@ -217,7 +226,7 @@ int main(int argc, char* argv[])
   printf("makeMiniNtuple\t     Input file (-i)         : %s\n",input_file);
   printf("makeMiniNtuple\t     Number of events (-n)   : %i\n",n_events );
   printf("makeMiniNtuple\t     Adding fakes (-f)       : %s\n",do_fakes );
-  printf("makeMiniNtuple\t     Estimating fakes (-e)   : %s\n",estimate_fakes );
+  printf("makeMiniNtuple\t     Estimating fakes (-e)   : %i\n",estimate_fakes );
   printf("makeMiniNtuple\t     Appending suffix (-s)   : %s\n",name_suffix );
   printf("makeMiniNtuple\t =================================================================\n");
   //////////////////////////////////////////////////////////////////////////////
@@ -265,12 +274,13 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////////////
   // Initialize relevant fake variables. Set inside cutflow
   std::string path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists";
+  
   //std::string fake_file = path_to_FF_file+"/FF_hists.root";
   //std::string el_FF_hist = "h_zjets_FF_CR_e_data_Z_Lep2_pT_minus_bkgd";
   //std::string mu_FF_hist = "h_zjets_FF_CR_m_data_Z_Lep2_pT_minus_bkgd";
 
-  //std::string fake_file = path_to_FF_file+"/FakeFactors_April12_2017_2.4.29_IncludingJVTSFs.root";
-  std::string fake_file = path_to_FF_file+"/dummy_FF_hists.root";
+  std::string fake_file = path_to_FF_file+"/FakeFactors_April12_2017_2.4.29_IncludingJVTSFs.root";
+  //std::string fake_file = path_to_FF_file+"/dummy_FF_hists.root";
   std::string el_FF_hist = "FakeFactor_el";
   std::string mu_FF_hist = "FakeFactor_mu";
   
@@ -308,7 +318,7 @@ int main(int argc, char* argv[])
   // Pass that with "<<" into the dereferenced cutflow object.
 
   // xTauFW Cut
-  if (!do_fakes) {
+  if (!do_fakes_zjets) {
     *cutflow << CutName("xTau: 2+ Loose Leptons") << [&](Superlink* sl) -> bool {
         uint nLooseLeptons = 0;
         for (const auto* mu : *sl->preMuons) {if (mu->loose) nLooseLeptons++;}
@@ -334,7 +344,7 @@ int main(int argc, char* argv[])
   *cutflow << CutName("SCT err") << [&](Superlink* sl) -> bool {
       return (sl->tools->passSCTErr(cutflags));
   };
-  if (do_fakes || estimate_fakes) {
+  if (do_fakes_zjets || estimate_fakes) {
     //////////////////////////////////////////////////////////////////////////////
     // Set relevant fake variables. This cut does not reject any events
     *cutflow << CutName("NoCut (Define Fake Vars)") << [&](Superlink* sl) -> bool {
@@ -369,6 +379,7 @@ int main(int argc, char* argv[])
           eta_pass = fabs(mu->eta) < 2.47;
           iso_pass = mu->isoGradient;
           id_pass  = mu->medium;
+          //TODO: Study effect of removing id_pass so muons only fail iso requirements
           passedID_cuts = iso_pass && id_pass;
           passedAntiID_cuts = 1;
         }
@@ -376,6 +387,7 @@ int main(int argc, char* argv[])
                               && passedAntiID_cuts && !passedID_cuts;
         lepAntiID_vec.push_back(lepAntiID_bool);
         if(lepAntiID_bool) lepAntiID_n++;
+
       }
       std::vector<int>::iterator begin = lepAntiID_vec.begin();
       std::vector<int>::iterator end = lepAntiID_vec.end();
@@ -430,6 +442,33 @@ int main(int argc, char* argv[])
       // All events pass this "cut".
       return true;
     };
+  }
+  if (do_fakes_zjets) {
+    // Apply correct lepton cut
+    if (fake_numerator) {
+        *cutflow << CutName("3-ID Leptons") << [&](Superlink* /*sl*/) -> bool {
+            return (lepID_n == 3);
+        };
+    } else if (fake_denominator) {
+        *cutflow << CutName("2-ID Leptons and 1+ Anti-ID Lepton") << [&](Superlink* /*sl*/) -> bool {
+            return (lepID_n == 2 && lepAntiID_n >= 1);
+        };
+    }
+    *cutflow << CutName("SFOS leptons") << [&](Superlink *sl) -> bool {
+        (void)sl;
+        bool SF = Zlep[0]->isEle() == Zlep[1]->isEle();
+        bool OS = Zlep[0]->q != Zlep[1]->q;
+        return SF && OS;
+    };
+  } else if (estimate_fakes && !do_fakes_zjets) {
+    *cutflow << CutName("1-ID Lepton and 1 Anti-ID Lepton") << [&](Superlink* /*sl*/) -> bool {
+        return (lepID_n == 1 && lepAntiID_n == 1);
+    };
+    *cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
+        bool DF = sl->leptons->at(0)->isEle() != sl->baseLeptons->at(antiID_idx0)->isEle();
+        bool OS = sl->leptons->at(0)->q != sl->baseLeptons->at(antiID_idx0)->q;
+        return DF && OS;
+    };
   } else {
     *cutflow << CutName("nBaselineLep = nSignalLep") << [](Superlink* sl) -> bool {
         return (sl->leptons->size() == sl->baseLeptons->size());
@@ -443,38 +482,13 @@ int main(int argc, char* argv[])
         return DF && OS;
     };
   }
-  if (do_fakes_zjets) {
-    *cutflow << CutName("2-ID Leptons + 1 Lepton") << [&](Superlink* /*sl*/) -> bool {
-        return (lepID_n >= 2 && (lepID_n+lepAntiID_n) >= 3);
-    };
-    *cutflow << CutName("SFOS leptons") << [&](Superlink *sl) -> bool {
-        (void)sl;
-        bool SF = Zlep[0]->isEle() == Zlep[1]->isEle();
-        bool OS = Zlep[0]->q != Zlep[1]->q;
-        return SF && OS;
-    };
-  } else if (do_fakes_wjets) {
-    *cutflow << CutName("1-ID Lepton + 1 Lepton") << [&](Superlink* /*sl*/) -> bool {
-        return (lepID_n >= 1 && lepID_n+lepAntiID_n >= 2);
-    };
-    //*cutflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
-    //    bool DF = sl->leptons->at(0)->isEle() != sl->baseLeptons->at(antiID_idx0)->isEle();
-    //    bool OS = sl->leptons->at(0)->q != sl->baseLeptons->at(antiID_idx0)->q;
-    //    return DF;
-    //};
-  }
   *cutflow << CutName("pass good vertex") << [&](Superlink* sl) -> bool {
       return (sl->tools->passGoodVtx(cutflags));
   };
   *cutflow << CutName("jet cleaning") << [&](Superlink* sl) -> bool {
       return (sl->tools->passJetCleaning(sl->baseJets));
   };
-  *cutflow << CutName("bad muon veto") << [&](Superlink* sl) -> bool {
-      //return (sl->tools->passBadMuon(sl->preMuons));
-      // Temporary change to be in agreement with xTau
-      return true;
-  };
-  if (!do_fakes) {
+  if (!do_fakes_zjets && !estimate_fakes) {
     *cutflow << CutName("2 leptons") << [](Superlink* sl) -> bool {
         return (sl->leptons->size() == 2);
     };
@@ -512,17 +526,12 @@ int main(int argc, char* argv[])
     *cutflow << HFTname("eventweight");
     *cutflow << [&](Superlink* sl, var_double*) -> double {
         float fakeFactor = 1;
-        if (estimate_fakes && isDenomEvt(lepID_n, lepAntiID_n, fake_op)) {
+        if (estimate_fakes) {
           bool probeIsEl = sl->baseLeptons->at(antiID_idx0)->isEle();
           LepEnum::LepType typeOfLep = probeIsEl ? LepEnum::Electron : LepEnum::Muon; 
           fakeFactor = m_applyFakeFactorTool->apply(LepFake0.Pt(), typeOfLep);
-          cout << "TESTING :: applying fake factor to denom event: " << fakeFactor << '\n';
-        } else if (estimate_fakes) {
-          fakeFactor = 0;
-          cout << "TESTING :: applying 0 weight to non-denom event: " << fakeFactor << '\n';
         }
         return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;
-        //return sl->weights->product();
     };
     *cutflow << SaveVar();
   }
@@ -1251,44 +1260,55 @@ int main(int argc, char* argv[])
         bool mother_is_el = fabs(M_ID) == 11;
         //bool mother_is_piZero = fabs(M_ID) == 111;
         bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
+        bool bkgEl_from_EMproc = T==BkgElectron && O==ElMagProc;
+        bool fromSMBoson = O==WBoson || O==ZBoson || O==Higgs || O==DiBoson;
+        bool MfromSMBoson = MO==WBoson || MO==ZBoson || MO==Higgs || MO==DiBoson;
         //bool noChargeFlip = M_ID*lepton->q < 0;
         //bool chargeFlip = M_ID*lepton->q > 0;
 
+        // Defs from https://indico.cern.ch/event/725960/contributions/2987219/attachments/1641430/2621432/TruthDef_April242018.pdf
         bool promptEl1 = T==IsoElectron; //&& noChargeFlip;
         bool promptEl2 = (bkgEl_from_phoConv && mother_is_el); //&& noChargeFlip;
-        bool promptEl3 = bkgEl_from_phoConv && MO==FSRPhot;
-        bool promptEl4 = T==NonIsoPhoton && O==FSRPhot;
-        bool promptEl = promptEl1 || promptEl2 || promptEl3 || promptEl4;
+        bool promptEl3 = bkgEl_from_EMproc && MT==IsoElectron && (MO==top || MfromSMBoson);
+        bool promptEl4 = bkgEl_from_phoConv && MO==FSRPhot;
+        bool promptEl5 = T==NonIsoPhoton && O==FSRPhot;
+        bool promptEl = promptEl1 || promptEl2 || promptEl3 || promptEl4 || promptEl5;
 
         //bool promptChargeFlipEl1 = T==IsoElectron && chargeFlip;
         //bool promptChargeFlipEl2 = (bkgEl_from_phoConv && mother_is_el) && chargeFlip;
         //bool promptChargeFlipEl = promptChargeFlipEl1 || promptChargeFlipEl2;
 
         bool promptMuon = T==IsoMuon && (
-            O==top || O==WBoson || O==ZBoson || O==Higgs || O==HiggsMSSM ||
-            O==MCTruthPartClassifier::SUSY || O==DiBoson);
+            O==top || fromSMBoson || O==HiggsMSSM || O==MCTruthPartClassifier::SUSY);
 
         bool promptPho1 = T==IsoPhoton && O==PromptPhot;
         bool promptPho2 = bkgEl_from_phoConv && MT==IsoPhoton && MO==PromptPhot;
-        bool promptPho3 = bkgEl_from_phoConv && MT==BkgPhoton && MO==UndrPhot;
-        bool promptPho = promptPho1 || promptPho2 || promptPho3;
+        bool promptPho3 = bkgEl_from_EMproc  && MT==IsoPhoton && MO==PromptPhot;
+        bool promptPho4 = bkgEl_from_phoConv && MT==BkgPhoton && MO==UndrPhot;
+        bool promptPho5 = T==BkgPhoton && O==UndrPhot; 
+        bool promptPho = promptPho1 || promptPho2 || promptPho3 || promptPho4 || promptPho5;
 
         bool hadDecay1 = T==BkgElectron && (
             O==DalitzDec || O==ElMagProc || O==LightMeson || O==StrangeMeson);
         bool hadDecay2 = bkgEl_from_phoConv && MT==BkgPhoton && (
             MO==PiZero || MO==LightMeson || MO==StrangeMeson);
-        bool hadDecay3 = T==BkgPhoton && (O==LightMeson || O==PiZero);
-        bool hadDecay4 = T==BkgMuon && (
+        bool hadDecay3 = bkgEl_from_EMproc && 
+            ((MT==BkgElectron && MO==StrangeMeson) || (MT==BkgPhoton && MO==PiZero));
+        bool hadDecay4 = T==BkgPhoton && (O==LightMeson || O==PiZero);
+        bool hadDecay5 = T==BkgMuon && (
             O==LightMeson || O==StrangeMeson || O==PionDecay || O==KaonDecay);
-        bool hadDecay5 = T==Hadron;
-        bool hadDecay = hadDecay1 || hadDecay2 || hadDecay3 || hadDecay4 || hadDecay5;
+        bool hadDecay6 = T==Hadron;
+        bool hadDecay = hadDecay1 || hadDecay2 || hadDecay3 || hadDecay4 || hadDecay5 || hadDecay6;
 
-        bool HF_tau_mu1 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==TauLep;
-        bool HF_tau_mu2 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==TauLep;
-        bool HF_tau_mu3 =  T==NonIsoMuon && O==TauLep;
-        bool HF_tau_mu4 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==Mu;
-        bool HF_tau_mu5 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==Mu;
-        bool HF_tau_mu =  HF_tau_mu1 || HF_tau_mu2 || HF_tau_mu3 || HF_tau_mu4 || HF_tau_mu5;
+        bool Mu_as_e1 = (T==NonIsoElectron || T==NonIsoPhoton) && O==Mu;
+        bool Mu_as_e2 = bkgEl_from_EMproc && MT==NonIsoElectron && MO==Mu;
+        bool Mu_as_e3 = bkgEl_from_phoConv && MT==NonIsoPhoton && MO==Mu;
+        bool Mu_as_e = Mu_as_e1 || Mu_as_e2 || Mu_as_e3;   
+
+        bool HF_tau1 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==TauLep;
+        bool HF_tau2 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==TauLep;
+        bool HF_tau3 =  T==NonIsoMuon && O==TauLep;
+        bool HF_tau =  HF_tau1 || HF_tau2 || HF_tau3;
 
         bool HF_B1 = T==NonIsoElectron && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
         bool HF_B2 = T==BkgPhoton && O==BottomMeson;
@@ -1310,10 +1330,10 @@ int main(int argc, char* argv[])
         else if (promptPho) lep_class = 3;
         else if (hadDecay) lep_class = 4;
         // Stand-in while Mother type is not available
-        //else if (bkgEl_from_phoConv && mother_is_piZero) lep_class = 5;
-        else if (HF_tau_mu) lep_class = 5;
-        else if (HF_B) lep_class = 6;
-        else if (HF_C) lep_class = 7;
+        else if (Mu_as_e) lep_class = 5;
+        else if (HF_tau) lep_class = 6;
+        else if (HF_B) lep_class = 7;
+        else if (HF_C) lep_class = 8;
         else if (bkgEl_from_phoConv) lep_class = -1;
         else if (T && O && M_ID) {
             cout << "Unexpected Truth Class: "
@@ -1819,7 +1839,7 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////////////
   // Fake variables
   //////////////////////////////////////////////////////////////////////////////
-  if (do_fakes) {
+  if (do_fakes_zjets || estimate_fakes) {
     *cutflow << NewVar("Lepton ID status (ID(1), antiID(-1))"); {
       *cutflow << HFTname("lepID_status");
       *cutflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
@@ -2186,7 +2206,7 @@ int main(int argc, char* argv[])
     preTaus.clear(); baseTaus.clear(); signalTaus.clear();
     preJets.clear(); baseJets.clear(); signalJets.clear();
     lightJets.clear(); BJets.clear(); forwardJets.clear();
-    if (do_fakes) {
+    if (do_fakes_zjets || estimate_fakes) {
         lepID_vec.clear(); lepAntiID_vec.clear();
         lepID_n = lepAntiID_n = 0;
         antiID_idx0 = antiID_idx1 = -1;

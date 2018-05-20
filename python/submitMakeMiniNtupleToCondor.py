@@ -13,11 +13,12 @@ submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
 dry_run = False
 
 # Run analysis with fake configuration
+do_zjets_num_fakes  = True
+do_zjets_den_fakes  = True
 estimate_fakes      = True # apply fake factor to denom events
-only_fakes          = True # only output fake ntuples
-do_wjets_fakes      = False 
-do_zjets_fakes      = True
-assert not (do_wjets_fakes and do_zjets_fakes)
+only_fakes          = False  # only output fake ntuples
+assert not (only_fakes and do_zjets_num_fakes)
+
 
 # Where to submit condor jobs
 doBrick       = True 
@@ -85,20 +86,16 @@ def main() :
             dataset = "." + dataset[dataset.find(in_job_filelist_dir):]
             print "    >> %s"%dataset
 
-            ops = ""
             suffix = []
             if "mc15_13TeV" in did and "_" in did.split(".")[3]:
-                suffix.append(did.split(".")[3].split("_")[-1])
-            if do_zjets_fakes:
-                suffix.append("zjets")
-                ops = '-f zjets'
-            elif do_wjets_fakes:
-                suffix.append("wjets")
-                ops = '-f wjets'
+                new_name = did.split(".")[3].split("_")[-1]
+                print "TESTING :: Does this ever happen? %s -> %s"%(did, new_name)
+                suffix.append(new_name)
 
             if not (str(os.path.abspath(out_dir)) == str(os.environ['PWD'])) :
                 print "You must call this script from the output directory where the ntuples will be stored!"
                 print " >>> Expected submission directory : %s"%os.path.abspath(out_dir)
+                print " >>> You are running from PWD =",str(os.environ['PWD'])
                 sys.exit()
             
             if s.endswith('DWNLD'): 
@@ -107,9 +104,7 @@ def main() :
             
             isData =  re.search("data1[5-8]", dataset.split("/")[-1])
 
-            for submit_fakes in [False, True]:
-                if submit_fakes and not (estimate_fakes and isData): continue
-                if not submit_fakes and estimate_fakes and only_fakes: continue
+            def create_run_cmd(do_fakes, region):
                 run_cmd = "ARGS="
                 run_cmd += '"'
                 run_cmd += ' %s '%out_dir
@@ -119,26 +114,48 @@ def main() :
                 run_cmd += ' %s '%tarred_dir
                 run_cmd += ' %s '%dataset
                 lname = dataset.split("/")[-1].replace(".txt", "")
-                if submit_fakes:
-                    ops_tmp = ops + ' -s %s -e true'%('_'.join(suffix+['FFest']))
-                    lname = '_'.join([lname] + suffix + ['FFest'])
-                elif ops or suffix:
-                    ops_tmp = ops + ' -s %s'%('_'.join(suffix))
-                    lname = '_'.join([lname] + suffix)
+                ops = ""
+                suffix = []
+            
+                if do_zjets_num_fakes and region=='zjets_num':
+                    suffix.append("zjets_num")
+                    ops += ' -f zjets_num'
+                elif do_zjets_den_fakes and region=='zjets_den':
+                    suffix.append("zjets_den")
+                    ops += ' -f zjets_den'
                 else:
-                    ops_tmp = ""
+                    # run baseline
+                    pass
+                
+                if submit_fakes and region != 'zjets_num':
+                    suffix.append('FFest')
+                    ops = ops + ' -e'
+                
+                if suffix:
+                    ops = ops + ' -s %s'%('_'.join(suffix))
 
-                run_cmd += ' %s '%(ops_tmp) # any extra cmd line optino for Superflow executable
+                lname = '_'.join([lname] + suffix)
+
+                run_cmd += ' %s '%(ops) # any extra cmd line optino for Superflow executable
                 run_cmd += '"'
                 run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
                 run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
                 run_cmd += ' -append "output = %s%s" '%(log_dir, lname + ".out")
                 run_cmd += ' -append "log = %s%s" '%(log_dir, lname + ".log")
                 run_cmd += ' -append "error = %s%s" '%(log_dir, lname + ".err")
+                return run_cmd
 
-                print run_cmd.replace(g.analysis_path, "")
-                if not dry_run: 
-                    subprocess.call(run_cmd, shell=True)
+            for submit_fakes in [False, True]:
+                if submit_fakes and not (estimate_fakes and isData): continue
+                if not submit_fakes and estimate_fakes and only_fakes: continue
+                for region in ['baseline', 'zjets_num', 'zjets_den']:
+                    if region == 'zjets_num' and submit_fakes: continue
+                    if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue 
+                    
+                    run_cmd = create_run_cmd(submit_fakes, region)
+                    print run_cmd.replace(g.analysis_path, "")
+                    if not dry_run: 
+                        subprocess.call(run_cmd, shell=True)
     if dry_run:
         print "END OF DRY RUN"
     else:

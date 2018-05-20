@@ -8,6 +8,8 @@ import tools.region as region
 import tools.systematic as systematic
 import global_variables as g
 
+ROOT.gROOT.SetBatch(ROOT.kTRUE)
+
 #######################################
 # samples
 ########################################
@@ -29,6 +31,18 @@ lumi_val = 0
 lumi_ = [36180, 36.01, 3209, 32971, 1][lumi_val] 
 
 backgrounds = []
+
+search_strs = ''
+exclude_strs = ''
+grab_zjets_num = False
+grab_zjets_den = False
+if grab_zjets_num:
+    search_strs = 'zjets_num'
+elif grab_zjets_den:
+    search_strs = 'zjets_den'
+else:
+    exclude_strs = 'zjets'
+
 ####### MC
 # ttbar
 ttbar = background.Background("ttbar", "t#bar{t}")
@@ -39,6 +53,7 @@ ttbar.setLineStyle(1)
 ttbar.set_color(ROOT.kOrange+2)
 ttbar.set_treename("ttbar")
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], rawdir)
+#ttbar.set_chain_from_dsid_list(g.groups['ttbar'], rawdir, search_strs=search_strs, exclude_strs=exclude_strs)
 
 # singletop
 stop = background.Background("st", "Single top")
@@ -176,8 +191,7 @@ fakes.set_fillStyle(0)
 fakes.setLineStyle(1)
 fakes.set_color(ROOT.kGray)
 fakes.set_treename("fakes")
-fakes.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, search_str='FFest')
-print "TESTING :: Fakes have %d entries"%fakes.tree.GetEntries()
+fakes.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, search_strs='FFest')
 
 signal_branching_ratio = 0.01
 signal_SF = 1
@@ -195,7 +209,7 @@ signal.set_treename("signal")
 data = background.Data()
 data.set_color(ROOT.kBlack)
 data.set_treename("data")
-data.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, exclude_str='FFest')
+data.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, exclude_strs='FFest')
 
 
 ##########################################
@@ -331,8 +345,8 @@ zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-#zjets_FF_CR_add += ' && (l_type[2] == 4 && l_origin[2] == 5)'
-#zjets_FF_CR_add += ' && !(l_type[2] == 2 || l_type == 6)' # Not Isolepton 
+#zjets_FF_CR_add += ' && !isMC || (l_truthClass[2] == 1 || l_truthClass[2] == 2)' # Only prompt leptons
+#zjets_FF_CR_add += ' && !isMC || !(l_truthClass[2] == 1 || l_truthClass[2] == 2)'
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
@@ -354,8 +368,8 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         regions.append(reg)
 
 # Wjet fake regions
-wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1' # require final state
-wjets_FF_CRnum_base = 'nLepID == 2' # require final state
+wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1'
+wjets_FF_CRnum_base = 'nLepID == 2'
 wjets_FF_CRden_add = '1'
 wjets_FF_CRden_add += ' && l_q[0] == aID_Lep0Q && aID_dilep_flav <= 1' # reject SFOS zjets 
 wjets_FF_CRden_add += ' && (aID_MLL < 70 || 110 < aID_MLL)' # reject zjets 
@@ -435,8 +449,6 @@ regions.append(reg)
 # plots
 ##########################################
 plots = []
-
-vars = {}
 
 ### Define variables for plots
 HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY, norm   xUnits, xLabel, yLabel, add_overflow, add_underflow, ratioPlot')
@@ -626,11 +638,11 @@ backgrounds.append(fakes)
 region_ops = []
 #region_ops += ['wjets_FF_CRden_emu', 'wjets_FF_CRden_mue']
 #region_ops += ['wjets_FF_CRnum_emu', 'wjets_FF_CRnum_mue']
-#region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
-#region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
-#region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
-#region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
-region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e', 'zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
+region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum_eee']
+#region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRnum_eem']
+#region_ops += ['zjets_FF_CRden_mme', 'zjets_FF_CRnum_mme']
+region_ops += ['zjets_FF_CRden_mmm', 'zjets_FF_CRnum_mmm']
+#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e', 'zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #region_ops += ['baseline_mue', 'baseline_emu']
 #region_ops += ['no_sel']
 
@@ -679,8 +691,7 @@ vars_to_plot = []
     # Z+Jets
 #vars_to_plot += ['MET','Z_Lep2_mT']
 #vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_MLL']
-#vars_to_plot += ['l_type[0]','l_type[1]','l_type[2]']
-#vars_to_plot += ['l_origin[0]','l_origin[1]','l_origin[2]']
+#vars_to_plot += ['l_truthClass']
 vars_to_plot += ['Z_Lep2_pT']
 
 ## Object Definitions Plots
@@ -741,10 +752,10 @@ for var in vars_to_plot:
         p.xax(bin_width, ops.x0, ops.x1)
         p.yax(y0, y1)
         assert data or backgrounds, "No data or backgrounds defined"
-        if data and backgrounds and ops.ratioPlot:
-            p.setRatioCanvas(p.name) 
-        else:
-            p.setDefaultCanvas(p.name)
+        #if data and backgrounds and ops.ratioPlot:
+        #    p.setRatioCanvas(p.name) 
+        #else:
+        p.setDefaultCanvas(p.name)
             
         plots.append(p)
 

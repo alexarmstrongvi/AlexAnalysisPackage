@@ -146,8 +146,10 @@ def get_FF_hists(data, backgrounds, regions, plots):
 
 def prepare_hists(hists):
     # Rebin histograms
-    newBinsEl = array.array('d',[0, 15, 20, 25, 35, 100])
-    newBinsMu = array.array('d',[0, 15, 20, 25, 35, 100])
+    #newBinsEl = array.array('d',[0, 15, 20, 25, 35, 100])
+    #newBinsMu = array.array('d',[0, 15, 20, 25, 35, 100])
+    newBinsEl = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
+    newBinsMu = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
     samples_to_subtract = ['WZ','ZZ','ttbar']
     
     rebin_hists = defaultdict(dict)
