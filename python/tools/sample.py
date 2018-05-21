@@ -24,7 +24,6 @@ r.TEventList.__init__._creates = False
 ################################################################################
 class Sample :
     def __init__(self, name = "", displayname = ""):
-        self.dbg = False #TODO: Remove debug
         self.name = name
         self.displayname = displayname
         self.treename = ""
@@ -40,7 +39,7 @@ class Sample :
         full_name = flat_ntuple_dir+file_name
         self.set_chain_from_list([full_name])
 
-    def set_chain_from_dsid_list(self, dsid_list, flat_ntuple_dir, search_strs='', exclude_strs=''):
+    def set_chain_from_dsid_list(self, dsid_list, flat_ntuple_dir, search_strs=[], exclude_strs=[]):
         '''
         Build chain of background ntuples
 
@@ -57,14 +56,10 @@ class Sample :
 
         # Select out flat ntuples found in DSID list
         chosen_ntuples = []
-        #TODO: Make inputs lists instead of converting here
-
-        search_str_list = [s.strip() for s in search_strs.split(",")]
-        exclude_str_list = [s.strip() for s in exclude_strs.split(",")]
         for dsid in dsid_list:
             for fname in flat_ntuples:
-                if any(s not in fname for s in search_str_list if s): continue
-                if any(s in fname for s in exclude_str_list if s) : continue
+                if any(s not in fname for s in search_strs if s): continue
+                if any(s in fname for s in exclude_strs if s) : continue
                 if str(dsid) in fname :
                     chosen_ntuples.append(fname);
                     break
@@ -72,7 +67,7 @@ class Sample :
                 print "WARNING :: Unable to find file for DSID =", dsid
         if not chosen_ntuples:
             print "WARNING :: No samples found for", self.name
-        
+
         self.set_chain_from_list(chosen_ntuples)
 
     def set_chain_from_file_list(self, file_list, flat_ntuple_dir):

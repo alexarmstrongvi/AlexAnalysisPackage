@@ -33,10 +33,10 @@ import tools.systematic as systematic
 ################################################################################
 import global_variables as g
 # Path to directories with flat ntuples
-#TODO: rawdir -> mc_ntuples_dir, signal_ntuples_dir, data_ntuples_dir
-rawdir        = g.mc_ntuples
-signal_rawdir = g.mc_ntuples
-data_rawdir   = g.data_ntuples
+bkg_ntuple_dir    = g.mc_ntuples
+signal_ntuple_dir = g.mc_ntuples
+data_ntuple_dir   = g.data_ntuples
+fake_ntuple_dir   = g.data_ntuples
 
 # Luminosity options
 # Description | 2015-16 (ipb) |  2015-16 (ifb) | 2015 (ipb) | 2016 (ipb) | dummy
@@ -569,25 +569,26 @@ HistOpMap = {
 # To remove sample from plot, comment out its formation here and where the
 # background gets appended to the samples list
 data_dsids = g.groups['data15']+g.groups['data16']
-data.set_chain_from_dsid_list(data_dsids, data_rawdir, exclude_strs='FFest')
-#fakes.set_chain_from_dsid_list(data_dsids, data_rawdir, search_strs='FFest')
-ttbar.set_chain_from_dsid_list(g.groups['ttbar'], rawdir)
-stop.set_chain_from_dsid_list(g.groups['singletop'], rawdir)
-wtop.set_chain_from_dsid_list(g.groups['Wt'], rawdir)
-WW.set_chain_from_dsid_list(g.groups['ww'], rawdir)
-ZZ.set_chain_from_dsid_list(g.groups['zz'], rawdir)
-WZ.set_chain_from_dsid_list(g.groups['wz'], rawdir)
-#zll.set_chain_from_dsid_list(g.groups['zll'], rawdir)
-zee.set_chain_from_dsid_list(g.groups['zee'], rawdir)
-zmumu.set_chain_from_dsid_list(g.groups['zmumu'], rawdir)
-ztt.set_chain_from_dsid_list(g.groups['ztt'], rawdir)
-wjets.set_chain_from_dsid_list(g.groups['wjets'], rawdir)
-#wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], rawdir)
-htt.set_chain_from_dsid_list(g.groups['htt'], rawdir)
-hww.set_chain_from_dsid_list(g.groups['hww'], rawdir)
-#signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_rawdir)
+data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs='FFest')
+#fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir, search_strs='FFest')
+ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
+stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir)
+wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir)
+WW.set_chain_from_dsid_list(g.groups['ww'], bkg_ntuple_dir)
+ZZ.set_chain_from_dsid_list(g.groups['zz'], bkg_ntuple_dir)
+WZ.set_chain_from_dsid_list(g.groups['wz'], bkg_ntuple_dir)
+#zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir)
+zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir)
+zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir)
+ztt.set_chain_from_dsid_list(g.groups['ztt'], bkg_ntuple_dir)
+wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir)
+#wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], bkg_ntuple_dir)
+htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir)
+hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir)
+#signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_ntuple_dir)
 
 ## Add backgrounds to be included in plots
+#TODO: change backgrounds to mc_samples or just samples
 backgrounds = []
 backgrounds.append(ttbar)
 backgrounds.append(stop)

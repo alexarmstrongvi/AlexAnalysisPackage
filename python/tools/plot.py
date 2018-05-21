@@ -1,18 +1,49 @@
-import ROOT as r
-r.TCanvas.__init__._creates = False
+"""
+================================================================================
+Plot classes for ROOT plotting
+
+Author:
+    Alex Armstrong <alarmstr@cern.ch>
+    ... with almost the entire code borrowed exactly from Danny Antrim
+        <dantrim@cern.ch>
+
+License:
+    Copyright: (C) <May 20th, 2018>; University of California, Irvine
+================================================================================
+"""
+# General python
+import sys
 import glob
 from math import floor
-import sys
-sys.path.append('../..')
+
+# Root data analysis framework
+import ROOT as r
+r.TCanvas.__init__._creates = False
 
 class Plot1D :
     def __init__(self) :
-        self.is2D = False
-        self.variable = ""
+        # Descriptors
         self.region = ""
         self.name = ""
+        self.variable = ""
+
+        # Objects
+        self.canvas = None
+        self.ratioCanvas = None
+        self.doubleRatioCanvas = None
+
+        # Properties
         self.x_label = "x-Label"
-        self.y_label = "Entries"
+        self.y_label = "Events"
+        self.x_bin_width = 1.0
+        self.x_range_min = 0.0
+        self.x_range_max = 50.0
+        self.y_range_min = 0.0
+        self.y_range_max = 50.0
+        self.nbins = 20
+
+        # Flags
+        self.is2D = False
         self.doLogY = False
         self.doNorm = False
         self.add_overflow = True
@@ -20,29 +51,17 @@ class Plot1D :
         self.leg_is_left = False
         self.leg_is_bottom_right = False
         self.leg_is_bottom_left = False
-        self.x_bin_width = 1.0
-        self.x_range_min = 0.0
-        self.x_range_max = 50.0
-        self.y_range_min = 0.0
-        self.y_range_max = 50.0
-        self.nbins = 20
         self.is_comparison = False
 
-        self.canvas = None
-        self.ratioCanvas = None
-        self.doubleRatioCanvas = None
 
     def initialize(self, region = "", variable = "", name = "") :
         self.region = region
         self.variable = variable
         self.name = name
 
-    def setComparison(self) :
-        '''
-        Set whether this plot is just a simple 'comparison plot' --
-        i.e. no stack, no fill, the samples drawn "hist"
-        '''
-        self.is_comparison = True
+    def setDefaultCanvas(self, name) :
+        c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
+        self.canvas = c
 
     def labels(self, x="", y="Entries") :
         self.x_label = x
@@ -59,6 +78,13 @@ class Plot1D :
         self.y_range_min = min
         self.y_range_max = max
 
+    def setComparison(self) :
+        '''
+        Set whether this plot is just a simple 'comparison plot' --
+        i.e. no stack, no fill, the samples drawn "hist"
+        '''
+        self.is_comparison = True
+
     def doLog(self) :
         '''
         Set y-axis logarithmic
@@ -70,10 +96,6 @@ class Plot1D :
 
     def isNorm(self) :
         return self.doNorm
-
-    def setDefaultCanvas(self, name) :
-        c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
-        self.canvas = c
 
     def setRatioCanvas(self, name) :
         self.ratioCanvas = RatioCanvas(name)
@@ -104,13 +126,6 @@ class Plot1D :
         elif self.ratioCanvas != None : return self.ratioCanvas
         elif self.doubleRatioCanvas != None : return self.doubleRatioCanvas
 
-    def default_name() :
-        '''
-        Default plot name is of the form:
-            <region>_<variable>
-        '''
-        return self.region + "_" + self.variable
-
     def get_n_bins(self) :
         '''
         From the user-provided bin width and (min,max) get
@@ -122,38 +137,34 @@ class Plot1D :
         nbins = floor( (max - min) / (width) + 0.5 )
         return nbins
 
-    def set_name(self, plotname) :
-        '''
-        Override the default plot name
-        '''
-        self.name = plotname
-
     def Print(self) :
         print "Plot1D    plot: %s  (region: %s  var: %s)"%(self.name, self.region, self.variable)
 
 class Plot2D :
     def __init__(self) :
-        self.is2D = True
+        # Descriptors
+        self.region = ""
+        self.name = ""
+
+        # Objects
+        self.canvas = None
+
+        # Properties
+        self.style = "colz"
         self.xVariable = ""
         self.yVariable = ""
-        self.region = ""
-        self.sample = ""
-        self.name = ""
-        #self.name = self.default_plot_name()
         self.x_label = "x-Label"
         self.y_label = "y-Label"
         self.x_bin_width = 1.0
-        self.y_bin_width = 1.0
         self.x_range_min = 0.0
         self.x_range_max = 50.0
         self.y_range_min = 0.0
-        self.y_range_max = 0.0
+        self.y_range_max = 50.0
+        self.y_bin_width = 1.0
+
+        # Flags
         self.do_profile = False
         self.do_profileRMS = False
-
-        self.style = "colz"
-
-        self.canvas = None
 
     def initialize(self, region="", xvar="", yvar="", name="") :
         '''
@@ -165,25 +176,16 @@ class Plot2D :
         self.yVariable = yvar
         self.name = name
 
-    def set_sample(self, sample="") :
-        '''
-        Set by name which sample the 2D histo is to be
-        plotted for
-        '''
-        self.sample = sample
+    def setDefaultCanvas(self, name) :
+        c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
+        self.canvas = c
 
-    def doProfile(self) :
+    def labels(self, x="",y="") :
         '''
-        Set whether to do a profile plot
+        Set the x- and y-axis titles
         '''
-        self.do_profile = True
-
-    def doProfileRMS(self) :
-        '''
-        Set whether to do a profile plot
-        with RMS on the y-axis
-        '''
-        self.do_profileRMS = True
+        self.x_label = x
+        self.y_label = y
 
     def xax(self, width=1.0, min=0.0, max=50.0) :
         '''
@@ -203,24 +205,18 @@ class Plot2D :
         self.y_range_max = max
         self.n_binsY = self.get_n_bins(width, min, max)
 
-    def labels(self, x="",y="") :
+    def doProfile(self) :
         '''
-        Set the x- and y-axis titles
+        Set whether to do a profile plot
         '''
-        self.x_label = x
-        self.y_label = y
+        self.do_profile = True
 
-
-    def default_plot_name(self) :
+    def doProfileRMS(self) :
         '''
-        Default plot name for 2D plots is of the form:
-            <region>_<xVar>_<yVar>
+        Set whether to do a profile plot
+        with RMS on the y-axis
         '''
-        return self.region + "_" + self.xVariable + "_" + self.yVariable
-
-    def defaultCanvas(self) :
-        c = r.TCanvas("c_" + self.name, "", 800, 600)
-        self.canvas = c
+        self.do_profileRMS = True
 
     def get_n_bins(self, width, min, max) :
         '''
@@ -230,12 +226,6 @@ class Plot2D :
         nbins = floor( (max - min) / (width) + 0.5 )
         return nbins
 
-    def set_plot_name(self, plotname) :
-        '''
-        Override the default plot name
-        '''
-        self.name = plotname
-
     def set_style(self, style="") :
         '''
         Override the default style of "colz"
@@ -244,6 +234,8 @@ class Plot2D :
 
     def Print(self) :
         print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(self.name, self.region, self.xVariable, self.yVariable)
+
+
 
 class RatioCanvas :
     def __init__(self, name) :

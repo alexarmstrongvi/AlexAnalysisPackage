@@ -43,7 +43,7 @@ r.TGraphAsymmErrors.__init__._creates = False
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.samples as sample
+import tools.background as background
 import tools.region as region
 import tools.plot as plot
 from global_variables import event_list_dir, plots_dir
