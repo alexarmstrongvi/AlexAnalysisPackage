@@ -242,46 +242,36 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 # Create regions
 regions = []
 
-reg = region.Region()
-reg.name = "no_sel"
-reg.displayname = "No Selections"
-reg.tcut = '1' #DF_OS
-regions.append(reg)
+#TODO: reformat to look prettier. like give regions variable names and then
+#      append them all at the end into one list.
+no_sel_CR = region.Region(name = "no_sel", displayname = "No Selections")
+no_sel_CR.tcut = '1' #DF_OS
+regions.append(no_sel_CR)
 
-reg = region.Region()
-reg.name = "trig_only"
-reg.displayname = "Lepton Triggers"
-reg.tcut = lepton_trig_pT + "&&" + DF_OS
-regions.append(reg)
+trig_only_CR = region.Region("trig_only", "Lepton Triggers")
+trig_only_CR.tcut = lepton_trig_pT + "&&" + DF_OS
+regions.append(trig_only_CR)
 
-reg = region.Region()
-reg.name = "topCR"
-reg.displayname = "Top CR"
-reg.tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
-regions.append(reg)
+top_CR = region.Region("topCR", "Top CR")
+top_CR.tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
+regions.append(top_CR)
 
-reg = region.Region()
-reg.name = "zCR_ee"
-reg.displayname = "Z CR (Channel: El-El)"
-reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
-regions.append(reg)
+zee_CR = region.Region("zCR_ee", "Z CR (Channel: El-El)")
+zee_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
+regions.append(zee_CR)
 
-reg = region.Region()
-reg.name = "zCR_mumu"
-reg.displayname = "Z CR (Channel: Mu-Mu)"
-reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
-regions.append(reg)
+zmumu_CR = region.Region("zCR_mumu", "Z CR (Channel: Mu-Mu)")
+zmumu_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
+regions.append(zmumu_CR)
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& (30 < MLL && MLL < 150) '
               + '&& nBJets==0 '
               + '&& ( !'+mue+' || el1pT_trackclus_ratio < 1.2) '
               + '&&' + DF_OS)
-reg = region.Region()
-reg.name = "ztautauCR"
-reg.displayname = "Ztautau CR"
-reg.tcut = ZTauTau_CR
-regions.append(reg)
+ztt_CR = region.Region("ztautauCR", "Ztautau CR")
+ztt_CR.tcut = ZTauTau_CR
+regions.append(ztt_CR)
 
 # Z+Jets fake regions
 zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
@@ -307,9 +297,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         id_or_aid = 'ID' if num_den == 'num' else 'anti-ID'
         chan_name = '%s + %s %s'%(ops[0], id_or_aid, ops[1])
 
-        reg = region.Region()
-        reg.name = 'zjets_FF_CR%s_%s'%(num_den, chan)
-        reg.displayname = 'Z+jets FF CR (%s)'%(chan_name)
+        reg = region.Region('zjets_FF_CR%s_%s'%(num_den, chan), 'Z+jets FF CR (%s)'%(chan_name))
         reg.tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
         regions.append(reg)
 
@@ -325,17 +313,13 @@ FF_CRden_mue_ch  = 'aID_dilep_flav == 1'
 FF_CRden_ee_ch   = 'aID_dilep_flav == 2'
 FF_CRden_mumu_ch = 'aID_dilep_flav == 3'
 
-reg = region.Region()
-reg.name = 'wjets_FF_CRden_emu'
-reg.displayname = 'wjets FF CR (anti-ID el)'
-reg.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
-regions.append(reg)
+wjets_emu_fake_CR = region.Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)')
+wjets_emu_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
+regions.append(wjets_emu_fake_CR)
 
-reg = region.Region()
-reg.name = 'wjets_FF_CRden_mue'
-reg.displayname = 'wjets FF CR (anti-ID mu)'
-reg.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
-regions.append(reg)
+wjets_mue_fake_CR = region.Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)')
+wjets_mue_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
+regions.append(wjets_mue_fake_CR)
 
 wjets_FF_CRnum_base = 'nLepID == 2' # require final state
 wjets_FF_CRnum_add = '1'
@@ -347,48 +331,34 @@ FF_CRnum_mue_ch  = 'dilep_flav == 1'
 FF_CRnum_ee_ch   = 'dilep_flav == 2'
 FF_CRnum_mumu_ch = 'dilep_flav == 3'
 
-reg = region.Region()
-reg.name = 'wjets_FF_CRnum_emu'
-reg.displayname = 'wjets FF CR (ID el)'
-reg.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-regions.append(reg)
+wjets_FF_CRnum_emu_CR = region.Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)')
+wjets_FF_CRnum_emu_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
+regions.append(wjets_FF_CRnum_emu_CR)
 
-reg = region.Region()
-reg.name = 'wjets_FF_CRnum_mue'
-reg.displayname = 'wjets FF CR (ID mu)'
-reg.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-regions.append(reg)
+wjets_FF_CRnum_mue_CR = region.Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)')
+wjets_FF_CRnum_mue_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
+regions.append(wjets_FF_CRnum_mue_CR)
 
 # Baseline regions
-reg = region.Region()
-reg.name = "baseline"
-reg.displayname = "Baseline"
-reg.tcut = Baseline_Sel
-regions.append(reg)
+baseline_CR = region.Region("baseline", "Baseline")
+baseline_CR.tcut = Baseline_Sel
+regions.append(baseline_CR)
 
-reg = region.Region()
-reg.name = "baseline_emu"
-reg.displayname = "Baseline (Channel: El-Mu)"
-reg.tcut = Baseline_Sel + " && " + emu
-regions.append(reg)
+baseline_emu_CR = region.Region("baseline_emu", "Baseline (Channel: El-Mu)")
+baseline_emu_CR.tcut = Baseline_Sel + " && " + emu
+regions.append(baseline_emu_CR)
 
-reg = region.Region()
-reg.name = "baseline_mue"
-reg.displayname = "Baseline (Channel: Mu-El)"
-reg.tcut = Baseline_Sel + " && " + mue
-regions.append(reg)
+baseline_mue_CR = region.Region("baseline_mue", "Baseline (Channel: Mu-El)")
+baseline_mue_CR.tcut = Baseline_Sel + " && " + mue
+regions.append(baseline_mue_CR)
 
-reg = region.Region()
-reg.name = "vbf"
-reg.displayname = "VBF"
-reg.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
-regions.append(reg)
+vbf_SR = region.Region("vbf", "VBF")
+vbf_SR.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
+regions.append(vbf_SR)
 
-reg = region.Region()
-reg.name = "optimized"
-reg.displayname = "Optimized"
-reg.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
-regions.append(reg)
+optimized_SR = region.Region("optimized", "Optimized")
+optimized_SR.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
+regions.append(optimized_SR)
 
 ################################################################################
 # Variables
