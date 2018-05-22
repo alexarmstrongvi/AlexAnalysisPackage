@@ -218,6 +218,7 @@ singlelep15_trig = '(treatAsYear==2015 && (%s || %s))'%(e15_trig,mu15_trig)
 singlelep16_trig = '(treatAsYear==2016 && (%s || %s))'%(e16_trig,mu16_trig)
 dilep_trig = '(%s || %s)'%(dilep15_trig, dilep16_trig)
 singlelep_trig = '(%s || %s)'%(singlelep15_trig, singlelep16_trig)
+lepton_trig = '(%s || %s)'%(singlelep_trig, dilep_trig)
 
 dilep15_trig_pT      = '(treatAsYear==2015 && %s)'%emu15_trig_pT
 dilep16_trig_pT     = '(treatAsYear==2016 && %s)'%emu16_trig_pT
@@ -263,13 +264,13 @@ regions.append(reg)
 reg = region.Region()
 reg.name = "zCR_ee"
 reg.displayname = "Z CR (Channel: El-El)"
-reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
+reg.tcut = "nLepID == 2 && 75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig 
 regions.append(reg)
 
 reg = region.Region()
 reg.name = "zCR_mumu"
 reg.displayname = "Z CR (Channel: Mu-Mu)"
-reg.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
+reg.tcut = "nLepID == 2 && 75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig
 regions.append(reg)
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
@@ -286,13 +287,17 @@ regions.append(reg)
 # Z+Jets fake regions
 zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
 zjets_FF_CRnum_base = 'nLepID == 3'
-zjets_FF_CR_add = '70 < Z_MLL && Z_MLL < 110'
+zjets_FF_CR_add =  singlelep_trig
+zjets_FF_CR_add += '&& (70 < Z_MLL && Z_MLL < 110)'
 zjets_FF_CR_add += ' && nBJets == 0'
-zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-#zjets_FF_CR_add += ' && !isMC || (l_truthClass[2] == 1 || l_truthClass[2] == 2)' # Only prompt leptons
-#zjets_FF_CR_add += ' && !isMC || !(l_truthClass[2] == 1 || l_truthClass[2] == 2)'
+zjets_FF_CR_add += ' && MET < 50'
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Lepton
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Lepton
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[2] && l_truthClass[2] <= 2))' #Prompt Lepton
+#zjets_FF_CR_add += ' && (!isMC || (2 < l_truthClass[2] && l_truthClass[2] <= 8))' #Non-Prompt Lepton
+#zjets_FF_CR_add += ' && (!isMC || (-2 < l_truthClass[2] && l_truthClass[2] <= 0))' #Unknown Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
@@ -464,9 +469,9 @@ HistOpMap = {
     'l_q'             : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Lepton charge'),
     'LepLepSign'      : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leptons sign product'),
     'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', logY=True),
-    #'Lep1Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', logY=True),
+    'Lep1Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', logY=True),
     #'Lep0Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', add_overflow=False),
-    'Lep1Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', add_overflow=False),
+    #'Lep1Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', add_overflow=False),
     'Lep0Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{leading lep}'),
     'Lep1Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{subleading lep}'),
     'Lep0Phi'         : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#phi^{leading lep}'),
@@ -550,7 +555,7 @@ HistOpMap = {
     'dR_Zl'               : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Z dilepton flavor', logY=True),
     'Z2_dilep_flav'       : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='2nd Z dilepton flavor', logY=True),
-    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=True),
+    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
     #'Z_Lep2_pT'         : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
     'Z_Lep2_eta'        : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='3rd leading lepton #eta', logY=True),
     'Z_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='Z Dilepton Sign : OS(-1) SS(1)', logY=True),
@@ -569,8 +574,8 @@ HistOpMap = {
 # To remove sample from plot, comment out its formation here and where the
 # background gets appended to the samples list
 data_dsids = g.groups['data15']+g.groups['data16']
-data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs='FFest')
-#fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir, search_strs='FFest')
+data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs=['FFest'])
+#fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir, search_strs=['FFest'])
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
 stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir)
 wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir)
@@ -609,7 +614,9 @@ backgrounds.append(hww)
 
 # What regions to plot
 region_ops = []
-region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
+#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
+#region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
+region_ops += ['zjets_FF_CRnum_m']
 
 # What variables to plot
 vars_to_plot = []
@@ -667,6 +674,7 @@ for var in vars_to_plot:
         #if data and backgrounds and ops.ratioPlot:
         #    p.setRatioCanvas(p.name)
         #else:
+        #    p.setDefaultCanvas(p.name)
         p.setDefaultCanvas(p.name)
 
         plots.append(p)

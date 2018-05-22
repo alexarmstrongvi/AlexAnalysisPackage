@@ -599,6 +599,7 @@ int main(int argc, char* argv[])
   // TODO: Add to SusyNts HLT_2mu10)
 
   // Single Electron Triggers
+  // TODO: Trigger match a provided vector of electrons instead of just one
   ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, el0)
   ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, el0)
   ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, el0)
