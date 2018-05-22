@@ -29,10 +29,11 @@ r.gStyle.SetOptStat(False)
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.samples as sample
+import tools.sample as sample
 import tools.region as region
 import tools.plot as plot
 
+HISTS_TO_PRINT = []
 ################################################################################
 def main ():
     """ Main Function """
@@ -129,6 +130,7 @@ def get_FF_hists(data, backgrounds, regions, plots):
             else:
                 cut = "(" + reg.tcut + ") * eventweight * " + str(sample.scale_factor)
 
+            
             cut = r.TCut(cut)
             sel = r.TCut("1")
             draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())
@@ -148,15 +150,21 @@ def prepare_hists(hists):
     # Rebin histograms
     #newBinsEl = array.array('d',[0, 15, 20, 25, 35, 100])
     #newBinsMu = array.array('d',[0, 15, 20, 25, 35, 100])
-    newBinsEl = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
-    newBinsMu = array.array('d',[0, 5, 10, 15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
-    samples_to_subtract = ['WZ','ZZ','ttbar']
+    newBinsEl = array.array('d',[15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
+    newBinsMu = array.array('d',[15, 20, 23, 26, 29, 32, 35, 40, 45, 50, 100])
+    samples_to_subtract = ['WZ','ZZ']
 
     rebin_hists = defaultdict(dict)
     bkgd_subtracted = defaultdict(dict)
+    global HISTS_TO_PRINT
+
+    # Loop through hists for a given channel (e.g. el or mu) and
+    # prepare the histograms as needed
     for ch_name, ch_hists in hists.iteritems():
         print "INFO :: Modifying hists in channel", ch_name
         non_fake_bkgd_hists = [[],[]]
+
+        # First pass over hists to configure as necessary
         for h_name, hist in ch_hists.iteritems():
             # Rebin
             ch_flav = get_channel_flav(ch_name)
@@ -165,18 +173,19 @@ def prepare_hists(hists):
             else:
                 rebin_hists[ch_name][h_name] = hist.Rebin(len(newBinsMu)-1, h_name, newBinsMu)
 
-
             # Capture relevent hists
             if 'data' in h_name:
                 h_tmp = rebin_hists[ch_name][h_name].Clone(hist.GetName()+"_minus_bkgd")
                 bkgd_subtracted[ch_name]['%s_minus_bkgd'%h_name] = h_tmp
                 print "INFO :: Data yield for %s before background subtraction: %.2f"%(h_name, h_tmp.Integral())
             if any(x in h_name for x in samples_to_subtract):
+                HISTS_TO_PRINT.append(h_name)
                 if hist_is_num(h_name):
                     non_fake_bkgd_hists[0].append(rebin_hists[ch_name][h_name])
                 else:
                     non_fake_bkgd_hists[1].append(rebin_hists[ch_name][h_name])
 
+        # Subtract 3 prompt lepton events from data
         for h_name, hist in bkgd_subtracted[ch_name].iteritems():
             if 'minus_bkgd' in h_name:
                 num_or_den = 0 if hist_is_num(h_name) else 1
@@ -189,17 +198,20 @@ def prepare_hists(hists):
 def make_FF_hists(hists):
     hists_to_divide = ['data','zee', 'zmumu']
     FF_hists = {}
+    global HISTS_TO_PRINT
     for ch_name, ch_hists in hists.iteritems():
         FF_hists_ch = {}
         for h_name, hist in ch_hists.iteritems():
             if not any(x in h_name for x in hists_to_divide): continue
             if hist_is_num(h_name):
                 ff_name = h_name.replace("num","")
+                HISTS_TO_PRINT.append(h_name)
                 FF_hists_ch[ff_name] = hist.Clone(ff_name)
         for h_name, hist in ch_hists.iteritems():
             if not any(x in h_name for x in hists_to_divide): continue
             if not hist_is_num(h_name):
                 ff_name = h_name.replace('den','')
+                HISTS_TO_PRINT += [h_name, ff_name]
                 FF_hists_ch[ff_name].Divide(hist)
         FF_hists[ch_name] = FF_hists_ch
     return FF_hists
@@ -216,11 +228,13 @@ def finalize_hists(hists, ff_hists):
 
     ofile = r.TFile(args.ofile_name,'RECREATE')
     all_hists = combine_dicts(hists, ff_hists)
+    global HISTS_TO_PRINT
     for ch_name, ch_hists in all_hists.iteritems():
         for h_name, hist in ch_hists.iteritems():
             hist.Draw("pE1")
             hist.Write()
-            if not ('num' in h_name or 'den' in h_name):
+            #if not ('num' in h_name or 'den' in h_name)
+            if h_name in HISTS_TO_PRINT:
                 can.SaveAs('%s%s.eps'%(g.plots_dir,h_name))
     ofile.Write()
     ofile.Close()

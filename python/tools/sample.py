@@ -29,7 +29,7 @@ class Sample :
         self.treename = ""
         self.color = r.kRed
         self.tree = None
-        self.isMC = False
+        self.isMC = None
 
     def isMC(self):
         return self.isMC

@@ -43,7 +43,7 @@ r.TGraphAsymmErrors.__init__._creates = False
 import tools.plot_utils as pu
 import tools.utils as utils
 import tools.signal as signal
-import tools.background as background
+import tools.sample as sample
 import tools.region as region
 import tools.plot as plot
 from global_variables import event_list_dir, plots_dir
@@ -140,7 +140,7 @@ def make_plots(plots, regions, data, backgrounds) :
                 b.tree.SetEventList(list)
                 list.Write(list_name)
                 save_cut.Write("cut")
-                rfile.Close()
+            rfile.Close()
 
         # EventLists for Data
         if data :
@@ -163,6 +163,7 @@ def make_plots(plots, regions, data, backgrounds) :
                 data_list = r.gROOT.FindObject(data_list_name)
                 data.tree.SetEventList(data_list)
                 data_list.SaveAs(data_save_name)
+            rfile.Close()
 
         ########################################################################
         # Make 1D and 2D plots
@@ -211,23 +212,39 @@ def make_plots2D(plot, reg, data, backgrounds):
 class PlotParts():
     def __init__(self):
         self.hist_axis = None
+        self.stack_hists = []
         self.mc_stack = None
         self.mc_hist = None
         self.signal_hists = []
         self.data_hist = None
         self.error_graph = None
         self.leg = None
-    def draw_all(self, region_name):
+    def draw_all(self, region_name, can):
         if not self.hist_axis:
             print "ERROR :: Hist axis not provided. Cannot draw "
             return
         self.hist_axis.Draw('AXIS')
-        if self.mc_stack: self.mc_stack.Draw("hist && same")
-        if self.error_graph: self.error_graph.Draw("E2 && same")
-        if self.mc_hist: self.mc_hist.Draw('hist same')
-        for hsig in self.signal_hists: hsig.Draw("hist same")
-        if self.data_hist: self.data_hist.Draw("option same pz 0")
-        if self.leg: self.leg.Draw('same')
+        print "axis name = ",self.hist_axis.GetXaxis().GetName()
+        if self.mc_stack: 
+            print "Drawing Stack"
+            self.mc_stack.Draw("HIST")
+        if self.error_graph: 
+            print "Drawing error"
+            self.error_graph.Draw("E2 same")
+        if self.mc_hist: 
+            print "Drawing mc_hist"
+            self.mc_hist.Draw('hist same')
+            print "axis name = ",self.mc_hist.GetXaxis().GetName()
+        for hsig in self.signal_hists: 
+            print "Drawing signal_hist"
+            hsig.Draw("hist same")
+        if self.data_hist: 
+            print "Drawing data_hist"
+            self.data_hist.Draw("option same pz 0")
+            print "axis name = ",self.data_hist.GetXaxis().GetName()
+        if self.leg: 
+            print "Drawing leg"
+            self.leg.Draw('same')
 
         # add some text/labels
         pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
@@ -237,9 +254,9 @@ class PlotParts():
         pu.draw_text(text=region_name,      x=0.18,y=0.68, size=0.04)
 
         # Reset axis
-        r.gPad.RedrawAxis()
         r.gPad.SetTickx()
         r.gPad.SetTicky()
+        r.gPad.Update()
 
     def Print(self):
         print "self.hist_axis = ", self.hist_axis
@@ -263,25 +280,16 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
     can.SetRightMargin(0.05)
     can.SetBottomMargin(1.3*can.GetBottomMargin())
     if plot.isLog() : can.SetLogy(True)
+    can.Update()
 
     # Initialize plot components
     # - allows them to persist when function scope ends
     # - thereby preserving them on the canvas
     stack_plot_parts = PlotParts()
-    #stack_plot_parts = None
-    #hist_axis = None
-    #mc_stack = None
-    #mc_hist = None
-    #signal_hists = []
-    #data_hist = None
-    #error_graph = None
-    #leg = None
     draw_stack(can, plot, reg, data, backgrounds, stack_plot_parts)
-    #stack_plot_parts.draw_all()
-    can.SaveAs("InProgress5.pdf")
+    #stack_plot_parts.draw_all(reg.displayname)
     can.Update()
 
-    can.SaveAs("InProgress6.pdf")
     save_plot(can, plot.name+".eps")
 
 def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
@@ -296,31 +304,12 @@ def draw_stack(can, plot, reg, data, backgrounds, plot_parts):
     ''' '''
     #TODO: Remove dependence on passing canvas to functions
     # Get histograms
-    #global hist_axis, mc_stack, mc_hist, signal_hists, data_hist, error_graph, leg
     make_stack_hists(can, plot, reg, data, backgrounds, plot_parts)
 
     #TODO: Seperate histogram making into seperate functions
-    #mc_stack = make_hist1D(plot, reg, backgrounds, stack=true)
-    #mc_total_hist = stack_to_total(mc_stack)
-    #signals_hists = make_hist1D(plot, reg, signals)
-    #data_hist = make_hist1D(plot, reg, data)
-    #error_graph = make_error_graph(mc_hist)
-    #
-    ## Prepare legend
-    #leg = make_legend(data=data_hist, stack=mc_stack, signals=signals_hists)
-    #
+    
     # Draw onto current canvas
-    #can.cd()
-    #hist_axis.Draw('AXIS')
-    #mc_stack.Draw("hist && same")
-    #error_graph.Draw("E2 && same")
-    #mc_hist.Draw('hist same')
-    #for hsig in signal_hists: hsig.Draw("hist same")
-    #data_hist.Draw("option same pz 0")
-    #leg.Draw('same')
-    plot_parts.draw_all(reg.displayname)
-    #can.Update()
-    can.SaveAs("InProgress4.pdf")
+    plot_parts.draw_all(reg.displayname, can)
 
 def save_plot(can, outname):
     can.SaveAs("InProgress7.pdf")
@@ -358,10 +347,10 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
     yax.SetLabelOffset(0.013)
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
-    if for_ratio:
-        hax.Draw()
-    else:
-        hax.Draw("AXIS")
+    #if for_ratio:
+    #    hax.Draw()
+    #else:
+    #    hax.Draw("AXIS")
     can.Update()
 
     stack = r.THStack("stack_"+plot.name, "")
@@ -538,17 +527,17 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
         maxy = stack.GetMaximum()
     if not plot.isLog() :
         hax.SetMaximum(max_mult*maxy)
-        hax.Draw()
+        #hax.Draw()
         can.Update()
         stack.SetMaximum(max_mult*maxy)
     else :
         hax.SetMaximum(1e3*plot.y_range_max)
-        hax.Draw()
+        #hax.Draw()
         can.Update()
         stack.SetMaximum(1e3*plot.y_range_max)
 
     # Add stack to canvas
-    stack.Draw("HIST SAME")
+    #stack.Draw("HIST SAME")
     can.Update()
 
     # symmetrize the errors
@@ -570,7 +559,7 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
         nominalAsymErrors.SetPointEYlow(i,error_sym)
 
     # draw the error band
-    nominalAsymErrors.Draw("same && E2")
+    #nominalAsymErrors.Draw("same && E2")
 
     # draw the total bkg line
     hist_sm = stack.GetStack().Last().Clone("hist_sm")
@@ -579,11 +568,12 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
     hist_sm.SetLineStyle(1)
     hist_sm.SetFillStyle(0)
     hist_sm.SetLineWidth(3)
-    hist_sm.Draw("hist same")
+    #hist_sm.Draw("hist same")
 
     #draw the signals
     for hsig in sig_histos :
-        hsig.Draw("hist same")
+        #hsig.Draw("hist same")
+        pass
 
     ############################################################################
     # Print yield table
@@ -600,14 +590,15 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
 
     # draw the data graph
     if data:
-        gdata.Draw("option same pz 0")
+        #gdata.Draw("option same pz 0")
+        pass
 
     # draw the legend
-    leg.Draw()
-    leg_sig.Draw()
+    #leg.Draw()
+    #leg_sig.Draw()
+    #r.gPad.RedrawAxis()
 
     can.Update()
-    can.SaveAs("InProgress3.pdf")
 
     plot_parts.hist_axis = hax
     plot_parts.mc_stack = stack
@@ -616,6 +607,12 @@ def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=Fa
     plot_parts.data_hist = gdata
     plot_parts.error_graph = nominalAsymErrors
     plot_parts.leg = leg
+    print '===== Directory before leaving main hist function ====='
+    print r.gDirectory.ls()
+    print '======================================================='
+    print '===== canvas before leaving the main hist function ====='
+    print can.ls()
+    print '======================================================='
     #return (hax, stack, hist_sm, sig_histos, gdata, nominalAsymErrors, leg)
 ################################################################################
 def histos_for_legend(histos) :
