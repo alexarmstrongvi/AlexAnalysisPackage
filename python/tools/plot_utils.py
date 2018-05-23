@@ -35,6 +35,8 @@ def ratio_canvas(name = "c") :
     ratio_can = plot.RatioCanvas(name)
     return ratio_can
 
+
+
 # ----------------------------------------------
 #  TH1D Methods
 # ----------------------------------------------
@@ -406,6 +408,8 @@ def th2f(name, title, nxbin, xlow, xhigh, nybin, ylow, yhigh, xtitle, ytitle) :
     return h
 
 
+
+
 # ----------------------------------------------
 #  TLegend Methods
 # ----------------------------------------------
@@ -433,6 +437,7 @@ def draw_text(x=0.7, y=0.65, font=42, color=ROOT.kBlack, text="", size=0.04, ang
     l.SetTextColor(color)
     l.SetTextAngle(angle)
     l.DrawLatex(x, y, text)
+
 
 # ----------------------------------------------
 #  TLine Methods

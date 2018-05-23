@@ -81,6 +81,82 @@ class Sample :
         print "%10s : ADDED %d FILES"%(self.name, n_files+1)
         self.tree = chain
 
+    def set_event_list(self, cut, list_name, save_dir):
+        import pdb
+        pdb.set_trace()
+        # Define useful variables
+        cut  = r.TCut(cut)
+        list_file_name = list_name.replace(".root","") + ".root"
+        save_path = os.path.join(save_dir, list_file_name)
+        save_path = os.path.normpath(save_path)
+        time_stamp = os.path.getmtime(save_path)
+
+        # Reset event list
+        self.tree.SetEventList(0)
+
+        # Check if the list already exists
+        load_eventlist = True
+        if os.path.isfile(save_path) :
+            rfile = r.TFile.Open(save_path)
+            print "%10s : EventList found at %s"%(b.name, save_path)
+
+            # Check for any changes
+            stored_cut = rfile.Get("cut")
+            stored_save_path = rfile.Get("save_path")
+            stored_time_stamp = rfile.Get("time_stamp")
+            try:
+                # Check that the expected variables are stored in the TEventList.
+                # Above, TFile::Get will return a nullptr TObject if the variable
+                # does not exist. So first apply some attribute check (e.g. IsOnHeap)
+                # to make sure there is no reference error that gets raise. If
+                # the variables are correctly grabbed then proceed with other
+                # checks
+                if not (stored_cut.IsOnHeap()
+                    and stored_save_path.IsOnHeap()
+                    and stored_time_stamp.IsOnHeap()):
+                    pass
+                if cut != stored_cut:
+                    print "EventList cuts have changed. Remaking EventList."
+                    load_eventlist = False
+                if save_path != stored_save_path:
+                    print "Eventlist path has changed.",
+                    print "Playing it safe and remaking EventList."
+                    load_eventlist = False
+                if time_stamp != stored_time_stamp:
+                    print "EventList file has been modified. Remaking Eventlist."
+                    load_eventlist = False
+            except ReferenceError:
+                print "TEventList not formatted as expected. Remaking Eventlist."
+                load_eventlist = False
+        else:
+            load_eventlist = False
+
+        # Load/Create evenlist
+        if load_eventlist:
+            event_list = rfile.Get(list_name)
+            self.tree.SetEventList(event_list)
+        else:
+            print "Creating TEventList for", b.name
+            rfile = r.TFile(save_path,'recreate')
+            draw_list = ">> " + list_name
+            self.tree.Draw(draw_list, cut)
+            event_list = r.gROOT.FindObject(list_name).Clone()
+            self.tree.SetEventList(event_list)
+            event_list.Write(list_name)
+
+            # Append other information
+            cut.Write("cut")
+            new_time_stamp = r.TString(os.path.getmtime(save_path))
+            new_time_stamp.Write("time_stamp")
+
+        rfile.Close()
+
+        if not load_eventlist:
+            print "TESTING :: Modify time after closing is", os.path.getmtime(save_path)
+            print "TESTING :: Modify time appended to file is ", new_time_stamp
+            print "TESTING :: Should be equal??"
+
+
     # Comparison
     def __eq__(self, other) :
         return (self.displayname == other.displayname

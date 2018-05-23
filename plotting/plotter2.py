@@ -67,11 +67,13 @@ def main ():
     elif rReg and rPlot:
         plots = [p for p in plots if p.name == rPlot and p.region == rReg]
 
-    make_plots(plots, conf.regions, conf.data, conf.backgrounds)
+    samples = [conf.data] + conf.backgrounds
+    make_plots(plots, conf.regions, samples)
 
 ################################################################################
 # PLOTTING FUNCTIONS
-def make_plots(plots, regions, data, backgrounds) :
+
+def make_plots(plots, regions, samples) :
     '''
     Make sure that the plots are not asking for undefined region
 
@@ -92,78 +94,11 @@ def make_plots(plots, regions, data, backgrounds) :
         print '\n', 20*'-', "Plots for %s region"%reg.displayname, 20*'-', '\n'
 
         ########################################################################
-        # Set event lists, if they already exist load it.
-        # Otherwise make it and save
-
-        #TODO: Modularize out
-        # - Loop over regions
-        # - Loop over samples = backgrounds + data
-        # - event_lists = get_event_list(sample, selection, list_dir)
-        # - b.tree.SetEventLists(event_lists)
-
         print "Setting EventLists for %s"%reg.name
         cut = r.TCut(reg.tcut)
-        sel = r.TCut("1")
-
-        # EventLists for Backgrounds
-        for b in backgrounds :
-            save_cut  = r.TCut(sel*cut)
-            list_name = "list_" + reg.name + "_" + b.treename
-            save_name = event_list_dir + list_name + ".root"
-            save_name = os.path.normpath(save_name)
-            if args.verbose: print 'List name =',list_name
-
-            # Reset event list
-            b.tree.SetEventList(0)
-
-            # check if the list already exists
-            load_eventlist = True
-            if os.path.isfile(save_name) :
-                rfile = r.TFile.Open(save_name)
-                print "%10s : EventList found at %s"%(b.name, save_name)
-                if save_cut != rfile.Get("cut"):
-                    print "EventList cuts have changed. Remaking EventList"
-                    load_eventlist = False
-            else:
-                load_eventlist = False
-
-            if load_eventlist:
-                list = rfile.Get(list_name)
-                b.tree.SetEventList(list)
-                if args.verbose : list.Print()
-            else:
-                print "Creating TEventList for", b.name
-                rfile = r.TFile(save_name,'recreate')
-                draw_list = ">> " + list_name
-                b.tree.Draw(draw_list, sel*cut)
-                list = r.gROOT.FindObject(list_name).Clone()
-                b.tree.SetEventList(list)
-                list.Write(list_name)
-                save_cut.Write("cut")
-            rfile.Close()
-
-        # EventLists for Data
-        if data :
-            data_list_name = "list_" + reg.name + "_" + data.treename
-            data_save_name = event_list_dir + data_list_name + ".root"
-            data_save_name = os.path.normpath(data_save_name)
-
-            # Reset event list
-            data.tree.SetEventList(0)
-
-            if os.path.isfile(data_save_name) :
-                rfile = r.TFile.Open(data_save_name)
-                data_list = rfile.Get(data_list_name)
-                print "%10s : EventList found at %s"%('Data', data_save_name)
-                if args.verbose : data_list.Print()
-                data.tree.SetEventList(data_list)
-            else :
-                draw_list = ">> " + data_list_name
-                data.tree.Draw(draw_list, sel * cut)
-                data_list = r.gROOT.FindObject(data_list_name)
-                data.tree.SetEventList(data_list)
-                data_list.SaveAs(data_save_name)
-            rfile.Close()
+        for sample in samples :
+            list_name = "list_" + reg.name + "_" + sample.treename
+            sample.set_event_list(cut, list_name, save_dir)
 
         ########################################################################
         # Make 1D and 2D plots
@@ -178,7 +113,7 @@ def make_plots(plots, regions, data, backgrounds) :
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 
 ################################################################################
-def make_plots1D(plot, reg, data, backgrounds, plot_i, n_plots) :
+def make_plots1D(plot, reg, samples, plot_i, n_plots) :
     '''
     Determine 1D plot type and run appropriate 1D plot method
 
@@ -199,13 +134,13 @@ def make_plots1D(plot, reg, data, backgrounds, plot_i, n_plots) :
     returns (None)
     '''
     if plot.ratioCanvas :
-        make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots)
+        make_plotsRatio(plot, reg, samples, plot_i, n_plots)
     elif plot.is_comparison :
-        make_plotsComparison(plot, reg, data, backgrounds)
+        make_plotsComparison(plot, reg, samples)
     else :
-        make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots)
+        make_plotsStack(plot, reg, samples, plot_i, n_plots)
 
-def make_plots2D(plot, reg, data, backgrounds):
+def make_plots2D(plot, reg, samples):
         print "TODO"
 
 ################################################################################
@@ -225,24 +160,24 @@ class PlotParts():
             return
         self.hist_axis.Draw('AXIS')
         print "axis name = ",self.hist_axis.GetXaxis().GetName()
-        if self.mc_stack: 
+        if self.mc_stack:
             print "Drawing Stack"
             self.mc_stack.Draw("HIST")
-        if self.error_graph: 
+        if self.error_graph:
             print "Drawing error"
             self.error_graph.Draw("E2 same")
-        if self.mc_hist: 
+        if self.mc_hist:
             print "Drawing mc_hist"
             self.mc_hist.Draw('hist same')
             print "axis name = ",self.mc_hist.GetXaxis().GetName()
-        for hsig in self.signal_hists: 
+        for hsig in self.signal_hists:
             print "Drawing signal_hist"
             hsig.Draw("hist same")
-        if self.data_hist: 
+        if self.data_hist:
             print "Drawing data_hist"
             self.data_hist.Draw("option same pz 0")
             print "axis name = ",self.data_hist.GetXaxis().GetName()
-        if self.leg: 
+        if self.leg:
             print "Drawing leg"
             self.leg.Draw('same')
 
@@ -267,7 +202,7 @@ class PlotParts():
         print "self.data_hist = ", self.data_hist
         print "self.leg = ", self.leg
 
-def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
+def make_plotsStack(plot, reg, samples, plot_i, n_plots):
     ''' '''
     print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
 
@@ -286,13 +221,13 @@ def make_plotsStack(plot, reg, data, backgrounds, plot_i, n_plots):
     # - allows them to persist when function scope ends
     # - thereby preserving them on the canvas
     stack_plot_parts = PlotParts()
-    draw_stack(can, plot, reg, data, backgrounds, stack_plot_parts)
+    draw_stack(can, plot, reg, samples, stack_plot_parts)
     #stack_plot_parts.draw_all(reg.displayname)
     can.Update()
 
     save_plot(can, plot.name+".eps")
 
-def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
+def make_plotsRatio(plot, reg, samples, plot_i, n_plots) :
     ''' '''
     print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
     ############################################################################
@@ -300,14 +235,14 @@ def make_plotsRatio(plot, reg, data, backgrounds, plot_i, n_plots) :
     print "Got Nothing Yet"
 
 ################################################################################
-def draw_stack(can, plot, reg, data, backgrounds, plot_parts):
+def draw_stack(can, plot, reg, samples, plot_parts):
     ''' '''
     #TODO: Remove dependence on passing canvas to functions
     # Get histograms
-    make_stack_hists(can, plot, reg, data, backgrounds, plot_parts)
+    make_stack_hists(can, plot, reg, samples, plot_parts)
 
     #TODO: Seperate histogram making into seperate functions
-    
+
     # Draw onto current canvas
     plot_parts.draw_all(reg.displayname, can)
 
@@ -320,8 +255,13 @@ def save_plot(can, outname):
     #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
 
 ################################################################################
-def make_stack_hists(can, plot, reg, data, backgrounds, plot_parts, for_ratio=False):
+def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     ''' '''
+
+    data = [s for s in samples if not s.isMC]
+    assert len(data) <= 1, "ERROR :: Multiple data samples"
+    data = data[0]
+    backgrounds = [s for s in samples if not s.isMC]
 
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
