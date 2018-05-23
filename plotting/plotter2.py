@@ -26,6 +26,7 @@ import sys, os, traceback, argparse
 import time
 import importlib
 import re
+from collections import OrderedDict
 
 # Root data analysis framework
 import ROOT as r
@@ -33,6 +34,7 @@ r.PyConfig.IgnoreCommandLineOptions = True # don't let root steal cmd-line optio
 r.gROOT.SetBatch(True)
 r.gStyle.SetOptStat(False)
 
+# Prevent root from taking ownership when creating classes
 r.TEventList.__init__._creates = False
 r.TH1F.__init__._creates = False
 r.TGraphErrors.__init__._creates = False
@@ -41,11 +43,10 @@ r.TLegend.__init__._creates = False
 
 # Local classes for plotting
 import tools.plot_utils as pu
-import tools.utils as utils
-import tools.signal as signal
-import tools.sample as sample
-import tools.region as region
-import tools.plot as plot
+import tools.utils as m_utils
+import tools.sample as m_sample
+import tools.region as m_region
+import tools.plot as m_plot
 from global_variables import event_list_dir, plots_dir
 
 ################################################################################
@@ -57,39 +58,24 @@ def main ():
     # Slim plots to make if requested
     rReg = args.requestRegion
     rPlot = args.requestPlot
-    plots = conf.plots
     if not rReg and not rPlot:
         pass # Use all plots
     elif rReg and not rPlot:
-        plots = [p for p in plots if p.region == rReg]
+        PLOTS = [p for p in PLOTS if p.region == rReg]
     elif not rReg and rPlot:
-        plots = [p for p in plots if p.name == rPlot]
+        PLOTS = [p for p in PLOTS if p.name == rPlot]
     elif rReg and rPlot:
-        plots = [p for p in plots if p.name == rPlot and p.region == rReg]
+        PLOTS = [p for p in PLOTS if p.name == rPlot and p.region == rReg]
 
-    #TODO: Change configuration file to simply pass in samples
-    samples = [conf.data] + conf.backgrounds
-    make_plots(plots, conf.regions, samples)
+    make_plots()
 
 ################################################################################
 # PLOTTING FUNCTIONS
-
-def make_plots(plots, regions, samples) :
-    '''
-    Make sure that the plots are not asking for undefined region
-
-    param:
-        plots : list(plot class)
-            plots defined in config file
-        regions : list(region class)
-            regions defined in config file
-        data : background class
-        backgrounds: list(background class)
-
-    '''
-    for reg in regions:
-        # first check that there are plots for the given region
-        plots_with_region = [p for p in plots if p.region == reg.name]
+def make_plots() :
+    ''' '''
+    for reg in REGIONS:
+        # Get plots for this region
+        plots_with_region = [p for p in PLOTS if p.region == reg.name]
         if not len(plots_with_region): continue
 
         print '\n', 20*'-', "Plots for %s region"%reg.displayname, 20*'-', '\n'
@@ -97,7 +83,7 @@ def make_plots(plots, regions, samples) :
         ########################################################################
         print "Setting EventLists for %s"%reg.name
         cut = r.TCut(reg.tcut)
-        for sample in samples :
+        for sample in SAMPLES :
             list_name = "list_" + reg.name + "_" + sample.treename
             sample.set_event_list(cut, list_name, event_list_dir)
 
@@ -105,172 +91,124 @@ def make_plots(plots, regions, samples) :
         # Make 1D and 2D plots
         n_total = len(plots_with_region)
         for n_current, p in enumerate(plots_with_region, 1):
+            print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
             if p.is2D :
-                make_plots2D(p, reg, samples)
+                make_plots2D(p, reg)
             else:
-                make_plots1D(p, reg, samples, n_current, n_total)
-
+                make_plots1D(p, reg, n_current, n_total)
 
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 
 ################################################################################
-def make_plots1D(plot, reg, samples, plot_i, n_plots) :
-    '''
-    Determine 1D plot type and run appropriate 1D plot method
+def make_plots1D(plot, reg, plot_i, n_plots) :
+    ''' '''
+    if plot.ptype == m_plots.Types.ratio :
+        make_plotsRatio(plot, reg plot_i, n_plots)
+    elif plot.ptype == m_plots.Types.comparison :
+        make_plotsComparison(plot, reg)
+    elif plot.ptype == m_plots.Types.stack :
+        make_plotsStack(plot, reg, plot_i, n_plots)
+    else:
+        print "ERROR :: Unknown plot type,", plot.ptype.name
 
-    param:
-        plot : plot class
-            1D plot defined in configuration file
-        reg : region class
-            region defined in configuration file
-        data : background class
-            data sample defined in configuration file
-        backgrounds : list(background class)
-            background samples defined in configuration file
-        plot_i : int
-            current plot number
-        n_plots : int
-            total number of plots
-
-    returns (None)
-    '''
-    if plot.ratioCanvas :
-        make_plotsRatio(plot, reg, samples, plot_i, n_plots)
-    elif plot.is_comparison :
-        make_plotsComparison(plot, reg, samples)
-    else :
-        make_plotsStack(plot, reg, samples, plot_i, n_plots)
-
-def make_plots2D(plot, reg, samples):
+def make_plots2D(plot, reg):
         print "TODO"
 
 ################################################################################
-class PlotParts():
-    def __init__(self):
-        self.hist_axis = None
-        self.hists = []
-        self.mc_stack = None
-        self.mc_hist = None
-        self.mc_error = None
-        self.signal_hists = []
-        self.data_hist = None
-        self.error_graph = None
-        self.leg = None
-
-    def draw_all(self, region_name, can):
-        if not self.hist_axis:
-            print "ERROR :: Hist axis not provided. Cannot draw "
-            return
-        self.hist_axis.Draw()
-        if self.mc_stack: self.mc_stack.Draw("HIST SAME")
-        if self.error_graph: self.error_graph.Draw("E2 same")
-        if self.mc_hist: self.mc_hist.Draw('hist same')
-        for hsig in self.signal_hists: hsig.Draw("hist same")
-        if self.data_hist: self.data_hist.Draw("option same pz 0")
-        if self.leg: self.leg.Draw()
-
-        # add some text/labels
-        pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
-        pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.05,font=42)
-        pu.draw_text(text="#sqrt{s} = 13 TeV, 36.1 fb^{-1}", x=0.18, y=0.79, size=0.04)
-        pu.draw_text(text="Higgs LFV", x=0.18, y=0.74, size=0.04)
-        pu.draw_text(text=region_name,      x=0.18,y=0.68, size=0.04)
-
-        # Reset axis
-        can.RedrawAxis()
-        can.SetTickx()
-        can.SetTicky()
-        can.Update()
-        #r.gPad.SetTickx()
-        #r.gPad.SetTicky()
-        #r.gPad.Update()
-
-    def clear(self):
-        self.hist_axis.Delete()
-        if self.mc_stack: self.mc_stack.Delete()
-        if self.error_graph: self.error_graph.Delete()
-        if self.mc_hist: self.mc_hist.Delete()
-        if self.mc_error: self.mc_error.Delete()
-        for hsig in self.signal_hists: hsig.Delete()
-        if self.data_hist: self.data_hist.Delete()
-        if self.leg: self.leg.Delete()
-        for h in self.hists: h.Delete()
-        self.__init__()
-
-
-    def Print(self):
-        print "self.hist_axis = ", self.hist_axis
-        print "self.mc_stack = ", self.mc_stack
-        print "self.error_graph = ", self.error_graph
-        print "self.mc_hist = ", self.mc_hist
-        print "self.signal_hists = ", self.signal_hists
-        print "self.data_hist = ", self.data_hist
-        print "self.leg = ", self.leg
-
-def make_plotsStack(plot, reg, samples, plot_i, n_plots):
+def make_plotsStack(plot, reg, plot_i, n_plots):
     ''' '''
-    print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
+    #TODO: Modularize so this can be reused for ratio plot code
 
-    # Prepare canvas
-    can = plot.canvas
-    can.cd()
-    can.SetFrameFillColor(0)
-    can.SetFillColor(0)
-    can.SetLeftMargin(0.14)
-    can.SetRightMargin(0.05)
-    can.SetBottomMargin(1.3*can.GetBottomMargin())
-    if plot.isLog() : can.SetLogy(True)
+    # Get Canvas
+    can = plot.pads.canvas
+    pr = plot.primitives[can.name] = OrderedDict()
+    # TODO: Add and disentangle
+    # pr['legend'] = make_stack_legend()
+    # pr['axis'] = make_stack_axis(plot)
+    # pr['mc_stack'], pr['mc_total'], pr['signals'], pr['hists'] = add_stack_backgrounds(plot, reg, pr['legend'])
+    # pr['data'], pr['data_hist'] = add_stack_data(plot, reg, pr['legend'])
+    # pr['error_leg'], pr['mc_errors'] = add_stack_mc_errors(plot, reg, pr['legend'])
+
+    make_stack_hists(plot, reg, plot.primitives[can])
+
+    # Draw the histograms
+    pr['axis'].Draw()
+    pr['mc_stack'].Draw("HIST SAME")
+    pr['mc_errors'].Draw("E2 same")
+    pr['mc_total'].Draw('hist same')
+    for hsig in pr['signals']: hsig.Draw("hist same")
+    pr['data'].Draw("option same pz 0")
+    pr['legend'].Draw()
+
+    # add some text/labels
+    # TODO: Move this into a single function
+    # e.g. draw_atlas_label('Internal', move_x = 0, move_y = 0, expand_x = 1, expand_y = 1, args* for added text)
+    pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
+    pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.05,font=42)
+    pu.draw_text(text="#sqrt{s} = 13 TeV, 36.1 fb^{-1}", x=0.18, y=0.79, size=0.04)
+    pu.draw_text(text="Higgs LFV", x=0.18, y=0.74, size=0.04)
+    pu.draw_text(text=region_name,      x=0.18,y=0.68, size=0.04)
+
+    # Reset axis
+    can.RedrawAxis()
+    can.SetTickx()
+    can.SetTicky()
+    can.Update()
     can.Update()
 
-    # Initialize plot components
-    # - allows them to persist when function scope ends
-    # - thereby preserving them on the canvas
-    stack_plot_parts = PlotParts()
-    draw_stack(can, plot, reg, samples, stack_plot_parts)
-    #stack_plot_parts.draw_all(reg.displayname)
-    can.Update()
-
+    # Save the histogram
     save_plot(can, plot.name+".eps")
-    stack_plot_parts.clear()
 
-def make_plotsRatio(plot, reg, samples, plot_i, n_plots) :
+    # Clean up
+    # TODO: Move to a function that simply loops over all primitives
+    pr['axis'].Delete()
+    pr['mc_stack'].Delete()
+    pr['mc_errors'].Delete()
+    pr['mc_total'].Delete()
+    pr['error_leg'].mc_error.Delete()
+    for hsig in pr['signals']: hsig.Delete()
+    pr['data'].Delete()
+    pr['data_hist'].Delete()
+    pr['legend'].Delete()
+    for h in pr['hists']: h.Delete()
+
+def make_plotsRatio(plot, reg, plot_i, n_plots) :
     ''' '''
     print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
     ############################################################################
     # Intialize plot components
-    print "Got Nothing Yet"
+    # Canvases
+    rcan = plot.pads
+    rcan.canvas.cd()
+    rcan.upper_pad.cd()
+
+    if plot.doLogY : rcan.upper_pad.SetLogy(True)
+    rcan.upper_pad.Update()
 
 ################################################################################
-def draw_stack(can, plot, reg, samples, plot_parts):
+def make_stack_hists(plot, reg, primitives, for_ratio=False):
     ''' '''
-    #TODO: Remove dependence on passing canvas to functions
-    # Get histograms
-    make_stack_hists(can, plot, reg, samples, plot_parts)
 
-    #TODO: Seperate histogram making into seperate functions
-
-    # Draw onto current canvas
-    plot_parts.draw_all(reg.displayname, can)
-
-def save_plot(can, outname):
-    can.SaveAs(outname)
-    out = plots_dir + args.outdir
-    utils.mv_file_to_dir(outname, out, True)
-    #fullname = out + "/" + outname
-    #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
-
-################################################################################
-def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
-    ''' '''
-    
-    data = [s for s in samples if not s.isMC]
-    assert len(data) <= 1, "ERROR :: Multiple data samples"
+    data = [s for s in SAMPLES if not s.isMC]
+    assert len(data) >= 1, "ERROR :: Multiple data samples"
+    assert len(data) == 1, "ERROR :: No data sample provided"
     data = data[0]
-    mc_samples = [s for s in samples if s.isMC]
+    mc_samples = [s for s in SAMPLES if s.isMC]
     backgrounds = [s for s in mc_samples if not s.isSignal]
     signals = [s for s in mc_samples if s.isSignal]
 
+    ############################################################################
+    # make_stack_legend()
+    ############################################################################
+    leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
+    leg.SetNColumns(2)
+    leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
+    leg_sig.SetNColumns(1)
+    # RETURN leg
 
+    ############################################################################
+    # make_stack_axis(plot, leg, for_ratio=False)
+    ############################################################################
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
     hax.SetMaximum(plot.y_range_max)
@@ -299,21 +237,17 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     #    hax.Draw()
     #else:
     #    hax.Draw("AXIS")
-    can.Update()
-
-    stack = r.THStack("stack_"+plot.name, "")
-
-    # Legend
-    leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
-    leg.SetNColumns(2)
-    leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
-    leg_sig.SetNColumns(1)
-
-    # Yield table
-    yield_tbl = []
+    #can.Update()
+    # RETURN hax
 
     ############################################################################
-    # Get background MC stack
+    # make_stack_background(plot, reg, leg)
+    ############################################################################
+    stack = r.THStack("stack_"+plot.name, "")
+
+    # Yield table
+    # TODO: Create a Yield Table class
+    yield_tbl = []
 
     # Initilize lists and defaults
     histos = []
@@ -377,8 +311,8 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
         else:
             all_histos.append(h)
             histos.append(h) if integral > 0 else avoid_bkg.append(mc_sample.name)
-        can.Update()
-    
+        #can.Update()
+
     if not len(histos):
         print "make_plotsStack ERROR :: All SM hists are empty. Skipping"
         #TODO: return NONE and add flags downstream to handle
@@ -389,16 +323,33 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     for h in histos :
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
-    can.Update()
-    
+    #can.Update()
+
 
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
 
+    #draw the signals
+    for hsig in sig_histos :
+        #hsig.Draw("hist same")
+        pass
+
+    # draw the total bkg line
+    hist_sm = stack.GetStack().Last().Clone("hist_sm")
+    hist_sm.SetLineColor(r.kBlack)
+    hist_sm.SetLineWidth(mcError.GetLineWidth())
+    hist_sm.SetLineStyle(1)
+    hist_sm.SetFillStyle(0)
+    hist_sm.SetLineWidth(3)
+    #hist_sm.Draw("hist same")
+
+    #RETURN stack, hist_sm, sig_histos, all_histos
     ############################################################################
-    # Get data hist
+    # make_stack_data(plot, reg, leg)
+    #TODO: Look for a way to combine with backgrounds
+    ############################################################################
     if data:
         hd_name = "h_"+reg.name+'_data_'+plot.variable
         hd = pu.th1d(hd_name, "", int(plot.nbins),
@@ -434,10 +385,18 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
         gdata.SetMarkerSize(1.5)
         gdata.SetLineColor(1)
         leg.AddEntry(gdata, "Data", "p")
-        can.Update()
+        #can.Update()
 
+    # draw the data graph
+    if data:
+        #gdata.Draw("option same pz 0")
+        pass
+
+    # RETURN gdata
     ############################################################################
-    # systematics loop
+    # make_stack_mc_errors(plot, leg)
+    #TODO: Look for a way to combine with backgrounds
+    ############################################################################
     r.gStyle.SetHatchesSpacing(0.9)
 
     mcError = r.TH1F("mcError", "mcError", 2,0,2)
@@ -458,32 +417,7 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     nominalAsymErrors.SetFillStyle(3345)
     nominalAsymErrors.SetFillColor(r.kBlue)
 
-    ############################################################################
-    # draw the MC stack and do cosmetics
-    stack.SetMinimum(plot.y_range_min)
-
-    # Determine y range for plot
-    max_mult = 2.0 if len(signals) else 1.66
-    if data:
-        maxy = max(hd.GetMaximum(), stack.GetMaximum())
-    else:
-        maxy = stack.GetMaximum()
-    if not plot.isLog() :
-        hax.SetMaximum(max_mult*maxy)
-        #hax.Draw()
-        can.Update()
-        stack.SetMaximum(max_mult*maxy)
-    else :
-        hax.SetMaximum(1e3*plot.y_range_max)
-        #hax.Draw()
-        can.Update()
-        stack.SetMaximum(1e3*plot.y_range_max)
-
-    # Add stack to canvas
-    #stack.Draw("HIST SAME")
-    can.Update()
-
-    # symmetrize the errors
+        # symmetrize the errors
     for i in xrange(nominalAsymErrors.GetN()) :
         ehigh = nominalAsymErrors.GetErrorYhigh(i)
         elow  = nominalAsymErrors.GetErrorYlow(i)
@@ -504,19 +438,34 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     # draw the error band
     #nominalAsymErrors.Draw("same && E2")
 
-    # draw the total bkg line
-    hist_sm = stack.GetStack().Last().Clone("hist_sm")
-    hist_sm.SetLineColor(r.kBlack)
-    hist_sm.SetLineWidth(mcError.GetLineWidth())
-    hist_sm.SetLineStyle(1)
-    hist_sm.SetFillStyle(0)
-    hist_sm.SetLineWidth(3)
-    #hist_sm.Draw("hist same")
+    # RETURN mcError, nominalAsymErrors
 
-    #draw the signals
-    for hsig in sig_histos :
-        #hsig.Draw("hist same")
-        pass
+    ############################################################################
+    # reformat_axis(plot, leg)
+    ############################################################################
+    # draw the MC stack and do cosmetics
+    stack.SetMinimum(plot.y_range_min)
+
+    # Determine y range for plot
+    max_mult = 2.0 if len(signals) else 1.66
+    if data:
+        maxy = max(hd.GetMaximum(), stack.GetMaximum())
+    else:
+        maxy = stack.GetMaximum()
+    if not plot.doLogY :
+        hax.SetMaximum(max_mult*maxy)
+        #hax.Draw()
+        #can.Update()
+        stack.SetMaximum(max_mult*maxy)
+    else :
+        hax.SetMaximum(1e3*plot.y_range_max)
+        #hax.Draw()
+        #can.Update()
+        stack.SetMaximum(1e3*plot.y_range_max)
+
+    # Add stack to canvas
+    #stack.Draw("HIST SAME")
+    #can.Update()
 
     ############################################################################
     # Print yield table
@@ -530,29 +479,29 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
 
     ############################################################################
     # Finalize the plot
-
-    # draw the data graph
-    if data:
-        #gdata.Draw("option same pz 0")
-        pass
-
     # draw the legend
     #leg.Draw()
     #leg_sig.Draw()
     #r.gPad.RedrawAxis()
+    #can.Update()
 
-    can.Update()
+primitives['legend'] = leg
+primitives['axis'] = hax
+primitives['mc_stack'] = stack
+primitives['mc_total'] = hist_sm
+primitives['signals'] = [s for s in sig_histos] # to pass ownership??
+primitives['hists'] = all_histos
+primitives['data'] = gdata
+primitives['data_hist']
+primitives['error_leg'] = mcError
+primitives['mc_errors'] = nominalAsymErrors
 
-    plot_parts.hist_axis = hax
-    plot_parts.hists = all_histos
-    plot_parts.mc_stack = stack
-    plot_parts.mc_error = mcError
-    plot_parts.mc_hist = hist_sm
-    plot_parts.error_graph = nominalAsymErrors
-    plot_parts.signal_hists = sig_histos
-    plot_parts.data_hist = gdata
-    plot_parts.leg = leg
-
+def save_plot(can, outname):
+    can.SaveAs(outname)
+    out = plots_dir + args.outdir
+    m_utils.mv_file_to_dir(outname, out, True)
+    #fullname = out + "/" + outname
+    #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
 ################################################################################
 def histos_for_legend(histos) :
     '''
@@ -617,22 +566,18 @@ def print_inputs(args):
 
     # print out the loaded samples and plots
     print " ============================"
-    if conf.backgrounds :
-        print "Loaded backgrounds:    "
-        for b in conf.backgrounds :
+    if SAMPLES :
+        print "Loaded samples:    "
+        for sample in SAMPLES :
             print '\t',
-            b.Print()
-    if conf.data :
-        print "Loaded data sample:    "
-        print '\t',
-        conf.data.Print()
+            sample.Print()
     if args.verbose:
         print "Loaded plots:"
-        for p in conf.plots :
-            p.Print()
+        for plot in PLOTS :
+            plot.Print()
     print " ============================"
 
-def check_for_consistency(plots, regions) :
+def check_for_consistency() :
     '''
     Make sure that the plots are not asking for undefined region
 
@@ -642,8 +587,8 @@ def check_for_consistency(plots, regions) :
         regions : list(region class)
             regions defined in config file
     '''
-    region_names = [r.name for r in regions]
-    bad_regions = [p.region for p in plots if p.region not in region_names]
+    region_names = [r.name for r in REGIONS]
+    bad_regions = [p.region for p in PLOTS if p.region not in region_names]
     if len(bad_regions) > 0 :
         print 'check_for_consistency ERROR    '\
         'You have configured a plot for a region that is not defined. '\
@@ -723,7 +668,11 @@ if __name__ == '__main__':
         import_conf = args.plotConfig.replace(".py","")
         conf = importlib.import_module(import_conf)
 
-        check_for_consistency(conf.plots, conf.regions)
+        SAMPLES = conf.backgrounds + [conf.data]
+        REGIONS = conf.regions
+        PLOTS = conf.plots
+
+        check_for_consistency()
         print_inputs(args)
 
         yield_tbl = []

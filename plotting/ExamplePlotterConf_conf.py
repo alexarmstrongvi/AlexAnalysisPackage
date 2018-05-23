@@ -646,10 +646,10 @@ for var in vars_to_plot:
         p.yax(y0, y1)
         assert data or backgrounds, "No data or backgrounds defined"
         #if data and backgrounds and ops.ratioPlot:
-        #    p.setRatioCanvas(p.name)
-        #else:
-        #    p.setDefaultCanvas(p.name)
-        p.setDefaultCanvas(p.name)
+        if False:
+            p.setRatioCanvas(p.name)
+        else:
+            p.setStackCanvas(p.name)
 
         plots.append(p)
 

@@ -15,11 +15,27 @@ License:
 import sys
 import glob
 from math import floor
+from enum import Enum
+from collections import OrderedDict
 
 # Root data analysis framework
 import ROOT as r
 r.TCanvas.__init__._creates = False
 
+################################################################################
+# Enumerating plot types
+################################################################################
+class Types(Enum):
+    default = 0
+    stack = 1
+    ratio = 2
+    double_ratio = 3
+    comparison = 4
+    undefined = 5
+
+################################################################################
+# Plot Classes
+################################################################################
 class Plot1D :
     def __init__(self) :
         # Descriptors
@@ -28,9 +44,8 @@ class Plot1D :
         self.variable = ""
 
         # Objects
-        self.canvas = None
-        self.ratioCanvas = None
-        self.doubleRatioCanvas = None
+        self.pads = None
+        self.primitives = OrderedDict()
 
         # Properties
         self.x_label = "x-Label"
@@ -51,17 +66,12 @@ class Plot1D :
         self.leg_is_left = False
         self.leg_is_bottom_right = False
         self.leg_is_bottom_left = False
-        self.is_comparison = False
-
+        self.ptype = Types.undefined
 
     def initialize(self, region = "", variable = "", name = "") :
         self.region = region
         self.variable = variable
         self.name = name
-
-    def setDefaultCanvas(self, name) :
-        c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
-        self.canvas = c
 
     def labels(self, x="", y="Entries") :
         self.x_label = x
@@ -78,53 +88,21 @@ class Plot1D :
         self.y_range_min = min
         self.y_range_max = max
 
-    def setComparison(self) :
-        '''
-        Set whether this plot is just a simple 'comparison plot' --
-        i.e. no stack, no fill, the samples drawn "hist"
-        '''
-        self.is_comparison = True
+    def setDefaultCanvas(self, name) :
+        self.pads = Canvas(name)
+        self.ptype = Types.default
 
-    def doLog(self) :
-        '''
-        Set y-axis logarithmic
-        '''
-        self.doLogY = True
-
-    def isLog(self) :
-        return self.doLogY
-
-    def isNorm(self) :
-        return self.doNorm
+    def setStackCanvas(self, name):
+        self.pads = StackCanvas(name)
+        self.ptype = Types.stack
 
     def setRatioCanvas(self, name) :
-        self.ratioCanvas = RatioCanvas(name)
+        self.pads = RatioCanvas(name)
+        self.ptype = Types.ratio
 
     def setDoubleRatioCanvas(self, name) :
-        self.doubleRatioCanvas = DoubleRatioCanvas(name)
-
-    def getCanvas(self) :
-        """
-        Return the canvas
-        """
-        ## TODO: Test improved implementation
-        #set_up_canvases = [self.canvas, self.ratioCanvas, self.doubleRatioCanvas]
-        #if sum(x != None for x in set_up_canvases) != 1:
-        #    print "Plot getCanvas ERROR    ",
-        #    print "Attempting to return a non-existent or ill-defined canvas!"
-        #    sys.exit()
-
-        set_up_canvases = []
-        if self.canvas != None : set_up_canvases.append(self.canvas)
-        if self.ratioCanvas != None : set_up_canvases.append(self.ratioCanvas)
-        if self.doubleRatioCanvas != None : set_up_canvases.append(self.doubleRatioCanvas)
-        if len(set_up_canvases) == 0 or len(set_up_canvases) > 1 :
-            print "Plot getCanvas ERROR    Attempting to return a non-existent or ill-defined canvas!"
-            print "Plot getCanvas ERROR    >>> Exiting."
-            sys.exit()
-        if self.canvas != None : return self.canvas
-        elif self.ratioCanvas != None : return self.ratioCanvas
-        elif self.doubleRatioCanvas != None : return self.doubleRatioCanvas
+        self.pads = DoubleRatioCanvas(name)
+        self.ptype = Types.double_ratio
 
     def get_n_bins(self) :
         '''
@@ -236,11 +214,44 @@ class Plot2D :
         print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(self.name, self.region, self.xVariable, self.yVariable)
 
 
+################################################################################
+# Canvas classes
+################################################################################
+class Canvas :
+    def __init__(self,name):
+        self.name = "c_" + name
+        self.canvas = r.TCanvas(self.name, self.name, 800, 600)
+        self.set_pad_dimensions()
+
+    def set_pad_dimensions(self):
+        pass
+
+class StackCanvas(Canvas)
+    def __init__(self, name):
+        Canvas.__init__(self, name)
+
+    def set_pad_dimensions(self):
+        can = self.canvas
+        can.cd()
+
+        # Color
+        can.SetFrameFillColor(0)
+        can.SetFillColor(0)
+
+        # Margins
+        can.SetRightMargin(0.05)
+        can.SetLeftMargin(0.14)
+        can.SetBottomMargin(1.3*can.GetBottomMargin())
+
+        if plot.doLogY : can.SetLogy(True)
+
+        can.Update()
+        self.canvas = can
 
 class RatioCanvas :
     def __init__(self, name) :
         self.name = "c_" + name
-        self.canvas = r.TCanvas(self.name,self.name, 768, 768)
+        self.canvas = r.TCanvas(self.name, self.name, 768, 768)
         self.upper_pad = r.TPad("upper", "upper", 0.0, 0.0, 1.0, 1.0)
         self.lower_pad = r.TPad("lower", "lower", 0.0, 0.0, 1.0, 1.0)
         self.set_pad_dimensions()
@@ -263,19 +274,14 @@ class RatioCanvas :
         up.SetFrameFillColor(0)
         up.SetFillColor(0)
 
-        # set right margins
+        # set margins
         up.SetRightMargin(0.05)
-        dn.SetRightMargin(0.05)
-
-        # set left margins
         up.SetLeftMargin(0.14)
-        dn.SetLeftMargin(0.14)
-
-        # set top margins
         up.SetTopMargin(0.7 * up.GetTopMargin())
-
-        # set bottom margins
         up.SetBottomMargin(0.09)
+
+        dn.SetRightMargin(up.GetRightMargin())
+        dn.SetLeftMargin(up.GetLeftMargin())
         dn.SetBottomMargin(0.4)
 
         up.Draw()
