@@ -23,7 +23,7 @@ ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 # Local classes for plotting
 import tools.plot as plot
-from tools.sample import Data, Background, Signal
+from tools.sample import Sample, MCsample, Data, Background, Signal
 import tools.region as region
 import tools.systematic as systematic
 
@@ -42,6 +42,10 @@ fake_ntuple_dir   = g.data_ntuples
 # Description | 2015-16 (ipb) |  2015-16 (ifb) | 2015 (ipb) | 2016 (ipb) | dummy
 # Value       |     36180     |      36.01     |    320     |    32971   |   1
 lumi_ = 36180
+
+# Strings for plotting
+MCsample.weight_str = 'eventweight'
+Sample.input_file_treename = 'superNt'
 
 ################################################################################
 # Samples
@@ -586,7 +590,7 @@ backgrounds.append(hww)
 region_ops = []
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 #region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-region_ops += ['zjets_FF_CRnum_m']
+region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
 
 # What variables to plot
 vars_to_plot = []

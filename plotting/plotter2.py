@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import pdb
 """
 ================================================================================
 As comprehensive a plotting script as there is this side of the Mississipi
@@ -38,6 +37,7 @@ r.TEventList.__init__._creates = False
 r.TH1F.__init__._creates = False
 r.TGraphErrors.__init__._creates = False
 r.TGraphAsymmErrors.__init__._creates = False
+r.TLegend.__init__._creates = False
 
 # Local classes for plotting
 import tools.plot_utils as pu
@@ -67,6 +67,7 @@ def main ():
     elif rReg and rPlot:
         plots = [p for p in plots if p.name == rPlot and p.region == rReg]
 
+    #TODO: Change configuration file to simply pass in samples
     samples = [conf.data] + conf.backgrounds
     make_plots(plots, conf.regions, samples)
 
@@ -98,16 +99,16 @@ def make_plots(plots, regions, samples) :
         cut = r.TCut(reg.tcut)
         for sample in samples :
             list_name = "list_" + reg.name + "_" + sample.treename
-            sample.set_event_list(cut, list_name, save_dir)
+            sample.set_event_list(cut, list_name, event_list_dir)
 
         ########################################################################
         # Make 1D and 2D plots
         n_total = len(plots_with_region)
         for n_current, p in enumerate(plots_with_region, 1):
             if p.is2D :
-                make_plots2D(p, reg, data, backgrounds)
+                make_plots2D(p, reg, samples)
             else:
-                make_plots1D(p, reg, data, backgrounds, n_current, n_total)
+                make_plots1D(p, reg, samples, n_current, n_total)
 
 
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
@@ -147,39 +148,26 @@ def make_plots2D(plot, reg, samples):
 class PlotParts():
     def __init__(self):
         self.hist_axis = None
-        self.stack_hists = []
+        self.hists = []
         self.mc_stack = None
         self.mc_hist = None
+        self.mc_error = None
         self.signal_hists = []
         self.data_hist = None
         self.error_graph = None
         self.leg = None
+
     def draw_all(self, region_name, can):
         if not self.hist_axis:
             print "ERROR :: Hist axis not provided. Cannot draw "
             return
-        self.hist_axis.Draw('AXIS')
-        print "axis name = ",self.hist_axis.GetXaxis().GetName()
-        if self.mc_stack:
-            print "Drawing Stack"
-            self.mc_stack.Draw("HIST")
-        if self.error_graph:
-            print "Drawing error"
-            self.error_graph.Draw("E2 same")
-        if self.mc_hist:
-            print "Drawing mc_hist"
-            self.mc_hist.Draw('hist same')
-            print "axis name = ",self.mc_hist.GetXaxis().GetName()
-        for hsig in self.signal_hists:
-            print "Drawing signal_hist"
-            hsig.Draw("hist same")
-        if self.data_hist:
-            print "Drawing data_hist"
-            self.data_hist.Draw("option same pz 0")
-            print "axis name = ",self.data_hist.GetXaxis().GetName()
-        if self.leg:
-            print "Drawing leg"
-            self.leg.Draw('same')
+        self.hist_axis.Draw()
+        if self.mc_stack: self.mc_stack.Draw("HIST SAME")
+        if self.error_graph: self.error_graph.Draw("E2 same")
+        if self.mc_hist: self.mc_hist.Draw('hist same')
+        for hsig in self.signal_hists: hsig.Draw("hist same")
+        if self.data_hist: self.data_hist.Draw("option same pz 0")
+        if self.leg: self.leg.Draw()
 
         # add some text/labels
         pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
@@ -189,9 +177,26 @@ class PlotParts():
         pu.draw_text(text=region_name,      x=0.18,y=0.68, size=0.04)
 
         # Reset axis
-        r.gPad.SetTickx()
-        r.gPad.SetTicky()
-        r.gPad.Update()
+        can.RedrawAxis()
+        can.SetTickx()
+        can.SetTicky()
+        can.Update()
+        #r.gPad.SetTickx()
+        #r.gPad.SetTicky()
+        #r.gPad.Update()
+
+    def clear(self):
+        self.hist_axis.Delete()
+        if self.mc_stack: self.mc_stack.Delete()
+        if self.error_graph: self.error_graph.Delete()
+        if self.mc_hist: self.mc_hist.Delete()
+        if self.mc_error: self.mc_error.Delete()
+        for hsig in self.signal_hists: hsig.Delete()
+        if self.data_hist: self.data_hist.Delete()
+        if self.leg: self.leg.Delete()
+        for h in self.hists: h.Delete()
+        self.__init__()
+
 
     def Print(self):
         print "self.hist_axis = ", self.hist_axis
@@ -226,6 +231,7 @@ def make_plotsStack(plot, reg, samples, plot_i, n_plots):
     can.Update()
 
     save_plot(can, plot.name+".eps")
+    stack_plot_parts.clear()
 
 def make_plotsRatio(plot, reg, samples, plot_i, n_plots) :
     ''' '''
@@ -247,7 +253,6 @@ def draw_stack(can, plot, reg, samples, plot_parts):
     plot_parts.draw_all(reg.displayname, can)
 
 def save_plot(can, outname):
-    can.SaveAs("InProgress7.pdf")
     can.SaveAs(outname)
     out = plots_dir + args.outdir
     utils.mv_file_to_dir(outname, out, True)
@@ -257,11 +262,14 @@ def save_plot(can, outname):
 ################################################################################
 def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     ''' '''
-
+    
     data = [s for s in samples if not s.isMC]
     assert len(data) <= 1, "ERROR :: Multiple data samples"
     data = data[0]
-    backgrounds = [s for s in samples if not s.isMC]
+    mc_samples = [s for s in samples if s.isMC]
+    backgrounds = [s for s in mc_samples if not s.isSignal]
+    signals = [s for s in mc_samples if s.isSignal]
+
 
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
@@ -318,45 +326,43 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     n_total_sm_yield = n_total_sm_error = 0.
     hists_to_clear = []
 
-    # Add MC backgrounds to stack
-    for b in backgrounds :
-        if b.isSignal() : continue
+    # Make MC sample hists
+    for mc_sample in mc_samples :
         # Initilize histogram
         h_name_tmp = re.sub(r'[(){}[\]]+','',plot.variable)
-        h_name = "h_"+reg.name+'_'+b.treename+"_"+h_name_tmp
+        h_name = "h_"+reg.name+'_'+mc_sample.treename+"_"+h_name_tmp
         hists_to_clear.append(h_name)
         h = pu.th1d(h_name, "", int(plot.nbins),
                     plot.x_range_min, plot.x_range_max,
                     plot.x_label, plot.y_label)
+        h.leg_name = mc_sample.displayname #dynamic classes...ooo yeah!
 
-        h.SetLineColor(b.color)
+        h.SetLineColor(mc_sample.color)
         h.GetXaxis().SetLabelOffset(-999)
-        if b.isSignal():
+        if mc_sample.isSignal:
             h.SetLineWidth(2)
             h.SetLineStyle(2)
             h.SetFillStyle(0)
         else:
-            h.SetFillColor(b.color)
+            h.SetFillColor(mc_sample.color)
             h.SetFillStyle(1001)
         h.Sumw2
 
-        weight_str = "eventweight"
-
         # Draw final histogram (i.e. selections and weights applied)
-        cut = "(" + reg.tcut + ") * %s * "%weight_str + str(b.scale_factor)
+        cut = "(%s) * %s * %s"%(reg.tcut, mc_sample.weight_str, str(mc_sample.scale_factor))
         cut = r.TCut(cut)
         sel = r.TCut("1")
         draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())
-        b.tree.Draw(draw_cmd, cut * sel, "goff")
+        mc_sample.tree.Draw(draw_cmd, cut * sel, "goff")
 
 
         # Yield +/- stat error
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
-        if not b.isSignal():
+        if not mc_sample.isSignal:
             n_total_sm_yield += float(integral)
             n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
-        yield_tbl.append("%10s: %.2f +/- %.2f"%(b.name, integral, stat_err))
+        yield_tbl.append("%10s: %.2f +/- %.2f"%(mc_sample.name, integral, stat_err))
 
         # Add overflow
         if plot.add_overflow:
@@ -365,14 +371,14 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
             pu.add_underflow_to_firstbin(h)
 
         # Record all and non-empty histograms
-        if b.isSignal():
-            leg_sig.AddEntry(h, b.displayname, "l")
+        if mc_sample.isSignal:
+            leg_sig.AddEntry(h, mc_sample.displayname, "l")
             sig_histos.append(h)
         else:
             all_histos.append(h)
-            histos.append(h) if integral > 0 else avoid_bkg.append(b.name)
+            histos.append(h) if integral > 0 else avoid_bkg.append(mc_sample.name)
         can.Update()
-
+    
     if not len(histos):
         print "make_plotsStack ERROR :: All SM hists are empty. Skipping"
         #TODO: return NONE and add flags downstream to handle
@@ -384,6 +390,7 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
     can.Update()
+    
 
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
@@ -442,11 +449,7 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
 
     # now add backgrounds to legend
     for h in histos_for_leg :
-        name_for_legend = ""
-        for b in backgrounds :
-            if b.treename in h.GetName() :
-                name_for_legend = b.displayname
-        leg.AddEntry(h, name_for_legend, "f")
+        leg.AddEntry(h, h.leg_name, "f")
 
     totalSM = stack.GetStack().Last().Clone("totalSM")
     nominalAsymErrors = pu.th1_to_tgraph(totalSM)
@@ -460,7 +463,7 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     stack.SetMinimum(plot.y_range_min)
 
     # Determine y range for plot
-    max_mult = 2.0 if any([b.isSignal() for b in backgrounds]) else 1.66
+    max_mult = 2.0 if len(signals) else 1.66
     if data:
         maxy = max(hd.GetMaximum(), stack.GetMaximum())
     else:
@@ -541,19 +544,15 @@ def make_stack_hists(can, plot, reg, samples, plot_parts, for_ratio=False):
     can.Update()
 
     plot_parts.hist_axis = hax
+    plot_parts.hists = all_histos
     plot_parts.mc_stack = stack
+    plot_parts.mc_error = mcError
     plot_parts.mc_hist = hist_sm
+    plot_parts.error_graph = nominalAsymErrors
     plot_parts.signal_hists = sig_histos
     plot_parts.data_hist = gdata
-    plot_parts.error_graph = nominalAsymErrors
     plot_parts.leg = leg
-    print '===== Directory before leaving main hist function ====='
-    print r.gDirectory.ls()
-    print '======================================================='
-    print '===== canvas before leaving the main hist function ====='
-    print can.ls()
-    print '======================================================='
-    #return (hax, stack, hist_sm, sig_histos, gdata, nominalAsymErrors, leg)
+
 ################################################################################
 def histos_for_legend(histos) :
     '''
@@ -616,7 +615,7 @@ def print_inputs(args):
     print ""
     print "===================================================================\n"
 
-    # print out the loaded backgrounds and plots
+    # print out the loaded samples and plots
     print " ============================"
     if conf.backgrounds :
         print "Loaded backgrounds:    "

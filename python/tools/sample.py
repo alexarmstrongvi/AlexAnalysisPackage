@@ -1,6 +1,6 @@
 """
 ================================================================================
-Class for handleing samples for plotting
+Class for handling samples for plotting
 
 Author:
     Alex Armstrong <alarmstr@cern.ch>
@@ -23,19 +23,24 @@ r.TEventList.__init__._creates = False
 # Main Base Class
 ################################################################################
 class Sample :
+    ''' '''
+    # Static variables for when all inputs have the same property.
+    # Can be updated for specific samples if needed
+    input_file_treename = 'Unset'
+
     def __init__(self, name = "", displayname = ""):
+        #TODO: combine name and treename?
         self.name = name
         self.displayname = displayname
         self.treename = ""
+        self.file_path = ""
         self.color = r.kRed
         self.tree = None
         self.isMC = None
 
-    def isMC(self):
-        return self.isMC
-
     # Setup TChain/TTree
     def set_chain_from_root_file(self, file_name, flat_ntuple_dir):
+        self.file_path = os.path.realpath(flat_ntuple_dir)
         full_name = flat_ntuple_dir+file_name
         self.set_chain_from_list([full_name])
 
@@ -51,6 +56,8 @@ class Sample :
             TChain: TChain of flat ntuples from input directory
         '''
         # Get list of flat ntuples file names from sample directory
+        self.file_path = os.path.realpath(flat_ntuple_dir)
+
         flat_ntuples = glob.glob(flat_ntuple_dir + "*.root")
         assert len(flat_ntuples), "No root files found at %s"%flat_ntuple_dir
 
@@ -71,59 +78,65 @@ class Sample :
         self.set_chain_from_list(chosen_ntuples)
 
     def set_chain_from_file_list(self, file_list, flat_ntuple_dir):
+        self.file_path = os.path.realpath(flat_ntuple_dir)
         full_file_list = [flat_ntuple_dir+f for f in file_list]
         self.set_chain_from_list(full_file_list)
 
     def set_chain_from_list(self, files):
-        chain = r.TChain("superNt") #TODO: Remove hard-coded value
+        chain = r.TChain(self.input_file_treename) 
         for n_files, fname in enumerate(files):
             chain.Add(fname)
         print "%10s : ADDED %d FILES"%(self.name, n_files+1)
         self.tree = chain
 
     def set_event_list(self, cut, list_name, save_dir):
-        import pdb
-        pdb.set_trace()
+        # Checks
+        if not self.tree:
+            print "WARNING :: no tree set for", self.name
+            return
+
+        # Reset event list
+        self.tree.SetEventList(0)
+
         # Define useful variables
         cut  = r.TCut(cut)
         list_file_name = list_name.replace(".root","") + ".root"
         save_path = os.path.join(save_dir, list_file_name)
-        save_path = os.path.normpath(save_path)
-        time_stamp = os.path.getmtime(save_path)
+        save_path = os.path.realpath(os.path.normpath(save_path))
+        n_entries = str(self.tree.GetEntries())
 
-        # Reset event list
-        self.tree.SetEventList(0)
 
         # Check if the list already exists
         load_eventlist = True
         if os.path.isfile(save_path) :
             rfile = r.TFile.Open(save_path)
-            print "%10s : EventList found at %s"%(b.name, save_path)
+            print "%10s : EventList found at %s"%(self.name, save_path)
 
             # Check for any changes
-            stored_cut = rfile.Get("cut")
-            stored_save_path = rfile.Get("save_path")
-            stored_time_stamp = rfile.Get("time_stamp")
             try:
                 # Check that the expected variables are stored in the TEventList.
                 # Above, TFile::Get will return a nullptr TObject if the variable
-                # does not exist. So first apply some attribute check (e.g. IsOnHeap)
-                # to make sure there is no reference error that gets raise. If
+                # does not exist. So one must apply some attribute check (GetTitle) 
+                # to make sure there is no reference error that gets raised. If
                 # the variables are correctly grabbed then proceed with other
                 # checks
-                if not (stored_cut.IsOnHeap()
-                    and stored_save_path.IsOnHeap()
-                    and stored_time_stamp.IsOnHeap()):
-                    pass
+                stored_cut = rfile.Get("cut").GetTitle()
+                stored_save_path = rfile.Get("save_path").GetTitle()
+                stored_file_path = rfile.Get("file_path").GetTitle()
+                stored_n_entries = rfile.Get("n_entries").GetTitle()
+                
                 if cut != stored_cut:
                     print "EventList cuts have changed. Remaking EventList."
                     load_eventlist = False
-                if save_path != stored_save_path:
+                elif save_path != stored_save_path:
                     print "Eventlist path has changed.",
                     print "Playing it safe and remaking EventList."
                     load_eventlist = False
-                if time_stamp != stored_time_stamp:
-                    print "EventList file has been modified. Remaking Eventlist."
+                elif self.file_path != stored_file_path: 
+                    print "Path to sample files has changed. Remaking Eventlist."
+                    load_eventlist = False
+                elif n_entries != stored_n_entries:
+                    print "Number of entries in tree has changed. Remaking Eventlist"
                     load_eventlist = False
             except ReferenceError:
                 print "TEventList not formatted as expected. Remaking Eventlist."
@@ -136,7 +149,7 @@ class Sample :
             event_list = rfile.Get(list_name)
             self.tree.SetEventList(event_list)
         else:
-            print "Creating TEventList for", b.name
+            print "Creating TEventList for", self.name
             rfile = r.TFile(save_path,'recreate')
             draw_list = ">> " + list_name
             self.tree.Draw(draw_list, cut)
@@ -145,17 +158,16 @@ class Sample :
             event_list.Write(list_name)
 
             # Append other information
-            cut.Write("cut")
-            new_time_stamp = r.TString(os.path.getmtime(save_path))
-            new_time_stamp.Write("time_stamp")
+            cut.Write("cut") 
+            r.TNamed("save_path",save_path).Write()
+            #new_save_path = r.TNamed("save_path",save_path)
+            #new_save_path.Write()
+            new_file_path = r.TNamed("file_path",self.file_path)
+            new_file_path.Write()
+            new_n_entries = r.TNamed("n_entries",n_entries)
+            new_n_entries.Write()
 
         rfile.Close()
-
-        if not load_eventlist:
-            print "TESTING :: Modify time after closing is", os.path.getmtime(save_path)
-            print "TESTING :: Modify time appended to file is ", new_time_stamp
-            print "TESTING :: Should be equal??"
-
 
     # Comparison
     def __eq__(self, other) :
@@ -205,13 +217,18 @@ class Data(Sample):
 # MC classes
 ################################################################################
 class MCsample(Sample):
+    
+    # Static variables for when all inputs have the same property.
+    # Can be updated for specific samples if needed
+    weight_str = ''
+
     def __init__(self, name = "", displayname = ""):
         Sample.__init__(self, name, displayname)
         self.dsid = ""
         self.line_style = 1
         self.fill_style = 0
         self.scale_factor = 1.0
-        self.isSignal = False
+        self.isSignal = None
         self.isMC = True
 
     def isSignal(self) :
@@ -221,7 +238,7 @@ class MCsample(Sample):
 
 class Background(MCsample) :
     def __init__(self, name = "", displayname = "") :
-        Sample.__init__(self, name, displayname)
+        MCsample.__init__(self, name, displayname)
         self.is_signal = False
 
     def Print(self) :
@@ -229,7 +246,7 @@ class Background(MCsample) :
 
 class Signal(MCsample) :
     def __init__(self, name = "", displayname ="") :
-        Sample.__init__(self, name, displayname)
+        MCsample.__init__(self, name, displayname)
         self.is_signal = True
 
     def Print(self) :
