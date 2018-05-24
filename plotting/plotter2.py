@@ -47,6 +47,7 @@ import tools.utils as m_utils
 import tools.sample as m_sample
 import tools.region as m_region
 import tools.plot as m_plot
+from tools.YieldTable import YieldTable, UncFloat
 from global_variables import event_list_dir, plots_dir
 
 ################################################################################
@@ -95,7 +96,7 @@ def make_plots() :
 
             # Clear the yield table
             # TODO: Create a Yield Table class
-            del YIELD_TBL[:]
+            YIELD_TBL.reset()
 
             # Determine the correct plot
             if p.is2D :
@@ -133,7 +134,7 @@ def make_plotsStack(plot, reg):
     legend = make_stack_legend()
     axis = make_stack_axis(plot)
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
-    data, data_hist = add_stack_data(plot, legend, reg, mc_total.Integral())
+    data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
@@ -143,13 +144,7 @@ def make_plotsStack(plot, reg):
         return
 
     # Print yield table
-    print "Yields for %s region"%reg.displayname
-    print 30*'-'
-    for yld in YIELD_TBL:
-        if 'total' in yld.lower() or 'Data/MC' in yld:
-            print 20*'-'
-        print yld
-    print 30*'-'
+    YIELD_TBL.Print()
 
     # Draw the histograms
     draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
@@ -185,7 +180,7 @@ def make_plotsRatio(plot, reg) :
     legend = make_stack_legend()
     axis = make_stack_axis(plot)
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
-    data, data_hist = add_stack_data(plot, legend, reg, mc_total.Integral())
+    data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
@@ -195,13 +190,9 @@ def make_plotsRatio(plot, reg) :
         return
 
     # Print yield table
-    print "Yields for %s region"%reg.displayname
-    print 30*'-'
-    for yld in YIELD_TBL:
-        if 'total' in yld.lower() or 'Data/MC' in yld:
-            print 20*'-'
-        print yld
-    print 30*'-'
+    import pdb
+    pdb.set_trace()
+    YIELD_TBL.Print()
 
     # Draw the histograms
     draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
@@ -300,7 +291,6 @@ def add_stack_backgrounds(plot, leg, reg):
     sig_histos = []
     avoid_bkg = []
 
-    n_total_sm_yield = n_total_sm_error = 0.
     hists_to_clear = []
 
     # Make MC sample hists
@@ -336,10 +326,7 @@ def add_stack_backgrounds(plot, leg, reg):
         # Yield +/- stat error
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
-        if not mc_sample.isSignal:
-            n_total_sm_yield += float(integral)
-            n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
-        YIELD_TBL.append("%10s: %.2f +/- %.2f"%(mc_sample.name, integral, stat_err))
+
 
         # Add overflow
         if plot.add_overflow:
@@ -351,9 +338,11 @@ def add_stack_backgrounds(plot, leg, reg):
         if mc_sample.isSignal:
             leg_sig.AddEntry(h, mc_sample.displayname, "l")
             sig_histos.append(h)
+            YIELD_TBL.signals[mc_sample.name] = UncFloat(integral, stat_err)
         else:
             all_histos.append(h)
             histos.append(h) if integral > 0 else avoid_bkg.append(mc_sample.name)
+            YIELD_TBL.mc[mc_sample.name] = UncFloat(integral, stat_err)
 
     if not len(histos):
         print "ERROR (make_stack_background) :: All SM hists are empty. Skipping"
@@ -364,8 +353,6 @@ def add_stack_backgrounds(plot, leg, reg):
     for h in histos :
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
-
-    YIELD_TBL.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
@@ -380,7 +367,7 @@ def add_stack_backgrounds(plot, leg, reg):
 
     return stack, hist_sm, sig_histos, histos_for_leg
 
-def add_stack_data(plot, leg, reg, sm_yield):
+def add_stack_data(plot, leg, reg):
     #TODO: Look for a way to combine with backgrounds
     data = [s for s in SAMPLES if not s.isMC]
     assert len(data) <= 1, "ERROR :: Multiple data samples"
@@ -403,9 +390,7 @@ def add_stack_data(plot, leg, reg, sm_yield):
     # print the yield +/- stat error
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
-    YIELD_TBL.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
-    YIELD_TBL.append("%10s: %.2f"%("Data/MC", integral/sm_yield))
-    #print "Data: %.2f +/- %.2f"%(integral, stat_err)
+    YIELD_TBL.data[data.name] = UncFloat(integral, stat_err)
 
     # Add overflow
     if plot.add_overflow:
@@ -578,7 +563,7 @@ def draw_ratio(plot, axis, ratio_errors, ratio):
     axis.Draw("AXIS")
     ratio_errors.Draw("E2")
     ratio.Draw("option same pz 0")
-    
+
     xmin, xmax = plot.x_range_min, plot.x_range_max
     pu.draw_line(xmin, 1.5, xmax, 1.5, style = 3, width = 1)
     pu.draw_line(xmin, 1.0, xmax, 1.0, style = 2, width = 1, color = r.kBlack)
@@ -753,7 +738,7 @@ if __name__ == '__main__':
         SAMPLES = conf.SAMPLES
         REGIONS = conf.REGIONS
         PLOTS = conf.PLOTS
-        YIELD_TBL = []
+        YIELD_TBL = conf.YIELD_TBL
 
         check_for_consistency()
         print_inputs(args)

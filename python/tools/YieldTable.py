@@ -138,15 +138,15 @@ class YieldTable :
                 print "%*s : %s"%(space, name, yield_value)
         if len(self.data):
             print "-"*40
-            print "Data:"
-            for name, yield_value in zip(self.data.keys(), data_string):
-                print "%*s : %s"%(space, name, yield_value)
+            print "%*s : %s"%(space, "MC", mc_total)
+            print "%*s : %s"%(space, "Data", data_total)
 
         if len(self.signals):
             print "-"*40
             print "Signal:"
             for name, yield_value in zip(self.signals.keys(), bkg_strings):
                 print "%*s : %s"%(space, name, yield_value)
+            print ""
         if self.data_mc_ratio or len(self.formulas):
             print "-"*40
         if self.data_mc_ratio:
@@ -185,6 +185,10 @@ class YieldTable :
 
 
     def reset(self):
-        #TODO: Reset for new region/plot
-        pass
+        self.mc.clear()
+        self.data.clear()
+        self.signals.clear()
+        self.region = ""
+        self.variable = ""
+
 
