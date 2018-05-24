@@ -215,8 +215,9 @@ class Plot2D :
 
 
 ################################################################################
-# Canvas classes
+# TPad handler classes
 ################################################################################
+#TODO: rename Canvas -> Pad based names
 class Canvas :
     def __init__(self,name):
         self.name = "c_" + name
@@ -226,7 +227,7 @@ class Canvas :
     def set_pad_dimensions(self):
         pass
 
-class StackCanvas(Canvas)
+class StackCanvas(Canvas):
     def __init__(self, name):
         Canvas.__init__(self, name)
 
@@ -242,8 +243,6 @@ class StackCanvas(Canvas)
         can.SetRightMargin(0.05)
         can.SetLeftMargin(0.14)
         can.SetBottomMargin(1.3*can.GetBottomMargin())
-
-        if plot.doLogY : can.SetLogy(True)
 
         can.Update()
         self.canvas = can
