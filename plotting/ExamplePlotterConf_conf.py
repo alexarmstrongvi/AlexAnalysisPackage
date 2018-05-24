@@ -26,6 +26,7 @@ import tools.plot as plot
 from tools.sample import Sample, MCsample, Data, Background, Signal
 import tools.region as region
 import tools.systematic as systematic
+from tools.YieldTable import Yieldtable, UncFloat
 
 
 ################################################################################
@@ -228,29 +229,29 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 
 ########################################
 # Create regions
-regions = []
+REGIONS = []
 
 #TODO: reformat to look prettier. like give regions variable names and then
 #      append them all at the end into one list.
 no_sel_CR = region.Region(name = "no_sel", displayname = "No Selections")
 no_sel_CR.tcut = '1' #DF_OS
-regions.append(no_sel_CR)
+REGIONS.append(no_sel_CR)
 
 trig_only_CR = region.Region("trig_only", "Lepton Triggers")
 trig_only_CR.tcut = lepton_trig_pT + "&&" + DF_OS
-regions.append(trig_only_CR)
+REGIONS.append(trig_only_CR)
 
 top_CR = region.Region("topCR", "Top CR")
 top_CR.tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
-regions.append(top_CR)
+REGIONS.append(top_CR)
 
 zee_CR = region.Region("zCR_ee", "Z CR (Channel: El-El)")
 zee_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
-regions.append(zee_CR)
+REGIONS.append(zee_CR)
 
 zmumu_CR = region.Region("zCR_mumu", "Z CR (Channel: Mu-Mu)")
 zmumu_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
-regions.append(zmumu_CR)
+REGIONS.append(zmumu_CR)
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& (30 < MLL && MLL < 150) '
@@ -259,7 +260,7 @@ ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&&' + DF_OS)
 ztt_CR = region.Region("ztautauCR", "Ztautau CR")
 ztt_CR.tcut = ZTauTau_CR
-regions.append(ztt_CR)
+REGIONS.append(ztt_CR)
 
 # Z+Jets fake regions
 zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
@@ -291,7 +292,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
 
         reg = region.Region('zjets_FF_CR%s_%s'%(num_den, chan), 'Z+jets FF CR (%s)'%(chan_name))
         reg.tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
-        regions.append(reg)
+        REGIONS.append(reg)
 
 # Wjet fake regions
 wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1'
@@ -307,11 +308,11 @@ FF_CRden_mumu_ch = 'aID_dilep_flav == 3'
 
 wjets_emu_fake_CR = region.Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)')
 wjets_emu_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
-regions.append(wjets_emu_fake_CR)
+REGIONS.append(wjets_emu_fake_CR)
 
 wjets_mue_fake_CR = region.Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)')
 wjets_mue_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
-regions.append(wjets_mue_fake_CR)
+REGIONS.append(wjets_mue_fake_CR)
 
 wjets_FF_CRnum_base = 'nLepID == 2' # require final state
 wjets_FF_CRnum_add = '1'
@@ -325,32 +326,32 @@ FF_CRnum_mumu_ch = 'dilep_flav == 3'
 
 wjets_FF_CRnum_emu_CR = region.Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)')
 wjets_FF_CRnum_emu_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-regions.append(wjets_FF_CRnum_emu_CR)
+REGIONS.append(wjets_FF_CRnum_emu_CR)
 
 wjets_FF_CRnum_mue_CR = region.Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)')
 wjets_FF_CRnum_mue_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-regions.append(wjets_FF_CRnum_mue_CR)
+REGIONS.append(wjets_FF_CRnum_mue_CR)
 
 # Baseline regions
 baseline_CR = region.Region("baseline", "Baseline")
 baseline_CR.tcut = Baseline_Sel
-regions.append(baseline_CR)
+REGIONS.append(baseline_CR)
 
 baseline_emu_CR = region.Region("baseline_emu", "Baseline (Channel: El-Mu)")
 baseline_emu_CR.tcut = Baseline_Sel + " && " + emu
-regions.append(baseline_emu_CR)
+REGIONS.append(baseline_emu_CR)
 
 baseline_mue_CR = region.Region("baseline_mue", "Baseline (Channel: Mu-El)")
 baseline_mue_CR.tcut = Baseline_Sel + " && " + mue
-regions.append(baseline_mue_CR)
+REGIONS.append(baseline_mue_CR)
 
 vbf_SR = region.Region("vbf", "VBF")
 vbf_SR.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
-regions.append(vbf_SR)
+REGIONS.append(vbf_SR)
 
 optimized_SR = region.Region("optimized", "Optimized")
 optimized_SR.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
-regions.append(optimized_SR)
+REGIONS.append(optimized_SR)
 
 ################################################################################
 # Variables
@@ -551,23 +552,31 @@ hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir)
 
 ## Add backgrounds to be included in plots
 #TODO: change backgrounds to mc_samples or just samples
-backgrounds = []
-backgrounds.append(ttbar)
-backgrounds.append(stop)
-backgrounds.append(wtop)
-backgrounds.append(WW)
-backgrounds.append(ZZ)
-backgrounds.append(WZ)
-#backgrounds.append(zll)
-backgrounds.append(zee)
-backgrounds.append(zmumu)
-backgrounds.append(ztt)
-backgrounds.append(wjets)
-#backgrounds.append(wgamma)
-backgrounds.append(htt)
-backgrounds.append(hww)
-#backgrounds.append(fakes)
-#backgrounds.append(signal)
+SAMPLES = []
+SAMPLES.append(ttbar)
+SAMPLES.append(stop)
+SAMPLES.append(wtop)
+SAMPLES.append(WW)
+SAMPLES.append(ZZ)
+SAMPLES.append(WZ)
+#SAMPLES.append(zll)
+SAMPLES.append(zee)
+SAMPLES.append(zmumu)
+SAMPLES.append(ztt)
+SAMPLES.append(wjets)
+#SAMPLES.append(wgamma)
+SAMPLES.append(htt)
+SAMPLES.append(hww)
+#SAMPLES.append(fakes)
+#SAMPLES.append(signal)
+
+
+YIELD_TBL = YieldTable()
+# Add formulas to yield table
+# Key values will be the labels on the table
+# Formulas should use sample names and +, -, *, /, (, ), and [0-9]
+YIELD_TBL.formulas['WZ + ZZ'] = "wz + zz"
+YIELD_TBL.formulas['Data - MC_fake'] = "data - zee - zmumu"
 
 # What regions to plot
 region_ops = []
@@ -585,7 +594,7 @@ vars_to_plot = list(set(vars_to_plot))
 ################################################################################
 # Create plots
 ################################################################################
-plots = []
+PLOTS = []
 for var in vars_to_plot:
 
     # Use vector settings when plotting a specific element of the vector
@@ -634,6 +643,6 @@ for var in vars_to_plot:
         else:
             p.setStackCanvas(p.name)
 
-        plots.append(p)
+        PLOTS.append(p)
 
 print "Configuration File End"

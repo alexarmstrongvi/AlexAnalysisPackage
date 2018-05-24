@@ -34,7 +34,7 @@ r.PyConfig.IgnoreCommandLineOptions = True # don't let root steal cmd-line optio
 r.gROOT.SetBatch(True)
 r.gStyle.SetOptStat(False)
 
-# Prevent root from taking ownership when creating classes
+# Turn off root ownership when creating classes
 r.TEventList.__init__._creates = False
 r.TH1F.__init__._creates = False
 r.TGraphErrors.__init__._creates = False
@@ -77,6 +77,7 @@ def make_plots() :
         plots_with_region = [p for p in PLOTS if p.region == reg.name]
         if not len(plots_with_region): continue
 
+
         print '\n', 20*'-', "Plots for %s region"%reg.displayname, 20*'-', '\n'
 
         ########################################################################
@@ -91,6 +92,12 @@ def make_plots() :
         n_total = len(plots_with_region)
         for n_current, plot in enumerate(plots_with_region, 1):
             print 20*"-","Plotting [%d/%d] %s"%(n_current, n_total, plot.name), 20*'-'
+
+            # Clear the yield table
+            # TODO: Create a Yield Table class
+            del YIELD_TBL[:]
+
+            # Determine the correct plot
             if p.is2D :
                 make_plots2D(plot, reg)
             else:
@@ -122,26 +129,24 @@ def make_plotsStack(plot, reg):
     can.cd()
     if plot.doLogY : can.SetLogy(True)
 
-    # Track yields for printing
-    # TODO: Create a Yield Table class
-    yield_tbl = []
-
     # Get plotting primitives
     # Not all primitives are for drawing. Some are for preserving pointers
     legend = make_stack_legend()
     axis = make_stack_axis(plot)
-    mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg, yield_tbl)
-    data, data_hist = add_stack_data(plot, legend, reg, yield_tbl, mc_total.Integral())
+    mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
+    data, data_hist = add_stack_data(plot, legend, reg, mc_total.Integral())
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
     # Checks - Move on to next plot in case of failure
-    if not mc_stack: return
+    if not mc_stack:
+        print "WARNING :: Stack plot has either no MC. Skipping."
+        return
 
     # Print yield table
     print "Yields for %s region"%reg.displayname
     print 30*'-'
-    for yld in yield_tbl:
+    for yld in YIELD_TBL:
         if 'total' in yld.lower() or 'Data/MC' in yld:
             print 20*'-'
         print yld
@@ -160,20 +165,89 @@ def make_plotsStack(plot, reg):
     save_plot(can, plot.name+".eps")
 
     # Clean up
+    # TODO: Automate cleanup more
     root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
                  data_hist, legend, hists])
+    plot.pads.canvas.Clear()
 
 def make_plotsRatio(plot, reg) :
     ''' '''
-    ############################################################################
-    # Intialize plot components
     # Canvases
     rcan = plot.pads
-    rcan.canvas.cd()
-    rcan.upper_pad.cd()
 
+    ############################################################################
+    # Top stack plot
+    rcan.upper_pad.cd()
     if plot.doLogY : rcan.upper_pad.SetLogy(True)
     rcan.upper_pad.Update()
+
+    # Get plotting primitives
+    # Not all primitives are for drawing. Some are for preserving pointers
+    legend = make_stack_legend()
+    axis = make_stack_axis(plot)
+    mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
+    data, data_hist = add_stack_data(plot, legend, reg, mc_total.Integral())
+    error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
+    reformat_axis(plot, legend, mc_stack, data, axis, signals)
+
+    # Checks - Move on to next plot in case of failure
+    if not mc_stack and data:
+        print "WARNING :: Ratio plot has either no MC or not data. Skipping."
+        return
+
+    # Print yield table
+    print "Yields for %s region"%reg.displayname
+    print 30*'-'
+    for yld in YIELD_TBL:
+        if 'total' in yld.lower() or 'Data/MC' in yld:
+            print 20*'-'
+        print yld
+    print 30*'-'
+
+    # Draw the histograms
+    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
+
+    # Reset axis
+    rcan.upper_pad.RedrawAxis()
+    rcan.upper_pad.SetTicks()
+    rcan.upper_pad.Update()
+
+    ############################################################################
+    # Bottom ratio plot
+    rcan.lower_pad.cd()
+
+    ratio_axis = get_ratio_axis()
+    ratio_errors = get_ratio_errors(mc_errors)
+    ratio = get_ratio_graph(data_hist, mc_errors)
+
+    draw_ratio(ratio_axis, ratio_errors, ratio)
+
+    rcan.lower_pad.SetTicks()
+    rcan.lower_pad.Update()
+
+    ############################################################################
+    # Save the histogram
+    save_plot(can, plot.name+".eps")
+
+    # Clean up
+    root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
+                 data_hist, legend, hists, ratio_axis, ratio_errors, ratio])
+    plot.pads.canvas.Clear()
+
+def save_plot(can, outname):
+    save_path = os.path.join(plots_dir, args.outdir, outname)
+    save_path = os.path.normpath(save_path)
+    can.SaveAs(save_path)
+    print "%s saved to : %s"%(outname, os.path.dirname(save_path))
+
+def root_delete(root_objects):
+    for ro in root_objects:
+        if type(ro) == list:
+            root_delete(ro)
+        elif issubclass(type(ro), r.TObject):
+            ro.Delete()
+        else:
+            print "ERROR :: Unknown primitive type", type(ro)
 
 ################################################################################
 #Stack Plot Functions
@@ -213,7 +287,7 @@ def make_stack_axis(plot, for_ratio=False):
 
     return hax
 
-def add_stack_backgrounds(plot, leg, reg, yield_tbl):
+def add_stack_backgrounds(plot, leg, reg):
     stack = r.THStack("stack_"+plot.name, "")
 
     # Initilize lists and defaults
@@ -262,7 +336,7 @@ def add_stack_backgrounds(plot, leg, reg, yield_tbl):
         if not mc_sample.isSignal:
             n_total_sm_yield += float(integral)
             n_total_sm_error = (n_total_sm_error**2 + float(stat_err)**2)**0.5
-        yield_tbl.append("%10s: %.2f +/- %.2f"%(mc_sample.name, integral, stat_err))
+        YIELD_TBL.append("%10s: %.2f +/- %.2f"%(mc_sample.name, integral, stat_err))
 
         # Add overflow
         if plot.add_overflow:
@@ -288,7 +362,7 @@ def add_stack_backgrounds(plot, leg, reg, yield_tbl):
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
 
-    yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
+    YIELD_TBL.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
@@ -301,9 +375,9 @@ def add_stack_backgrounds(plot, leg, reg, yield_tbl):
     hist_sm.SetFillStyle(0)
     hist_sm.SetLineWidth(3)
 
-    return stack, hist_sm, sig_histos, histos_for_leg 
+    return stack, hist_sm, sig_histos, histos_for_leg
 
-def add_stack_data(plot, leg, reg, yield_tbl, sm_yield):
+def add_stack_data(plot, leg, reg, sm_yield):
     #TODO: Look for a way to combine with backgrounds
     data = [s for s in SAMPLES if not s.isMC]
     assert len(data) <= 1, "ERROR :: Multiple data samples"
@@ -326,8 +400,8 @@ def add_stack_data(plot, leg, reg, yield_tbl, sm_yield):
     # print the yield +/- stat error
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
-    yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
-    yield_tbl.append("%10s: %.2f"%("Data/MC", integral/sm_yield))
+    YIELD_TBL.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    YIELD_TBL.append("%10s: %.2f"%("Data/MC", integral/sm_yield))
     #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
     # Add overflow
@@ -416,21 +490,95 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_n
     if data: data.Draw("option same pz 0")
     legend.Draw()
     pu.draw_atlas_label('Internal','Higgs LFV', reg_name)
+################################################################################
+#Stack Plot Functions
+################################################################################
+def get_ratio_axis(stack):
+    # yaxis
+    h_sm = stack.GetStack().Last().Clone("h_sm")
+    yax = h_sm.GetYaxis()
+    # TODO: Automate this to pick a range depending on result
+    yax.SetRangeUser(0,2)
+    # TODO: Automate this for when doing other ratio plots between not stack and data
+    yax.SetTitle("Data / SM")
+    yax.SetTitleSize(0.14 * 0.83)
+    yax.SetLabelSize(0.13 * 0.81)
+    yax.SetLabelOffset(0.98 * 0.013 * 1.08)
+    yax.SetTitleOffset(0.45 * 1.2)
+    yax.SetLabelFont(42)
+    yax.SetTitleFont(42)
+    yax.SetNdivisions(5)
 
-def save_plot(can, outname):
-    save_path = os.path.join(plots_dir, args.outdir, outname)
-    save_path = os.path.normpath(save_path)
-    can.SaveAs(save_path)
-    print "%s saved to : %s"%(outname, os.path.dirname(save_path))
+    # xaxis
+    xax = h_sm.GetXaxis()
+    xax.SetTitleSize(1.1 * 0.14)
+    xax.SetLabelSize(yax.GetLabelSize())
+    xax.SetLabelOffset(1.15*0.02)
+    xax.SetTitleOffset(0.85 * xax.GetTitleOffset())
+    xax.SetLabelFont(42)
+    xax.SetTitleFont(42)
 
-def root_delete(root_objects):
-    for ro in root_objects:
-        if type(ro) == list:
-            root_delete(ro)
-        elif issubclass(type(ro), r.TObject):
-            ro.Delete()
-        else:
-            print "ERROR :: Unknown primitive type", type(ro)
+    h_sm.SetTickLength(0.06)
+
+    return h_sm
+
+def get_ratio_errors(mc_errors):
+    ratio_errors = r.TGraphAsymmErrors(mc_errors)
+    pu.buildRatioErrorBand(mc_errors, ratio_errors)
+
+    return ratio_errors
+
+def get_ratio_graph(data_hist, mc_errors)
+    g_data = pu.convert_errors_to_poisson(data_hist)
+    #g_sm = pu.th1_to_tgraph(h_sm)
+    #g_ratio = pu.tgraphAsymmErrors_divide(g_data, g_sm)
+
+    # For Data/MC only use the statistical error for data
+    # since we explicity draw the MC error band
+    nominalAsymErrorsNoSys = r.TGraphAsymmErrors(mc_errors)
+    for i in xrange(nominalAsymErrorsNoSys.GetN()) :
+        nominalAsymErrorsNoSys.SetPointError(i-1,0,0,0,0)
+    ratio_raw = pu.tgraphAsymmErrors_divide(g_data, nominalAsymErrorsNoSys)
+    #ratio_raw = pu.tgraphAsymmErrors_divide(nominalAsymErrorsNoSys,g_data)
+
+    # Make final ratio plot
+    ratio = r.TGraphAsymmErrors()
+    x1, y1 = r.Double(0.0), r.Double(0.0)
+    index = 0
+    for i in xrange(ratio_raw.GetN()) :
+        ratio_raw.GetPoint(i, x1, y1)
+        if y1 <= 0. : continue
+
+        ratio.SetPoint(index, x1, y1)
+        xlo, xhi = ratio_raw.GetErrorXlow(i), ratio_raw.GetErrorXhigh(i)
+        ylo, yhi = ratio_raw.GetErrorYlow(i), ratio_raw.GetErrorYhigh(i)
+        ratio.SetPointError(index, xlo, xhi, ylo, yhi)
+        index+=1
+
+    # Format
+    #ratio.SetLineWidth(2)
+    #uglify
+    ratio.SetLineWidth(1)
+    ratio.SetMarkerStyle(20)
+    ratio.SetMarkerSize(1.5)
+    ratio.SetLineColor(1)
+    ratio.SetMarkerSize(1.5)
+
+    # Clean up
+    ratio_raw.Delete()
+    nominalAsymErrorsNoSys.Delete()
+    g_data.Delete()
+
+    return ratio
+
+def draw_ratio(axis, ratio_errors, ratio):
+    xmin, xmax = plot.x_range_min, plot.x_range_max
+    pu.draw_line(xmin, 1.5, xmax, 1.5, style = 3, width = 1)
+    pu.draw_line(xmin, 1.0, xmax, 1.0, style = 2, width = 1, color = r.kBlack)
+    pu.draw_line(xmin, 0.5, xmax, 0.5, style = 3, width = 1)
+    axis.Draw("AXIS")
+    ratio_errors.Draw("E2")
+    ratio.Draw("option same pz 0")
 
 ################################################################################
 def histos_for_legend(histos) :
@@ -598,9 +746,10 @@ if __name__ == '__main__':
         import_conf = args.plotConfig.replace(".py","")
         conf = importlib.import_module(import_conf)
 
-        SAMPLES = conf.backgrounds + [conf.data]
-        REGIONS = conf.regions
-        PLOTS = conf.plots
+        SAMPLES = conf.SAMPLES
+        REGIONS = conf.REGIONS
+        PLOTS = conf.PLOTS
+        YIELD_TBL = []
 
         check_for_consistency()
         print_inputs(args)
