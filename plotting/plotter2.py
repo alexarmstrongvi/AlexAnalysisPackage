@@ -27,6 +27,7 @@ import time
 import importlib
 import re
 from collections import OrderedDict
+from copy import deepcopy
 
 # Root data analysis framework
 import ROOT as r
@@ -72,6 +73,7 @@ def main ():
     print "Yields found during plotting...\n"
     for yld_tbl in YIELD_TABLES:
         yld_tbl.Print()
+        print '\n'
 
 ################################################################################
 # PLOTTING FUNCTIONS
@@ -108,6 +110,14 @@ def make_plots() :
                 make_plots2D(plot, reg)
             else:
                 make_plots1D(plot, reg)
+            
+            # Print yield table
+            for yld_tbl in YIELD_TABLES:
+                if YIELD_TBL == yld_tbl:
+                    yld_tbl.variable = ', '.join([YIELD_TBL.variable, yld_tbl.variable])
+                    break
+            else:
+                YIELD_TABLES.append(deepcopy(YIELD_TBL))
 
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 
@@ -147,14 +157,6 @@ def make_plotsStack(plot, reg):
     if not mc_stack:
         print "WARNING :: Stack plot has either no MC. Skipping."
         return
-
-    # Save yield table
-    for yld_tbl in YIELD_TABLES:
-        if YIELD_TBL == yld_tbl:
-            yld_tbl.variable = ', '.join([YIELD_TBL.variable, yld_tbl.variable])
-            break
-    else:
-        YIELD_TABLES.append(YIELD_TBL)
 
     # Draw the histograms
     draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
@@ -199,8 +201,6 @@ def make_plotsRatio(plot, reg) :
         print "WARNING :: Ratio plot has either no MC or not data. Skipping."
         return
 
-    # Print yield table
-    YIELD_TBL.Print()
 
     # Draw the histograms
     draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
@@ -238,7 +238,7 @@ def save_plot(can, outname):
     save_path = os.path.join(plots_dir, args.outdir, outname)
     save_path = os.path.normpath(save_path)
     can.SaveAs(save_path)
-    print "%s saved to : %s"%(outname, os.path.dirname(save_path))
+    #print "%s saved to : %s"%(outname, os.path.dirname(save_path))
 
 def root_delete(root_objects):
     for ro in root_objects:

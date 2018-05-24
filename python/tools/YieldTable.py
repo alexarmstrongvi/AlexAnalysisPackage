@@ -125,13 +125,14 @@ class YieldTable :
 
     def __eq__(self, other):
         ''' Check if all yields, both value and uncertainty, are identical'''
-        if not isinstance(self, other): return false
+        if not isinstance(other, self.__class__): return false
 
         y1 = self.all_yields()
         y2 = other.all_yields()
         for (name1, yld1), (name2, yld2) in zip(y1.iteritems(),y2.iteritems()):
             if name1 != name2 or str(yld1) != str(yld2):
-                return false
+                return False
+        return True
 
     def is_empty(self):
         return not (self.mc or self.data or self.signals)
@@ -160,7 +161,7 @@ class YieldTable :
 
         # Print Table
         print "==============  Yield Table =============="
-        print " Quantity: ", self.variable
+        print " Variable(s): ", self.variable
         print " Region: ", self.region
         print "=========================================="
         if len(self.mc):
