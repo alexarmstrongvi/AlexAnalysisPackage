@@ -26,7 +26,7 @@ import tools.plot as plot
 from tools.sample import Sample, MCsample, Data, Background, Signal
 import tools.region as region
 import tools.systematic as systematic
-from tools.YieldTable import Yieldtable, UncFloat
+from tools.YieldTable import YieldTable, UncFloat
 
 
 ################################################################################
@@ -569,6 +569,7 @@ SAMPLES.append(htt)
 SAMPLES.append(hww)
 #SAMPLES.append(fakes)
 #SAMPLES.append(signal)
+SAMPLES.append(data)
 
 
 YIELD_TBL = YieldTable()
@@ -636,9 +637,8 @@ for var in vars_to_plot:
         p.labels(x=ops.xLabel, y=yLabel)
         p.xax(bin_width, ops.x0, ops.x1)
         p.yax(y0, y1)
-        assert data or backgrounds, "No data or backgrounds defined"
-        #if data and backgrounds and ops.ratioPlot:
-        if False:
+        assert SAMPLES, "No data or backgrounds defined"
+        if data and len(SAMPLES)>1:# and ops.ratioPlot:
             p.setRatioCanvas(p.name)
         else:
             p.setStackCanvas(p.name)

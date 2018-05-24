@@ -12,7 +12,7 @@ License:
 
 # General python
 import sys, os
-from number import Numbers
+from numbers import Number
 from math import sqrt
 from collections import OrderedDict
 
@@ -166,14 +166,16 @@ class YieldTable :
 
 
         # Replace names in formula with values
-        all_values = dict(self.mc, **self.data, **self.signals)
+        all_values = self.mc.copy()
+        all_values.update(self.data)
+        all_values.update(self.signals)
         assert len(all_values) == len(self.mc) + len(self.data) + len(self.signals), (
             "ERROR (YieldTable) :: Overlapping key values")
 
-        for sample_name in samples.sort(key=len, reverse=True)
+        for sample_name in samples.sort(key=len, reverse=True):
             assert sample_name in all_values, (
                 "ERROR :: Formula sample not stored:", sample_name)
-            if no_uncertainty
+            if no_uncertainty:
                 formula.replace(sample_name, "all_values['%s'].value"%sample)
             else:
                 formula.replace(sample_name, "all_values['%s']"%sample)
@@ -185,7 +187,4 @@ class YieldTable :
     def reset(self):
         #TODO: Reset for new region/plot
         pass
-
-    def PrettyPrint(no_uncertainty = False):
-
 

@@ -123,7 +123,6 @@ def make_plots2D(plot, reg):
 ################################################################################
 def make_plotsStack(plot, reg):
     ''' '''
-    #TODO: Modularize so this can be reused for ratio plot code
     # Get Canvas
     can = plot.pads.canvas
     can.cd()
@@ -214,20 +213,22 @@ def make_plotsRatio(plot, reg) :
 
     ############################################################################
     # Bottom ratio plot
+    #import pdb
+    #pdb.set_trace()
     rcan.lower_pad.cd()
 
-    ratio_axis = get_ratio_axis()
+    ratio_axis = get_ratio_axis(mc_stack)
     ratio_errors = get_ratio_errors(mc_errors)
     ratio = get_ratio_graph(data_hist, mc_errors)
 
-    draw_ratio(ratio_axis, ratio_errors, ratio)
+    draw_ratio(plot, ratio_axis, ratio_errors, ratio)
 
     rcan.lower_pad.SetTicks()
     rcan.lower_pad.Update()
 
     ############################################################################
     # Save the histogram
-    save_plot(can, plot.name+".eps")
+    save_plot(rcan.canvas, plot.name+".eps")
 
     # Clean up
     root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
@@ -242,7 +243,9 @@ def save_plot(can, outname):
 
 def root_delete(root_objects):
     for ro in root_objects:
-        if type(ro) == list:
+        if type(ro) == type(None):
+            continue
+        elif type(ro) == list:
             root_delete(ro)
         elif issubclass(type(ro), r.TObject):
             ro.Delete()
@@ -481,7 +484,6 @@ def reformat_axis(plot, leg, stack, hd, hax, signals):
         stack.SetMaximum(1e3*plot.y_range_max)
 
 def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name) :
-
     axis.Draw()
     mc_stack.Draw("HIST SAME")
     mc_errors.Draw("E2 same")
@@ -490,6 +492,7 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_n
     if data: data.Draw("option same pz 0")
     legend.Draw()
     pu.draw_atlas_label('Internal','Higgs LFV', reg_name)
+
 ################################################################################
 #Stack Plot Functions
 ################################################################################
@@ -528,7 +531,7 @@ def get_ratio_errors(mc_errors):
 
     return ratio_errors
 
-def get_ratio_graph(data_hist, mc_errors)
+def get_ratio_graph(data_hist, mc_errors):
     g_data = pu.convert_errors_to_poisson(data_hist)
     #g_sm = pu.th1_to_tgraph(h_sm)
     #g_ratio = pu.tgraphAsymmErrors_divide(g_data, g_sm)
@@ -571,14 +574,15 @@ def get_ratio_graph(data_hist, mc_errors)
 
     return ratio
 
-def draw_ratio(axis, ratio_errors, ratio):
+def draw_ratio(plot, axis, ratio_errors, ratio):
+    axis.Draw("AXIS")
+    ratio_errors.Draw("E2")
+    ratio.Draw("option same pz 0")
+    
     xmin, xmax = plot.x_range_min, plot.x_range_max
     pu.draw_line(xmin, 1.5, xmax, 1.5, style = 3, width = 1)
     pu.draw_line(xmin, 1.0, xmax, 1.0, style = 2, width = 1, color = r.kBlack)
     pu.draw_line(xmin, 0.5, xmax, 0.5, style = 3, width = 1)
-    axis.Draw("AXIS")
-    ratio_errors.Draw("E2")
-    ratio.Draw("option same pz 0")
 
 ################################################################################
 def histos_for_legend(histos) :
