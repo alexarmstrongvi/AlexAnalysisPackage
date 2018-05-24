@@ -45,7 +45,6 @@ class Plot1D :
 
         # Objects
         self.pads = None
-        self.primitives = OrderedDict()
 
         # Properties
         self.x_label = "x-Label"

@@ -32,7 +32,6 @@ class Sample :
         #TODO: combine name and treename?
         self.name = name
         self.displayname = displayname
-        self.treename = ""
         self.file_path = ""
         self.color = r.kRed
         self.tree = None
@@ -83,7 +82,7 @@ class Sample :
         self.set_chain_from_list(full_file_list)
 
     def set_chain_from_list(self, files):
-        chain = r.TChain(self.input_file_treename) 
+        chain = r.TChain(self.input_file_treename)
         for n_files, fname in enumerate(files):
             chain.Add(fname)
         print "%10s : ADDED %d FILES"%(self.name, n_files+1)
@@ -116,7 +115,7 @@ class Sample :
             try:
                 # Check that the expected variables are stored in the TEventList.
                 # Above, TFile::Get will return a nullptr TObject if the variable
-                # does not exist. So one must apply some attribute check (GetTitle) 
+                # does not exist. So one must apply some attribute check (GetTitle)
                 # to make sure there is no reference error that gets raised. If
                 # the variables are correctly grabbed then proceed with other
                 # checks
@@ -124,7 +123,7 @@ class Sample :
                 stored_save_path = rfile.Get("save_path").GetTitle()
                 stored_file_path = rfile.Get("file_path").GetTitle()
                 stored_n_entries = rfile.Get("n_entries").GetTitle()
-                
+
                 if cut != stored_cut:
                     print "EventList cuts have changed. Remaking EventList."
                     load_eventlist = False
@@ -132,7 +131,7 @@ class Sample :
                     print "Eventlist path has changed.",
                     print "Playing it safe and remaking EventList."
                     load_eventlist = False
-                elif self.file_path != stored_file_path: 
+                elif self.file_path != stored_file_path:
                     print "Path to sample files has changed. Remaking Eventlist."
                     load_eventlist = False
                 elif n_entries != stored_n_entries:
@@ -158,7 +157,7 @@ class Sample :
             event_list.Write(list_name)
 
             # Append other information
-            cut.Write("cut") 
+            cut.Write("cut")
             r.TNamed("save_path",save_path).Write()
             #new_save_path = r.TNamed("save_path",save_path)
             #new_save_path.Write()
@@ -171,13 +170,13 @@ class Sample :
 
     # Comparison
     def __eq__(self, other) :
-        return (self.displayname == other.displayname
-            and self.name == other.name
-            and self.treename == other.treename)
+        return (isinstance(other, Sample)
+            and self.displayname == other.displayname
+            and self.name == other.name)
 
      # Comparison
     def Print(self) :
-        print 'Sample "%s" (tree %s)'%(self.displayname, self.treename)
+        print 'Sample "%s" (tree %s)'%(self.displayname, self.name)
 
     def __gt__(self, other, tcut) :
         '''
@@ -211,13 +210,13 @@ class Data(Sample):
         self.isMC = False
 
     def Print(self) :
-        print 'Data (tree %s)'%(self.treename)
+        print 'Data (tree %s)'%(self.name)
 
 ################################################################################
 # MC classes
 ################################################################################
 class MCsample(Sample):
-    
+
     # Static variables for when all inputs have the same property.
     # Can be updated for specific samples if needed
     weight_str = ''
@@ -234,7 +233,7 @@ class MCsample(Sample):
     def isSignal(self) :
         return self.is_signal
     def Print(self) :
-        print 'MC Sample "%s" (tree %s)'%(self.displayname, self.treename)
+        print 'MC Sample "%s" (tree %s)'%(self.displayname, self.name)
 
 class Background(MCsample) :
     def __init__(self, name = "", displayname = "") :
@@ -242,7 +241,7 @@ class Background(MCsample) :
         self.is_signal = False
 
     def Print(self) :
-        print 'Background "%s" (tree %s)'%(self.displayname, self.treename)
+        print 'Background "%s" (tree %s)'%(self.displayname, self.name)
 
 class Signal(MCsample) :
     def __init__(self, name = "", displayname ="") :
@@ -250,6 +249,6 @@ class Signal(MCsample) :
         self.is_signal = True
 
     def Print(self) :
-        print 'Signal "%s" (tree %s)'%(self.displayname, self.treename)
+        print 'Signal "%s" (tree %s)'%(self.displayname, self.name)
 
 
