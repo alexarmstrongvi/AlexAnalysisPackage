@@ -220,13 +220,13 @@ class MCsample(Sample):
     # Static variables for when all inputs have the same property.
     # Can be updated for specific samples if needed
     weight_str = ''
+    scale_factor = 1.0
 
     def __init__(self, name = "", displayname = ""):
         Sample.__init__(self, name, displayname)
         self.dsid = ""
         self.line_style = 1
         self.fill_style = 0
-        self.scale_factor = 1.0
         self.isSignal = None
         self.isMC = True
 

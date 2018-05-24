@@ -46,6 +46,7 @@ lumi_ = 36180
 
 # Strings for plotting
 MCsample.weight_str = 'eventweight'
+MCsample.scale_factor = lumi_
 Sample.input_file_treename = 'superNt'
 
 ################################################################################
@@ -60,6 +61,7 @@ data = Data()
 # Fakes
 ## Fakes
 fakes = Background("fakes", "Fakes")
+fakes.scale_factor = 1 # Derived from data so no need for scaling
 fakes.color = ROOT.kGray
 
 ################################################################################
@@ -79,72 +81,62 @@ signal.color = ROOT.kGreen
 # Initialize all backgrounds
 # ttbar
 ttbar = Background("ttbar", "t#bar{t}")
-ttbar.scale_factor = lumi_
 ttbar.color = ROOT.kOrange+2
 
 # singletop
 stop = Background("st", "Single top")
-stop.scale_factor = lumi_
 stop.color = ROOT.kOrange+1
 
 # W+top
 wtop = Background("wt", "Wt")
-wtop.scale_factor = lumi_
 wtop.color = ROOT.kOrange+8
+
+# VV combined
+VV = Background("ggllvv", "ggllvv")
+VV.color = ROOT.kSpring-7
 
 # WW
 WW = Background("ww", "WW")
-WW.scale_factor = lumi_
 WW.color = ROOT.kSpring-6
 
 # ZZ
 ZZ = Background("zz", "ZZ")
-ZZ.scale_factor = lumi_
 ZZ.color = ROOT.kSpring-4
 
 # WZ
 WZ = Background("wz", "WZ")
-WZ.scale_factor = lumi_
 WZ.color = ROOT.kSpring-5
 
 # Zll
 zll = Background("zll", "Zll")
-zll.scale_factor = lumi_
 zll.color = ROOT.kAzure-9
 
 # Zee
 zee = Background("zee", "Zee")
-zee.scale_factor = lumi_
 zee.color = ROOT.kAzure-7
 
 # Zmumu
 zmumu = Background("zmumu", "Zmumu")
-zmumu.scale_factor = lumi_
 zmumu.color = ROOT.kAzure-9
 
 # Ztt
 ztt = Background("ztt", "Z#tau#tau")
-ztt.scale_factor = lumi_
 ztt.color = ROOT.kAzure-5
 
 # Wjets
 wjets = Background("wjets", "W+jets")
-wjets.scale_factor = lumi_
 wjets.color = ROOT.kOrange
 
 # W+gamma
 wgamma = Background("wgamma", "W+gamma")
-wgamma.scale_factor = lumi_
 wgamma.color = ROOT.kOrange-1
 
 # Higgs -> tau tau
 htt = Background("htt", "H#tau#tau")
-htt.scale_factor = lumi_
 htt.color = ROOT.kRed
 
 # Higgs -> W W
 hww = Background("hww", "HWW")
-hww.scale_factor = lumi_
 hww.color = ROOT.kBlue+3
 
 
@@ -271,11 +263,12 @@ zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR_add += ' && MET < 50'
-#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Lepton
-#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Lepton
-#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[2] && l_truthClass[2] <= 2))' #Prompt Lepton
-#zjets_FF_CR_add += ' && (!isMC || (2 < l_truthClass[2] && l_truthClass[2] <= 8))' #Non-Prompt Lepton
-#zjets_FF_CR_add += ' && (!isMC || (-2 < l_truthClass[2] && l_truthClass[2] <= 0))' #Unknown Lepton
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
+#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[2] && l_truthClass[2] <= 2))' #Prompt Probe Lepton
+#zjets_FF_CR_add += ' && (!isMC || (l_truthClass[2] <= 0 && 2 < l_truthClass[2]))' #Fake Probe Lepton
+#zjets_FF_CR_add += ' && (!isMC || (2 < l_truthClass[2] && l_truthClass[2] <= 8))' #Non-Prompt Probe Lepton
+#zjets_FF_CR_add += ' && (!isMC || (-2 < l_truthClass[2] && l_truthClass[2] <= 0))' #Unknown Probe Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
@@ -513,7 +506,7 @@ HistOpMap = {
     'dR_Zl'               : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Z dilepton flavor', logY=True),
     'Z2_dilep_flav'       : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='2nd Z dilepton flavor', logY=True),
-    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
+    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=True),
     #'Z_Lep2_pT'         : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
     'Z_Lep2_eta'        : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='3rd leading lepton #eta', logY=True),
     'Z_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='Z Dilepton Sign : OS(-1) SS(1)', logY=True),
@@ -537,6 +530,7 @@ data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs=['FFest'
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
 stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir)
 wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir)
+VV.set_chain_from_dsid_list(g.groups['ggllvv'], bkg_ntuple_dir)
 WW.set_chain_from_dsid_list(g.groups['ww'], bkg_ntuple_dir)
 ZZ.set_chain_from_dsid_list(g.groups['zz'], bkg_ntuple_dir)
 WZ.set_chain_from_dsid_list(g.groups['wz'], bkg_ntuple_dir)
@@ -556,6 +550,7 @@ SAMPLES = []
 SAMPLES.append(ttbar)
 SAMPLES.append(stop)
 SAMPLES.append(wtop)
+SAMPLES.append(VV)
 SAMPLES.append(WW)
 SAMPLES.append(ZZ)
 SAMPLES.append(WZ)
@@ -576,18 +571,20 @@ YIELD_TBL = YieldTable()
 # Add formulas to yield table
 # Key values will be the labels on the table
 # Formulas should use sample names and +, -, *, /, (, ), and [0-9]
-YIELD_TBL.formulas['WZ + ZZ'] = "wz + zz"
-YIELD_TBL.formulas['Data-Zll'] = "data - zee - zmumu"
+YIELD_TBL.formulas['WZ+ZZ'] = "wz + zz"
+YIELD_TBL.formulas['Zee+Zmm'] = "zee + zmumu"
 
 # What regions to plot
 region_ops = []
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 #region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
+#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
+region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
+region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
 
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['Lep0Pt']
+vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))
@@ -638,7 +635,7 @@ for var in vars_to_plot:
         p.xax(bin_width, ops.x0, ops.x1)
         p.yax(y0, y1)
         assert SAMPLES, "No data or backgrounds defined"
-        if data and len(SAMPLES)>1:# and ops.ratioPlot:
+        if data and len(SAMPLES)>1 and ops.ratioPlot:
             p.setRatioCanvas(p.name)
         else:
             p.setStackCanvas(p.name)
