@@ -577,7 +577,7 @@ YIELD_TBL = YieldTable()
 # Key values will be the labels on the table
 # Formulas should use sample names and +, -, *, /, (, ), and [0-9]
 YIELD_TBL.formulas['WZ + ZZ'] = "wz + zz"
-YIELD_TBL.formulas['Data - MC_fake'] = "data - zee - zmumu"
+YIELD_TBL.formulas['Data-Zll'] = "data - zee - zmumu"
 
 # What regions to plot
 region_ops = []

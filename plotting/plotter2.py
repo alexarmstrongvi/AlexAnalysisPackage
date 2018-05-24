@@ -97,6 +97,8 @@ def make_plots() :
             # Clear the yield table
             # TODO: Create a Yield Table class
             YIELD_TBL.reset()
+            YIELD_TBL.region = reg.displayname
+            YIELD_TBL.variable = plot.variable
 
             # Determine the correct plot
             if p.is2D :
@@ -190,8 +192,6 @@ def make_plotsRatio(plot, reg) :
         return
 
     # Print yield table
-    import pdb
-    pdb.set_trace()
     YIELD_TBL.Print()
 
     # Draw the histograms

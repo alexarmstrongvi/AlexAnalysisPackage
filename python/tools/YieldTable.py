@@ -12,6 +12,7 @@ License:
 
 # General python
 import sys, os
+import re
 from numbers import Number
 from math import sqrt
 from collections import OrderedDict
@@ -70,7 +71,7 @@ class UncFloat :
         return self.value >= other.value
 
     def __str__(self):
-        return "%s +/- %s"%(self.value, self.uncertainty)
+        return "%.2f +/- %.2f"%(self.value, self.uncertainty)
 
     def parse_uncertainty_string(string):
         if '+/-' not in string:
@@ -102,7 +103,7 @@ class YieldTable :
         self.region = ""
         self.variable = ""
 
-    def Print(no_uncertainty = False):
+    def Print(self, no_uncertainty = False):
         if no_uncertainty:
             bkg_strings = [str(v.value) for _, v in self.mc.iteritems()]
             sig_strings = [str(v.value) for _, v in self.signals.iteritems()]
@@ -110,15 +111,15 @@ class YieldTable :
             mc_total = sum([v.value for _, v in self.mc.iteritems()])
             data_total = sum([v.value for _, v in self.data.iteritems()])
         else:
-            bkd_strings = [str(v) for _, v in self.mc.iteritems()]
+            bkg_strings = [str(v) for _, v in self.mc.iteritems()]
             sig_strings = [str(v) for _, v in self.signals.iteritems()]
             data_string = [str(v) for _, v in self.data.iteritems()]
             mc_total = sum([v for _, v in self.mc.iteritems()])
             data_total = sum([v for _, v in self.data.iteritems()])
 
         formula_values = {}
-        for key, formula in numerators.iteritems():
-            formula_values[key] = apply_formula(formula)
+        for key, formula in self.formulas.iteritems():
+            formula_values[key] = self.apply_formula(formula)
 
         # Get formatting settings
         all_names = []
@@ -139,7 +140,7 @@ class YieldTable :
         if len(self.data):
             print "-"*40
             print "%*s : %s"%(space, "MC", mc_total)
-            print "%*s : %s"%(space, "Data", data_total)
+            print "%*s : %.2f"%(space, "Data", data_total.value)
 
         if len(self.signals):
             print "-"*40
@@ -150,16 +151,15 @@ class YieldTable :
         if self.data_mc_ratio or len(self.formulas):
             print "-"*40
         if self.data_mc_ratio:
-            print "%*s : %s"%(space, "Data/MC", data_total/mc_total)
+            print "%*s : %.2f"%(space, "Data/MC", (data_total/mc_total).value)
         if len(self.formulas):
-            for name, value in formula_values:
-                print "%*s : %s"%(space, name, value)
+            for name, value in formula_values.iteritems():
+                print "%*s : %.2f"%(space, name, value)
+        print "-"*40
 
     def apply_formula(self, formula, no_uncertainty=True):
         # Get samples from formula
-        samples = formula.replace("+"," ").replace("-"," ")
-        samples = samples.replace("*"," ").replace("/"," ")
-        samples = samples.replace(")"," ").replace("("," ")
+        samples = re.sub("(\+|\-|\)|\(|\*|\/)"," ", formula)
         samples = [s.strip() for s in samples.split()]
         assert all(s.replace("_","").isalpha() for s in samples), (
             "ERROR :: Unacceptable formula format", formula)
@@ -171,14 +171,16 @@ class YieldTable :
         all_values.update(self.signals)
         assert len(all_values) == len(self.mc) + len(self.data) + len(self.signals), (
             "ERROR (YieldTable) :: Overlapping key values")
-
-        for sample_name in samples.sort(key=len, reverse=True):
+        samples.sort(key=len, reverse=True)
+        
+        for sample_name in samples:
             assert sample_name in all_values, (
                 "ERROR :: Formula sample not stored:", sample_name)
             if no_uncertainty:
-                formula.replace(sample_name, "all_values['%s'].value"%sample)
+                replace_str = "all_values['%s'].value"%sample_name
             else:
-                formula.replace(sample_name, "all_values['%s']"%sample)
+                replace_str = "all_values['%s']"%sample_name
+            formula = re.sub(r"\b%s\b"%sample_name, replace_str, formula)
 
         # Evaluate formula
         return eval(formula)
