@@ -90,24 +90,24 @@ def make_plots() :
         ########################################################################
         # Make 1D and 2D plots
         n_total = len(plots_with_region)
-        for n_current, p in enumerate(plots_with_region, 1):
-            print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
+        for n_current, plot in enumerate(plots_with_region, 1):
+            print 20*"-","Plotting [%d/%d] %s"%(n_current, n_total, plot.name), 20*'-'
             if p.is2D :
-                make_plots2D(p, reg)
+                make_plots2D(plot, reg)
             else:
-                make_plots1D(p, reg, n_current, n_total)
+                make_plots1D(plot, reg)
 
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 
 ################################################################################
-def make_plots1D(plot, reg, plot_i, n_plots) :
+def make_plots1D(plot, reg) :
     ''' '''
-    if plot.ptype == m_plots.Types.ratio :
-        make_plotsRatio(plot, reg plot_i, n_plots)
-    elif plot.ptype == m_plots.Types.comparison :
+    if plot.ptype == m_plot.Types.ratio :
+        make_plotsRatio(plot, reg)
+    elif plot.ptype == m_plot.Types.comparison :
         make_plotsComparison(plot, reg)
-    elif plot.ptype == m_plots.Types.stack :
-        make_plotsStack(plot, reg, plot_i, n_plots)
+    elif plot.ptype == m_plot.Types.stack :
+        make_plotsStack(plot, reg)
     else:
         print "ERROR :: Unknown plot type,", plot.ptype.name
 
@@ -115,13 +115,15 @@ def make_plots2D(plot, reg):
         print "TODO"
 
 ################################################################################
-def make_plotsStack(plot, reg, plot_i, n_plots):
+def make_plotsStack(plot, reg):
     ''' '''
     #TODO: Modularize so this can be reused for ratio plot code
 
     # Get Canvas
     can = plot.pads.canvas
-    pr = plot.primitives[can.name] = OrderedDict()
+    can.cd()
+    if plot.doLogY : can.SetLogy(True)
+    pr = plot.primitives[plot.pads.name] = OrderedDict()
     # TODO: Add and disentangle
     # pr['legend'] = make_stack_legend()
     # pr['axis'] = make_stack_axis(plot)
@@ -129,8 +131,7 @@ def make_plotsStack(plot, reg, plot_i, n_plots):
     # pr['data'], pr['data_hist'] = add_stack_data(plot, reg, pr['legend'])
     # pr['error_leg'], pr['mc_errors'] = add_stack_mc_errors(plot, reg, pr['legend'])
 
-    make_stack_hists(plot, reg, plot.primitives[can])
-
+    make_stack_hists(plot, reg, pr)
     # Draw the histograms
     pr['axis'].Draw()
     pr['mc_stack'].Draw("HIST SAME")
@@ -147,7 +148,7 @@ def make_plotsStack(plot, reg, plot_i, n_plots):
     pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.05,font=42)
     pu.draw_text(text="#sqrt{s} = 13 TeV, 36.1 fb^{-1}", x=0.18, y=0.79, size=0.04)
     pu.draw_text(text="Higgs LFV", x=0.18, y=0.74, size=0.04)
-    pu.draw_text(text=region_name,      x=0.18,y=0.68, size=0.04)
+    pu.draw_text(text=reg.displayname,x=0.18,y=0.68, size=0.04)
 
     # Reset axis
     can.RedrawAxis()
@@ -165,16 +166,15 @@ def make_plotsStack(plot, reg, plot_i, n_plots):
     pr['mc_stack'].Delete()
     pr['mc_errors'].Delete()
     pr['mc_total'].Delete()
-    pr['error_leg'].mc_error.Delete()
+    pr['error_leg'].Delete()
     for hsig in pr['signals']: hsig.Delete()
     pr['data'].Delete()
     pr['data_hist'].Delete()
     pr['legend'].Delete()
     for h in pr['hists']: h.Delete()
 
-def make_plotsRatio(plot, reg, plot_i, n_plots) :
+def make_plotsRatio(plot, reg) :
     ''' '''
-    print 20*"-","Plotting [%d/%d] %s"%(plot_i, n_plots, plot.name), 20*'-'
     ############################################################################
     # Intialize plot components
     # Canvases
@@ -339,7 +339,7 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
     # draw the total bkg line
     hist_sm = stack.GetStack().Last().Clone("hist_sm")
     hist_sm.SetLineColor(r.kBlack)
-    hist_sm.SetLineWidth(mcError.GetLineWidth())
+    hist_sm.SetLineWidth(3)
     hist_sm.SetLineStyle(1)
     hist_sm.SetFillStyle(0)
     hist_sm.SetLineWidth(3)
@@ -485,16 +485,16 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
     #r.gPad.RedrawAxis()
     #can.Update()
 
-primitives['legend'] = leg
-primitives['axis'] = hax
-primitives['mc_stack'] = stack
-primitives['mc_total'] = hist_sm
-primitives['signals'] = [s for s in sig_histos] # to pass ownership??
-primitives['hists'] = all_histos
-primitives['data'] = gdata
-primitives['data_hist']
-primitives['error_leg'] = mcError
-primitives['mc_errors'] = nominalAsymErrors
+    primitives['legend'] = leg
+    primitives['axis'] = hax
+    primitives['mc_stack'] = stack
+    primitives['mc_total'] = hist_sm
+    primitives['signals'] = [s for s in sig_histos] # to pass ownership??
+    primitives['hists'] = all_histos
+    primitives['data'] = gdata
+    primitives['data_hist'] = hd
+    primitives['error_leg'] = mcError
+    primitives['mc_errors'] = nominalAsymErrors
 
 def save_plot(can, outname):
     can.SaveAs(outname)
