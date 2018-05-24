@@ -592,7 +592,7 @@ region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
+#vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
 #vars_to_plot += ['Z_MLL']
 
 # Remove duplicate names

@@ -494,8 +494,8 @@ def get_ratio_axis(stack, y_label, y_lim):
     # yaxis
     h_sm = stack.GetStack().Last().Clone("h_sm")
     yax = h_sm.GetYaxis()
-    yax.SetRangeUser(0,ratio_y_lim)
-    yax.SetTitle(ratio_y_label)
+    yax.SetRangeUser(0,y_lim)
+    yax.SetTitle(y_label)
     yax.SetTitleSize(0.14 * 0.83)
     yax.SetLabelSize(0.13 * 0.81)
     yax.SetLabelOffset(0.98 * 0.013 * 1.08)
