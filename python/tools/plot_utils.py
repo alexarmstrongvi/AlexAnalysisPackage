@@ -7,7 +7,6 @@ import tools.plot as plot
 
 ROOT.gStyle.SetCanvasPreferGL(ROOT.kTRUE)
 
-
 ROOT.TH1F.__init__._creates = False
 ROOT.TH2F.__init__._creates = False
 ROOT.TCanvas.__init__._creates = False
@@ -18,25 +17,9 @@ ROOT.TGraphErrors.__init__._creates = False
 ROOT.TGraphAsymmErrors.__init__._creates = False
 ROOT.TLatex.__init__._creates = False
 
-# ----------------------------------------------
-#  TCanvas Methods
-# ----------------------------------------------
-def basic_canvas(name = "c", width = 768, height = 768, nxpads = 1, nypads = 1) :
-    '''
-    Book a canvas and return it
-    '''
-    c = ROOT.TCanvas(name, name, width, height)
-    c.Divide(nxpads, nypads)
-    c.cd(1)
-    c.Modified()
-    return c
 
-def ratio_canvas(name = "c") :
-    ratio_can = plot.RatioCanvas(name)
-    return ratio_can
-
-
-
+# TODO Check how many of these methods I need
+# many can probably be removed
 # ----------------------------------------------
 #  TH1D Methods
 # ----------------------------------------------

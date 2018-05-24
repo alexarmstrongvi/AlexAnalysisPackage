@@ -110,7 +110,7 @@ def make_plots() :
                 make_plots2D(plot, reg)
             else:
                 make_plots1D(plot, reg)
-            
+
             # Print yield table
             for yld_tbl in YIELD_TABLES:
                 if YIELD_TBL == yld_tbl:
@@ -178,7 +178,7 @@ def make_plotsStack(plot, reg):
 
 def make_plotsRatio(plot, reg) :
     ''' '''
-    # Canvases
+    # Pads
     rcan = plot.pads
 
     ############################################################################
@@ -216,7 +216,7 @@ def make_plotsRatio(plot, reg) :
     #pdb.set_trace()
     rcan.lower_pad.cd()
 
-    ratio_axis = get_ratio_axis(mc_stack)
+    ratio_axis = get_ratio_axis(mc_stack, rcan.y_label, rcan.y_lim)
     ratio_errors = get_ratio_errors(mc_errors)
     ratio = get_ratio_graph(data_hist, mc_errors)
 
@@ -254,6 +254,7 @@ def root_delete(root_objects):
 ################################################################################
 #Stack Plot Functions
 ################################################################################
+#TODO Clean up and optimize the methods for stack
 def make_stack_legend():
     leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
     leg.SetNColumns(2)
@@ -489,14 +490,12 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_n
 ################################################################################
 #Stack Plot Functions
 ################################################################################
-def get_ratio_axis(stack):
+def get_ratio_axis(stack, y_label, y_lim):
     # yaxis
     h_sm = stack.GetStack().Last().Clone("h_sm")
     yax = h_sm.GetYaxis()
-    # TODO: Automate this to pick a range depending on result
-    yax.SetRangeUser(0,2)
-    # TODO: Automate this for when doing other ratio plots between not stack and data
-    yax.SetTitle("Data / SM")
+    yax.SetRangeUser(0,ratio_y_lim)
+    yax.SetTitle(ratio_y_label)
     yax.SetTitleSize(0.14 * 0.83)
     yax.SetLabelSize(0.13 * 0.81)
     yax.SetLabelOffset(0.98 * 0.013 * 1.08)

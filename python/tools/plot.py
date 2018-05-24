@@ -87,20 +87,20 @@ class Plot1D :
         self.y_range_min = min
         self.y_range_max = max
 
-    def setDefaultCanvas(self, name) :
-        self.pads = Canvas(name)
+    def setDefaultPads(self, name) :
+        self.pads = Pads(name)
         self.ptype = Types.default
 
-    def setStackCanvas(self, name):
-        self.pads = StackCanvas(name)
+    def setStackPads(self, name):
+        self.pads = StackPads(name)
         self.ptype = Types.stack
 
-    def setRatioCanvas(self, name) :
-        self.pads = RatioCanvas(name)
+    def setRatioPads(self, name) :
+        self.pads = RatioPads(name)
         self.ptype = Types.ratio
 
-    def setDoubleRatioCanvas(self, name) :
-        self.pads = DoubleRatioCanvas(name)
+    def setDoubleRatioPads(self, name) :
+        self.pads = DoubleRatioPads(name)
         self.ptype = Types.double_ratio
 
     def get_n_bins(self) :
@@ -153,7 +153,7 @@ class Plot2D :
         self.yVariable = yvar
         self.name = name
 
-    def setDefaultCanvas(self, name) :
+    def setDefaultPads(self, name) :
         c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
         self.canvas = c
 
@@ -217,7 +217,7 @@ class Plot2D :
 # TPad handler classes
 ################################################################################
 #TODO: rename Canvas -> Pad based names
-class Canvas :
+class Pads :
     def __init__(self,name):
         self.name = "c_" + name
         self.canvas = r.TCanvas(self.name, self.name, 800, 600)
@@ -226,9 +226,9 @@ class Canvas :
     def set_pad_dimensions(self):
         pass
 
-class StackCanvas(Canvas):
+class StackPads(Pads):
     def __init__(self, name):
-        Canvas.__init__(self, name)
+        Pads.__init__(self, name)
 
     def set_pad_dimensions(self):
         can = self.canvas
@@ -246,7 +246,9 @@ class StackCanvas(Canvas):
         can.Update()
         self.canvas = can
 
-class RatioCanvas :
+class RatioPads :
+    y_label = 'Data / MC'
+    y_lim = 2
     def __init__(self, name) :
         self.name = "c_" + name
         self.canvas = r.TCanvas(self.name, self.name, 768, 768)
@@ -290,7 +292,7 @@ class RatioCanvas :
         self.upper_pad = up
         self.lower_pad = dn
 
-class DoubleRatioCanvas :
+class DoubleRatioPads :
     def __init__(self, name) :
         self.name = "c_" + name
         self.canvas = r.TCanvas(self.name, self.name, 300, 350)

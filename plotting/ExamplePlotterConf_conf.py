@@ -54,8 +54,11 @@ Sample.input_file_treename = 'superNt'
 # - Create all the samples that will be put into plots (e.g. backgrounds,
 #   signal, data)
 ################################################################################
+SAMPLES = []
+
 # Data
 data = Data()
+SAMPLES.append(data)
 
 ################################################################################
 # Fakes
@@ -63,6 +66,7 @@ data = Data()
 fakes = Background("fakes", "Fakes")
 fakes.scale_factor = 1 # Derived from data so no need for scaling
 fakes.color = ROOT.kGray
+SAMPLES.append(fakes)
 
 ################################################################################
 # Signal
@@ -73,6 +77,7 @@ signal_label = "Higgs LFV" if signal_SF == 1 else "Higgs LFV (%dX)"%signal_SF
 signal = Signal("higgs_lfv", signal_label)
 signal.scale_factor = lumi_ * signal_branching_ratio * signal_SF
 signal.color = ROOT.kGreen
+SAMPLES.append(signal)
 
 ################################################################################
 # Backgrounds
@@ -82,62 +87,77 @@ signal.color = ROOT.kGreen
 # ttbar
 ttbar = Background("ttbar", "t#bar{t}")
 ttbar.color = ROOT.kOrange+2
+SAMPLES.append(ttbar)
 
 # singletop
 stop = Background("st", "Single top")
 stop.color = ROOT.kOrange+1
+SAMPLES.append(stop)
 
 # W+top
 wtop = Background("wt", "Wt")
 wtop.color = ROOT.kOrange+8
+SAMPLES.append(wtop)
 
 # VV combined
 VV = Background("ggllvv", "ggllvv")
 VV.color = ROOT.kSpring-7
+SAMPLES.append(VV)
 
 # WW
 WW = Background("ww", "WW")
 WW.color = ROOT.kSpring-6
+SAMPLES.append(WW)
 
 # ZZ
 ZZ = Background("zz", "ZZ")
 ZZ.color = ROOT.kSpring-4
+SAMPLES.append(ZZ)
 
 # WZ
 WZ = Background("wz", "WZ")
 WZ.color = ROOT.kSpring-5
+SAMPLES.append(WZ)
 
 # Zll
 zll = Background("zll", "Zll")
 zll.color = ROOT.kAzure-9
+SAMPLES.append(zll)
 
 # Zee
 zee = Background("zee", "Zee")
 zee.color = ROOT.kAzure-7
+SAMPLES.append(zee)
 
 # Zmumu
 zmumu = Background("zmumu", "Zmumu")
 zmumu.color = ROOT.kAzure-9
+SAMPLES.append(zmumu)
 
 # Ztt
 ztt = Background("ztt", "Z#tau#tau")
 ztt.color = ROOT.kAzure-5
+SAMPLES.append(ztt)
 
 # Wjets
 wjets = Background("wjets", "W+jets")
 wjets.color = ROOT.kOrange
+SAMPLES.append(wjets)
 
 # W+gamma
 wgamma = Background("wgamma", "W+gamma")
 wgamma.color = ROOT.kOrange-1
+SAMPLES.append(wgamma)
 
 # Higgs -> tau tau
 htt = Background("htt", "H#tau#tau")
 htt.color = ROOT.kRed
+SAMPLES.append(htt)
 
 # Higgs -> W W
 hww = Background("hww", "HWW")
 hww.color = ROOT.kBlue+3
+SAMPLES.append(hww)
 
 
 ################################################################################
@@ -223,36 +243,28 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 # Create regions
 REGIONS = []
 
-#TODO: reformat to look prettier. like give regions variable names and then
-#      append them all at the end into one list.
-no_sel_CR = region.Region(name = "no_sel", displayname = "No Selections")
-no_sel_CR.tcut = '1' #DF_OS
-REGIONS.append(no_sel_CR)
+REGIONS.append(region.Region(name = "no_sel", displayname = "No Selections"))
+REGIONS[-1].tcut = '1' #DF_OS
 
-trig_only_CR = region.Region("trig_only", "Lepton Triggers")
-trig_only_CR.tcut = lepton_trig_pT + "&&" + DF_OS
-REGIONS.append(trig_only_CR)
+REGIONS.append(region.Region("trig_only", "Lepton Triggers"))
+REGIONS[-1].tcut = lepton_trig_pT + "&&" + DF_OS
 
-top_CR = region.Region("topCR", "Top CR")
-top_CR.tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
-REGIONS.append(top_CR)
+REGIONS.append(region.Region("topCR", "Top CR"))
+REGIONS[-1].tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
 
-zee_CR = region.Region("zCR_ee", "Z CR (Channel: El-El)")
-zee_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
-REGIONS.append(zee_CR)
+REGIONS.append(region.Region("zCR_ee", "Z CR (Channel: El-El)"))
+REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
 
-zmumu_CR = region.Region("zCR_mumu", "Z CR (Channel: Mu-Mu)")
-zmumu_CR.tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
-REGIONS.append(zmumu_CR)
+REGIONS.append(region.Region("zCR_mumu", "Z CR (Channel: Mu-Mu)"))
+REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& (30 < MLL && MLL < 150) '
               + '&& nBJets==0 '
               + '&& ( !'+mue+' || el1pT_trackclus_ratio < 1.2) '
               + '&&' + DF_OS)
-ztt_CR = region.Region("ztautauCR", "Ztautau CR")
-ztt_CR.tcut = ZTauTau_CR
-REGIONS.append(ztt_CR)
+REGIONS.append(region.Region("ztautauCR", "Ztautau CR"))
+REGIONS[-1].tcut = ZTauTau_CR
 
 # Z+Jets fake regions
 zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
@@ -283,9 +295,10 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         id_or_aid = 'ID' if num_den == 'num' else 'anti-ID'
         chan_name = '%s + %s %s'%(ops[0], id_or_aid, ops[1])
 
-        reg = region.Region('zjets_FF_CR%s_%s'%(num_den, chan), 'Z+jets FF CR (%s)'%(chan_name))
-        reg.tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
-        REGIONS.append(reg)
+        name = 'zjets_FF_CR%s_%s'%(num_den, chan)
+        displayname = 'Z+jets FF CR (%s)'%(chan_name)
+        REGIONS.append(region.Region(name, displayname))
+        REGIONS[-1].tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
 
 # Wjet fake regions
 wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1'
@@ -299,13 +312,11 @@ FF_CRden_mue_ch  = 'aID_dilep_flav == 1'
 FF_CRden_ee_ch   = 'aID_dilep_flav == 2'
 FF_CRden_mumu_ch = 'aID_dilep_flav == 3'
 
-wjets_emu_fake_CR = region.Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)')
-wjets_emu_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
-REGIONS.append(wjets_emu_fake_CR)
+REGIONS.append(region.Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)'))
+REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
 
-wjets_mue_fake_CR = region.Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)')
-wjets_mue_fake_CR.tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
-REGIONS.append(wjets_mue_fake_CR)
+REGIONS.append(region.Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)'))
+REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
 
 wjets_FF_CRnum_base = 'nLepID == 2' # require final state
 wjets_FF_CRnum_add = '1'
@@ -317,34 +328,27 @@ FF_CRnum_mue_ch  = 'dilep_flav == 1'
 FF_CRnum_ee_ch   = 'dilep_flav == 2'
 FF_CRnum_mumu_ch = 'dilep_flav == 3'
 
-wjets_FF_CRnum_emu_CR = region.Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)')
-wjets_FF_CRnum_emu_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-REGIONS.append(wjets_FF_CRnum_emu_CR)
+REGIONS.append(region.Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)'))
+REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
 
-wjets_FF_CRnum_mue_CR = region.Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)')
-wjets_FF_CRnum_mue_CR.tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-REGIONS.append(wjets_FF_CRnum_mue_CR)
+REGIONS.append(region.Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)'))
+REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
 
 # Baseline regions
-baseline_CR = region.Region("baseline", "Baseline")
-baseline_CR.tcut = Baseline_Sel
-REGIONS.append(baseline_CR)
+REGIONS.append(region.Region("baseline", "Baseline"))
+REGIONS[-1].tcut = Baseline_Sel
 
-baseline_emu_CR = region.Region("baseline_emu", "Baseline (Channel: El-Mu)")
-baseline_emu_CR.tcut = Baseline_Sel + " && " + emu
-REGIONS.append(baseline_emu_CR)
+REGIONS.append(region.Region("baseline_emu", "Baseline (Channel: El-Mu)"))
+REGIONS[-1].tcut = Baseline_Sel + " && " + emu
 
-baseline_mue_CR = region.Region("baseline_mue", "Baseline (Channel: Mu-El)")
-baseline_mue_CR.tcut = Baseline_Sel + " && " + mue
-REGIONS.append(baseline_mue_CR)
+REGIONS.append(region.Region("baseline_mue", "Baseline (Channel: Mu-El)"))
+REGIONS[-1].tcut = Baseline_Sel + " && " + mue
 
-vbf_SR = region.Region("vbf", "VBF")
-vbf_SR.tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
-REGIONS.append(vbf_SR)
+REGIONS.append(region.Region("vbf", "VBF"))
+REGIONS[-1].tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
 
-optimized_SR = region.Region("optimized", "Optimized")
-optimized_SR.tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
-REGIONS.append(optimized_SR)
+REGIONS.append(region.Region("optimized", "Optimized"))
+REGIONS[-1].tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
 
 ################################################################################
 # Variables
@@ -353,6 +357,28 @@ REGIONS.append(optimized_SR)
 ### Define variables for plots
 HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY, norm   xUnits, xLabel, yLabel, add_overflow, add_underflow, ratioPlot')
 HistOp1D.__new__.__defaults__=   ('baseline', 12,     -2,  10, None, None, False, False, '',     '',     'Events', True, False, True)
+
+'''
+Improved plot defining setup
+variables = {
+  'RunNumber' : Plot1D(nbins=25, x_range_min=0.0,  x_range_max=-1,    x_units='',    x_label='Event run number')
+}
+
+region_vars = {}
+regions_vars['baseline'] = {
+  'RunNumber' : deepcopy(variables['RunNumber'])
+}
+regions_vars['baseline']['RunNumber'].update(nbins = 25, x_range_max = -1)
+for var in vars_to_plot:
+  for region in region_ops:
+    if var in regions_vars[region]:
+      p = regions_vars[region][var]
+    elif var in variables
+      p = variables[var]
+    else:
+      assert False, ("ERROR :: requested plot not defined:", var)
+'''
+
 
 HistOpMap = {
     # Event level
@@ -522,8 +548,8 @@ HistOpMap = {
 
 #######################################
 ## Build the TChain/TTree for each sample
-# To remove sample from plot, comment out its formation here and where the
-# background gets appended to the samples list
+# To remove sample from plot, comment out the line setting its TChain
+# Samples with empty TChains get removed below
 data_dsids = g.groups['data15']+g.groups['data16']
 data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs=['FFest'])
 #fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir, search_strs=['FFest'])
@@ -543,37 +569,18 @@ wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir)
 htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir)
 hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir)
 #signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_ntuple_dir)
+SAMPLES = [s for s in SAMPLES if s.tree]
 
-## Add backgrounds to be included in plots
-#TODO: change backgrounds to mc_samples or just samples
-SAMPLES = []
-SAMPLES.append(ttbar)
-SAMPLES.append(stop)
-SAMPLES.append(wtop)
-SAMPLES.append(VV)
-SAMPLES.append(WW)
-SAMPLES.append(ZZ)
-SAMPLES.append(WZ)
-#SAMPLES.append(zll)
-SAMPLES.append(zee)
-SAMPLES.append(zmumu)
-SAMPLES.append(ztt)
-SAMPLES.append(wjets)
-#SAMPLES.append(wgamma)
-SAMPLES.append(htt)
-SAMPLES.append(hww)
-#SAMPLES.append(fakes)
-#SAMPLES.append(signal)
-SAMPLES.append(data)
-
-
+#######################################
+# Yield Table
 YIELD_TBL = YieldTable()
 # Add formulas to yield table
 # Key values will be the labels on the table
-# Formulas should use sample names and +, -, *, /, (, ), and [0-9]
+# Formulas should use sample names and these symbols: +, -, *, /, (, ), [0-9]
 YIELD_TBL.formulas['WZ+ZZ'] = "wz + zz"
 YIELD_TBL.formulas['Zee+Zmm'] = "zee + zmumu"
 
+#######################################
 # What regions to plot
 region_ops = []
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
@@ -582,6 +589,7 @@ region_ops = []
 region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
 
+#######################################
 # What variables to plot
 vars_to_plot = []
 vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
@@ -637,9 +645,9 @@ for var in vars_to_plot:
         p.yax(y0, y1)
         assert SAMPLES, "No data or backgrounds defined"
         if data and len(SAMPLES)>1 and ops.ratioPlot:
-            p.setRatioCanvas(p.name)
+            p.setRatioPads(p.name)
         else:
-            p.setStackCanvas(p.name)
+            p.setStackPads(p.name)
 
         PLOTS.append(p)
 

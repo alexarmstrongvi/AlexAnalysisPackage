@@ -29,7 +29,6 @@ class Sample :
     input_file_treename = 'Unset'
 
     def __init__(self, name = "", displayname = ""):
-        #TODO: combine name and treename?
         self.name = name
         self.displayname = displayname
         self.file_path = ""
