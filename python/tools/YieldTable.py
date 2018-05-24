@@ -18,6 +18,8 @@ from math import sqrt
 from collections import OrderedDict
 
 class UncFloat :
+    precision = 2
+
     def __init__(self, value = 0 , uncertainty = 0):
         if isinstance(value, Number):
             pass # Expected
@@ -61,7 +63,8 @@ class UncFloat :
     def __le__(self, other) :
         return self.value <= other.value
     def __eq__(self, other) :
-        return (self.value == other.value
+        return (isinstance(self, other)
+            and self.value == other.value
             and self.uncertainty == other.uncertainty)
     def __ne__(self, other) :
         return not self.value == other.value
@@ -71,7 +74,8 @@ class UncFloat :
         return self.value >= other.value
 
     def __str__(self):
-        return "%.2f +/- %.2f"%(self.value, self.uncertainty)
+        return "%.*f +/- %.*f"%(self.precision, self.value,
+                                self.precision, self.uncertainty)
 
     def parse_uncertainty_string(string):
         if '+/-' not in string:
@@ -94,6 +98,8 @@ class UncFloat :
             return False
 
 class YieldTable :
+    precision = 2
+
     def __init__(self):
         self.mc = OrderedDict()
         self.data = {}
@@ -102,6 +108,33 @@ class YieldTable :
         self.formulas = {}
         self.region = ""
         self.variable = ""
+
+    def all_yields(self):
+        all_yields = self.mc.copy()
+        all_yields.update(self.data)
+        all_yields.update(self.signals)
+        return all_yields
+
+    def all_names(self):
+        all_names = []
+        all_names += [k for k in self.mc]
+        all_names += [k for k in self.signals]
+        all_names += [k for k in self.data]
+        all_names += [k for k in self.formulas]
+        return all_names
+
+    def __eq__(self, other):
+        ''' Check if all yields, both value and uncertainty, are identical'''
+        if not isinstance(self, other): return false
+
+        y1 = self.all_yields()
+        y2 = other.all_yields()
+        for (name1, yld1), (name2, yld2) in zip(y1.iteritems(),y2.iteritems()):
+            if name1 != name2 or str(yld1) != str(yld2):
+                return false
+
+    def is_empty(self):
+        return not (self.mc or self.data or self.signals)
 
     def Print(self, no_uncertainty = False):
         if no_uncertainty:
@@ -122,40 +155,38 @@ class YieldTable :
             formula_values[key] = self.apply_formula(formula)
 
         # Get formatting settings
-        all_names = []
-        all_names += [k for k in self.mc]
-        all_names += [k for k in self.signals]
-        all_names += [k for k in self.data]
-        all_names += [k for k in self.formulas]
-        longest_name = max(all_names, key=len)
+        longest_name = max(self.all_names(), key=len)
         space = len(longest_name) + 2
 
         # Print Table
-        print "===== Yields (Region : %s, Quantity : %s) ====="%(self.region, self.variable)
+        print "==============  Yield Table =============="
+        print " Quantity: ", self.variable
+        print " Region: ", self.region
+        print "=========================================="
         if len(self.mc):
-            print "-"*40
+            print "------------------------------------------"
             print "Backgrounds:"
             for name, yield_value in zip(self.mc.keys(), bkg_strings):
                 print "%*s : %s"%(space, name, yield_value)
         if len(self.data):
-            print "-"*40
+            print "------------------------------------------"
             print "%*s : %s"%(space, "MC", mc_total)
-            print "%*s : %.2f"%(space, "Data", data_total.value)
+            print "%*s : %.*f"%(space, "Data", self.precision, data_total.value)
 
         if len(self.signals):
-            print "-"*40
+            print "------------------------------------------"
             print "Signal:"
             for name, yield_value in zip(self.signals.keys(), bkg_strings):
                 print "%*s : %s"%(space, name, yield_value)
-            print ""
         if self.data_mc_ratio or len(self.formulas):
-            print "-"*40
+            print "------------------------------------------"
         if self.data_mc_ratio:
-            print "%*s : %.2f"%(space, "Data/MC", (data_total/mc_total).value)
+            ratio = (data_total/mc_total).value
+            print "%*s : %.*f"%(space, "Data/MC", self.precision, ratio)
         if len(self.formulas):
             for name, value in formula_values.iteritems():
-                print "%*s : %.2f"%(space, name, value)
-        print "-"*40
+                print "%*s : %.*f"%(space, name, self.precision, value)
+        print "=========================================="
 
     def apply_formula(self, formula, no_uncertainty=True):
         # Get samples from formula
@@ -166,25 +197,22 @@ class YieldTable :
 
 
         # Replace names in formula with values
-        all_values = self.mc.copy()
-        all_values.update(self.data)
-        all_values.update(self.signals)
-        assert len(all_values) == len(self.mc) + len(self.data) + len(self.signals), (
+        all_yields = self.all_yields()
+        assert len(all_yields) == len(self.mc) + len(self.data) + len(self.signals), (
             "ERROR (YieldTable) :: Overlapping key values")
         samples.sort(key=len, reverse=True)
-        
+
         for sample_name in samples:
-            assert sample_name in all_values, (
+            assert sample_name in all_yields, (
                 "ERROR :: Formula sample not stored:", sample_name)
             if no_uncertainty:
-                replace_str = "all_values['%s'].value"%sample_name
+                replace_str = "all_yields['%s'].value"%sample_name
             else:
-                replace_str = "all_values['%s']"%sample_name
+                replace_str = "all_yields['%s']"%sample_name
             formula = re.sub(r"\b%s\b"%sample_name, replace_str, formula)
 
         # Evaluate formula
         return eval(formula)
-
 
     def reset(self):
         self.mc.clear()

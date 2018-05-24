@@ -69,6 +69,10 @@ def main ():
 
     make_plots()
 
+    print "Yields found during plotting...\n"
+    for yld_tbl in YIELD_TABLES:
+        yld_tbl.Print()
+
 ################################################################################
 # PLOTTING FUNCTIONS
 def make_plots() :
@@ -95,7 +99,6 @@ def make_plots() :
             print 20*"-","Plotting [%d/%d] %s"%(n_current, n_total, plot.name), 20*'-'
 
             # Clear the yield table
-            # TODO: Create a Yield Table class
             YIELD_TBL.reset()
             YIELD_TBL.region = reg.displayname
             YIELD_TBL.variable = plot.variable
@@ -145,8 +148,13 @@ def make_plotsStack(plot, reg):
         print "WARNING :: Stack plot has either no MC. Skipping."
         return
 
-    # Print yield table
-    YIELD_TBL.Print()
+    # Save yield table
+    for yld_tbl in YIELD_TABLES:
+        if YIELD_TBL == yld_tbl:
+            yld_tbl.variable = ', '.join([YIELD_TBL.variable, yld_tbl.variable])
+            break
+    else:
+        YIELD_TABLES.append(YIELD_TBL)
 
     # Draw the histograms
     draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
@@ -739,6 +747,7 @@ if __name__ == '__main__':
         REGIONS = conf.REGIONS
         PLOTS = conf.PLOTS
         YIELD_TBL = conf.YIELD_TBL
+        YIELD_TABLES = []
 
         check_for_consistency()
         print_inputs(args)
