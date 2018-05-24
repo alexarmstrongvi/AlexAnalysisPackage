@@ -131,9 +131,9 @@ def make_plotsStack(plot, reg):
     legend = make_stack_legend()
     axis = make_stack_axis(plot)
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg, yield_tbl)
-    data, data_hist = add_stack_data(plot, legend, reg, yield_tbl)
-    error_leg, mc_errors = add_stack_mc_errors(plot, legend, reg)
-    reformat_axis(plot, legend, mc_stack, data, axis)
+    data, data_hist = add_stack_data(plot, legend, reg, yield_tbl, mc_total.Integral())
+    error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
+    reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
     # Checks - Move on to next plot in case of failure
     if not mc_stack: return
@@ -148,7 +148,7 @@ def make_plotsStack(plot, reg):
     print 30*'-'
 
     # Draw the histograms
-    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend)
+    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
 
     # Reset axis
     can.RedrawAxis()
@@ -178,14 +178,14 @@ def make_plotsRatio(plot, reg) :
 ################################################################################
 #Stack Plot Functions
 ################################################################################
-def make_stack_legend()
+def make_stack_legend():
     leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
     leg.SetNColumns(2)
     leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
     leg_sig.SetNColumns(1)
     return leg
 
-def make_stack_axis(plot, for_ratio=False)
+def make_stack_axis(plot, for_ratio=False):
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
     hax.SetMaximum(plot.y_range_max)
@@ -213,8 +213,7 @@ def make_stack_axis(plot, for_ratio=False)
 
     return hax
 
-def make_stack_background(plot, leg, reg, yield_tbl):
-
+def add_stack_backgrounds(plot, leg, reg, yield_tbl):
     stack = r.THStack("stack_"+plot.name, "")
 
     # Initilize lists and defaults
@@ -302,9 +301,9 @@ def make_stack_background(plot, leg, reg, yield_tbl):
     hist_sm.SetFillStyle(0)
     hist_sm.SetLineWidth(3)
 
-    return stack, hist_sm, sig_histos, all_histos
+    return stack, hist_sm, sig_histos, histos_for_leg 
 
-def make_stack_data(plot, leg, reg, yield_tbl):
+def add_stack_data(plot, leg, reg, yield_tbl, sm_yield):
     #TODO: Look for a way to combine with backgrounds
     data = [s for s in SAMPLES if not s.isMC]
     assert len(data) <= 1, "ERROR :: Multiple data samples"
@@ -328,14 +327,14 @@ def make_stack_data(plot, leg, reg, yield_tbl):
     stat_err = r.Double(0.0)
     integral = hd.IntegralAndError(0,-1,stat_err)
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
-    yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
+    yield_tbl.append("%10s: %.2f"%("Data/MC", integral/sm_yield))
     #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
     # Add overflow
     if plot.add_overflow:
-        pu.add_overflow_to_lastbin(h)
+        pu.add_overflow_to_lastbin(hd)
     if plot.add_underflow:
-        pu.add_underflow_to_firstbin(h)
+        pu.add_underflow_to_firstbin(hd)
 
     gdata = pu.convert_errors_to_poisson(hd)
     #gdata.SetLineWidth(2)
@@ -348,8 +347,7 @@ def make_stack_data(plot, leg, reg, yield_tbl):
 
     return gdata, hd
 
-def make_stack_mc_errors(plot, leg)
-
+def add_stack_mc_errors(plot, leg, hists, stack):
     r.gStyle.SetHatchesSpacing(0.9)
 
     mcError = r.TH1F("mcError", "mcError", 2,0,2)
@@ -360,7 +358,7 @@ def make_stack_mc_errors(plot, leg)
     leg.AddEntry(mcError, "Standard Model", "fl")
 
     # now add backgrounds to legend
-    for h in histos_for_leg :
+    for h in hists :
         leg.AddEntry(h, h.leg_name, "f")
 
     totalSM = stack.GetStack().Last().Clone("totalSM")
@@ -391,13 +389,13 @@ def make_stack_mc_errors(plot, leg)
 
     return mcError, nominalAsymErrors
 
-def reformat_axis(plot, leg, stack, hd, hax)
+def reformat_axis(plot, leg, stack, hd, hax, signals):
     # draw the MC stack and do cosmetics
     stack.SetMinimum(plot.y_range_min)
 
     # Determine y range for plot
     max_mult = 2.0 if len(signals) else 1.66
-    if data:
+    if hd:
         maxy = max(hd.GetMaximum(), stack.GetMaximum())
     else:
         maxy = stack.GetMaximum()
@@ -408,7 +406,7 @@ def reformat_axis(plot, leg, stack, hd, hax)
         hax.SetMaximum(1e3*plot.y_range_max)
         stack.SetMaximum(1e3*plot.y_range_max)
 
-def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend) :
+def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name) :
 
     axis.Draw()
     mc_stack.Draw("HIST SAME")
@@ -417,10 +415,11 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend) :
     for hsig in signals: hsig.Draw("hist same")
     if data: data.Draw("option same pz 0")
     legend.Draw()
-    pu.draw_atlas_label('Internal','Higgs LFV', reg.displayname)
+    pu.draw_atlas_label('Internal','Higgs LFV', reg_name)
 
 def save_plot(can, outname):
     save_path = os.path.join(plots_dir, args.outdir, outname)
+    save_path = os.path.normpath(save_path)
     can.SaveAs(save_path)
     print "%s saved to : %s"%(outname, os.path.dirname(save_path))
 

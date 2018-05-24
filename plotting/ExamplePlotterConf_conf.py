@@ -54,14 +54,12 @@ Sample.input_file_treename = 'superNt'
 ################################################################################
 # Data
 data = Data()
-data.treename = "data"
 
 ################################################################################
 # Fakes
 ## Fakes
 fakes = Background("fakes", "Fakes")
 fakes.color = ROOT.kGray
-fakes.treename = "fakes"
 
 ################################################################################
 # Signal
@@ -72,7 +70,6 @@ signal_label = "Higgs LFV" if signal_SF == 1 else "Higgs LFV (%dX)"%signal_SF
 signal = Signal("higgs_lfv", signal_label)
 signal.scale_factor = lumi_ * signal_branching_ratio * signal_SF
 signal.color = ROOT.kGreen
-signal.treename = "signal"
 
 ################################################################################
 # Backgrounds
@@ -83,85 +80,71 @@ signal.treename = "signal"
 ttbar = Background("ttbar", "t#bar{t}")
 ttbar.scale_factor = lumi_
 ttbar.color = ROOT.kOrange+2
-ttbar.treename = "ttbar"
 
 # singletop
 stop = Background("st", "Single top")
 stop.scale_factor = lumi_
 stop.color = ROOT.kOrange+1
-stop.treename = "ST"
 
 # W+top
 wtop = Background("wt", "Wt")
 wtop.scale_factor = lumi_
 wtop.color = ROOT.kOrange+8
-wtop.treename = "wt"
 
 # WW
 WW = Background("ww", "WW")
 WW.scale_factor = lumi_
 WW.color = ROOT.kSpring-6
-WW.treename = "WW"
 
 # ZZ
 ZZ = Background("zz", "ZZ")
 ZZ.scale_factor = lumi_
 ZZ.color = ROOT.kSpring-4
-ZZ.treename = "ZZ"
 
 # WZ
 WZ = Background("wz", "WZ")
 WZ.scale_factor = lumi_
 WZ.color = ROOT.kSpring-5
-WZ.treename = "WZ"
 
 # Zll
 zll = Background("zll", "Zll")
 zll.scale_factor = lumi_
 zll.color = ROOT.kAzure-9
-zll.treename = "zll"
 
 # Zee
 zee = Background("zee", "Zee")
 zee.scale_factor = lumi_
 zee.color = ROOT.kAzure-7
-zee.treename = "zee"
 
 # Zmumu
 zmumu = Background("zmumu", "Zmumu")
 zmumu.scale_factor = lumi_
 zmumu.color = ROOT.kAzure-9
-zmumu.treename = "zmumu"
 
 # Ztt
 ztt = Background("ztt", "Z#tau#tau")
 ztt.scale_factor = lumi_
 ztt.color = ROOT.kAzure-5
-ztt.treename = "ztt"
 
 # Wjets
 wjets = Background("wjets", "W+jets")
 wjets.scale_factor = lumi_
 wjets.color = ROOT.kOrange
-wjets.treename = "wjets"
 
 # W+gamma
 wgamma = Background("wgamma", "W+gamma")
 wgamma.scale_factor = lumi_
 wgamma.color = ROOT.kOrange-1
-wgamma.treename = "w_gamma"
 
 # Higgs -> tau tau
 htt = Background("htt", "H#tau#tau")
 htt.scale_factor = lumi_
 htt.color = ROOT.kRed
-htt.treename = "htt"
 
 # Higgs -> W W
 hww = Background("hww", "HWW")
 hww.scale_factor = lumi_
 hww.color = ROOT.kBlue+3
-hww.treename = "hww"
 
 
 ################################################################################
