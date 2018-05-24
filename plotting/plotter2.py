@@ -54,7 +54,6 @@ def main ():
     """ Main Function """
 
     global args
-    global yield_tbl
     # Slim plots to make if requested
     rReg = args.requestRegion
     rPlot = args.requestPlot
@@ -84,7 +83,7 @@ def make_plots() :
         print "Setting EventLists for %s"%reg.name
         cut = r.TCut(reg.tcut)
         for sample in SAMPLES :
-            list_name = "list_" + reg.name + "_" + sample.treename
+            list_name = "list_" + reg.name + "_" + sample.name
             sample.set_event_list(cut, list_name, event_list_dir)
 
         ########################################################################
@@ -118,60 +117,51 @@ def make_plots2D(plot, reg):
 def make_plotsStack(plot, reg):
     ''' '''
     #TODO: Modularize so this can be reused for ratio plot code
-
     # Get Canvas
     can = plot.pads.canvas
     can.cd()
     if plot.doLogY : can.SetLogy(True)
-    pr = plot.primitives[plot.pads.name] = OrderedDict()
-    # TODO: Add and disentangle
-    # pr['legend'] = make_stack_legend()
-    # pr['axis'] = make_stack_axis(plot)
-    # pr['mc_stack'], pr['mc_total'], pr['signals'], pr['hists'] = add_stack_backgrounds(plot, reg, pr['legend'])
-    # pr['data'], pr['data_hist'] = add_stack_data(plot, reg, pr['legend'])
-    # pr['error_leg'], pr['mc_errors'] = add_stack_mc_errors(plot, reg, pr['legend'])
 
-    make_stack_hists(plot, reg, pr)
+    # Track yields for printing
+    # TODO: Create a Yield Table class
+    yield_tbl = []
+
+    # Get plotting primitives
+    # Not all primitives are for drawing. Some are for preserving pointers
+    legend = make_stack_legend()
+    axis = make_stack_axis(plot)
+    mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg, yield_tbl)
+    data, data_hist = add_stack_data(plot, legend, reg, yield_tbl)
+    error_leg, mc_errors = add_stack_mc_errors(plot, legend, reg)
+    reformat_axis(plot, legend, mc_stack, data, axis)
+
+    # Checks - Move on to next plot in case of failure
+    if not mc_stack: return
+
+    # Print yield table
+    print "Yields for %s region"%reg.displayname
+    print 30*'-'
+    for yld in yield_tbl:
+        if 'total' in yld.lower() or 'Data/MC' in yld:
+            print 20*'-'
+        print yld
+    print 30*'-'
+
     # Draw the histograms
-    pr['axis'].Draw()
-    pr['mc_stack'].Draw("HIST SAME")
-    pr['mc_errors'].Draw("E2 same")
-    pr['mc_total'].Draw('hist same')
-    for hsig in pr['signals']: hsig.Draw("hist same")
-    pr['data'].Draw("option same pz 0")
-    pr['legend'].Draw()
-
-    # add some text/labels
-    # TODO: Move this into a single function
-    # e.g. draw_atlas_label('Internal', move_x = 0, move_y = 0, expand_x = 1, expand_y = 1, args* for added text)
-    pu.draw_text(text="ATLAS",x=0.18,y=0.85,size=0.05,font=72)
-    pu.draw_text(text="Internal",x=0.325,y=0.85,size=0.05,font=42)
-    pu.draw_text(text="#sqrt{s} = 13 TeV, 36.1 fb^{-1}", x=0.18, y=0.79, size=0.04)
-    pu.draw_text(text="Higgs LFV", x=0.18, y=0.74, size=0.04)
-    pu.draw_text(text=reg.displayname,x=0.18,y=0.68, size=0.04)
+    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend)
 
     # Reset axis
     can.RedrawAxis()
     can.SetTickx()
     can.SetTicky()
     can.Update()
-    can.Update()
 
     # Save the histogram
     save_plot(can, plot.name+".eps")
 
     # Clean up
-    # TODO: Move to a function that simply loops over all primitives
-    pr['axis'].Delete()
-    pr['mc_stack'].Delete()
-    pr['mc_errors'].Delete()
-    pr['mc_total'].Delete()
-    pr['error_leg'].Delete()
-    for hsig in pr['signals']: hsig.Delete()
-    pr['data'].Delete()
-    pr['data_hist'].Delete()
-    pr['legend'].Delete()
-    for h in pr['hists']: h.Delete()
+    root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
+                 data_hist, legend, hists])
 
 def make_plotsRatio(plot, reg) :
     ''' '''
@@ -186,29 +176,16 @@ def make_plotsRatio(plot, reg) :
     rcan.upper_pad.Update()
 
 ################################################################################
-def make_stack_hists(plot, reg, primitives, for_ratio=False):
-    ''' '''
-
-    data = [s for s in SAMPLES if not s.isMC]
-    assert len(data) >= 1, "ERROR :: Multiple data samples"
-    assert len(data) == 1, "ERROR :: No data sample provided"
-    data = data[0]
-    mc_samples = [s for s in SAMPLES if s.isMC]
-    backgrounds = [s for s in mc_samples if not s.isSignal]
-    signals = [s for s in mc_samples if s.isSignal]
-
-    ############################################################################
-    # make_stack_legend()
-    ############################################################################
+#Stack Plot Functions
+################################################################################
+def make_stack_legend()
     leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
     leg.SetNColumns(2)
     leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
     leg_sig.SetNColumns(1)
-    # RETURN leg
+    return leg
 
-    ############################################################################
-    # make_stack_axis(plot, leg, for_ratio=False)
-    ############################################################################
+def make_stack_axis(plot, for_ratio=False)
     hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
     hax.SetMinimum(plot.y_range_min)
     hax.SetMaximum(plot.y_range_max)
@@ -233,29 +210,19 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
     yax.SetLabelOffset(0.013)
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
-    #if for_ratio:
-    #    hax.Draw()
-    #else:
-    #    hax.Draw("AXIS")
-    #can.Update()
-    # RETURN hax
 
-    ############################################################################
-    # make_stack_background(plot, reg, leg)
-    ############################################################################
+    return hax
+
+def make_stack_background(plot, leg, reg, yield_tbl):
+
     stack = r.THStack("stack_"+plot.name, "")
 
-    # Yield table
-    # TODO: Create a Yield Table class
-    yield_tbl = []
-
     # Initilize lists and defaults
+    mc_samples = [s for s in SAMPLES if s.isMC]
     histos = []
     all_histos = []
     sig_histos = []
     avoid_bkg = []
-
-    #h_nom_fake = None
 
     n_total_sm_yield = n_total_sm_error = 0.
     hists_to_clear = []
@@ -264,7 +231,7 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
     for mc_sample in mc_samples :
         # Initilize histogram
         h_name_tmp = re.sub(r'[(){}[\]]+','',plot.variable)
-        h_name = "h_"+reg.name+'_'+mc_sample.treename+"_"+h_name_tmp
+        h_name = "h_"+reg.name+'_'+mc_sample.name+"_"+h_name_tmp
         hists_to_clear.append(h_name)
         h = pu.th1d(h_name, "", int(plot.nbins),
                     plot.x_range_min, plot.x_range_max,
@@ -311,30 +278,21 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
         else:
             all_histos.append(h)
             histos.append(h) if integral > 0 else avoid_bkg.append(mc_sample.name)
-        #can.Update()
 
     if not len(histos):
-        print "make_plotsStack ERROR :: All SM hists are empty. Skipping"
-        #TODO: return NONE and add flags downstream to handle
-        sys.exit()
+        print "ERROR (make_stack_background) :: All SM hists are empty. Skipping"
+        return None, None, sig_histos, all_histos
 
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
     for h in histos :
         if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
-    #can.Update()
-
 
     yield_tbl.append("%10s: %.2f +/- %.2f"%('Total SM', n_total_sm_yield, n_total_sm_error))
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
     histos_for_leg = histos_for_legend(h_leg)
-
-    #draw the signals
-    for hsig in sig_histos :
-        #hsig.Draw("hist same")
-        pass
 
     # draw the total bkg line
     hist_sm = stack.GetStack().Last().Clone("hist_sm")
@@ -343,60 +301,55 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
     hist_sm.SetLineStyle(1)
     hist_sm.SetFillStyle(0)
     hist_sm.SetLineWidth(3)
-    #hist_sm.Draw("hist same")
 
-    #RETURN stack, hist_sm, sig_histos, all_histos
-    ############################################################################
-    # make_stack_data(plot, reg, leg)
+    return stack, hist_sm, sig_histos, all_histos
+
+def make_stack_data(plot, leg, reg, yield_tbl):
     #TODO: Look for a way to combine with backgrounds
-    ############################################################################
-    if data:
-        hd_name = "h_"+reg.name+'_data_'+plot.variable
-        hd = pu.th1d(hd_name, "", int(plot.nbins),
-                                  plot.x_range_min, plot.x_range_max,
-                                  plot.x_label, plot.y_label)
-        hd.Sumw2
+    data = [s for s in SAMPLES if not s.isMC]
+    assert len(data) <= 1, "ERROR :: Multiple data samples"
+    if len(data) == 0: return None, None
+    data = data[0]
 
-        cut = "(" + reg.tcut + ")"
-        cut = r.TCut(cut)
-        sel = r.TCut("1")
-        draw_cmd = "%s>>%s"%(plot.variable, hd.GetName())
-        data.tree.Draw(draw_cmd, cut * sel, "goff")
-        hd.GetXaxis().SetLabelOffset(-999)
+    hd_name = "h_"+reg.name+'_data_'+plot.variable
+    hd = pu.th1d(hd_name, "", int(plot.nbins),
+                              plot.x_range_min, plot.x_range_max,
+                              plot.x_label, plot.y_label)
+    hd.Sumw2
 
-        # print the yield +/- stat error
-        stat_err = r.Double(0.0)
-        integral = hd.IntegralAndError(0,-1,stat_err)
-        yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
-        yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
-        #print "Data: %.2f +/- %.2f"%(integral, stat_err)
+    cut = "(" + reg.tcut + ")"
+    cut = r.TCut(cut)
+    sel = r.TCut("1")
+    draw_cmd = "%s>>%s"%(plot.variable, hd.GetName())
+    data.tree.Draw(draw_cmd, cut * sel, "goff")
+    hd.GetXaxis().SetLabelOffset(-999)
 
-        # Add overflow
-        if plot.add_overflow:
-            pu.add_overflow_to_lastbin(h)
-        if plot.add_underflow:
-            pu.add_underflow_to_firstbin(h)
+    # print the yield +/- stat error
+    stat_err = r.Double(0.0)
+    integral = hd.IntegralAndError(0,-1,stat_err)
+    yield_tbl.append("%10s: %.2f +/- %.2f"%('Data',integral, stat_err))
+    yield_tbl.append("%10s: %.2f"%("Data/MC", integral/n_total_sm_yield))
+    #print "Data: %.2f +/- %.2f"%(integral, stat_err)
 
-        gdata = pu.convert_errors_to_poisson(hd)
-        #gdata.SetLineWidth(2)
-        #uglify
-        gdata.SetLineWidth(1)
-        gdata.SetMarkerStyle(20)
-        gdata.SetMarkerSize(1.5)
-        gdata.SetLineColor(1)
-        leg.AddEntry(gdata, "Data", "p")
-        #can.Update()
+    # Add overflow
+    if plot.add_overflow:
+        pu.add_overflow_to_lastbin(h)
+    if plot.add_underflow:
+        pu.add_underflow_to_firstbin(h)
 
-    # draw the data graph
-    if data:
-        #gdata.Draw("option same pz 0")
-        pass
+    gdata = pu.convert_errors_to_poisson(hd)
+    #gdata.SetLineWidth(2)
+    #uglify
+    gdata.SetLineWidth(1)
+    gdata.SetMarkerStyle(20)
+    gdata.SetMarkerSize(1.5)
+    gdata.SetLineColor(1)
+    leg.AddEntry(gdata, "Data", "p")
 
-    # RETURN gdata
-    ############################################################################
-    # make_stack_mc_errors(plot, leg)
-    #TODO: Look for a way to combine with backgrounds
-    ############################################################################
+    return gdata, hd
+
+def make_stack_mc_errors(plot, leg)
+
     r.gStyle.SetHatchesSpacing(0.9)
 
     mcError = r.TH1F("mcError", "mcError", 2,0,2)
@@ -412,6 +365,7 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
 
     totalSM = stack.GetStack().Last().Clone("totalSM")
     nominalAsymErrors = pu.th1_to_tgraph(totalSM)
+    totalSM.Delete()
     nominalAsymErrors.SetMarkerSize(0)
     nominalAsymErrors.SetLineWidth(0)
     nominalAsymErrors.SetFillStyle(3345)
@@ -435,14 +389,9 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
         nominalAsymErrors.SetPointEYlow(i,0.0)
         nominalAsymErrors.SetPointEYlow(i,error_sym)
 
-    # draw the error band
-    #nominalAsymErrors.Draw("same && E2")
+    return mcError, nominalAsymErrors
 
-    # RETURN mcError, nominalAsymErrors
-
-    ############################################################################
-    # reformat_axis(plot, leg)
-    ############################################################################
+def reformat_axis(plot, leg, stack, hd, hax)
     # draw the MC stack and do cosmetics
     stack.SetMinimum(plot.y_range_min)
 
@@ -452,56 +401,38 @@ def make_stack_hists(plot, reg, primitives, for_ratio=False):
         maxy = max(hd.GetMaximum(), stack.GetMaximum())
     else:
         maxy = stack.GetMaximum()
-    if not plot.doLogY :
+    if not plot.doLogY:
         hax.SetMaximum(max_mult*maxy)
-        #hax.Draw()
-        #can.Update()
         stack.SetMaximum(max_mult*maxy)
-    else :
+    else:
         hax.SetMaximum(1e3*plot.y_range_max)
-        #hax.Draw()
-        #can.Update()
         stack.SetMaximum(1e3*plot.y_range_max)
 
-    # Add stack to canvas
-    #stack.Draw("HIST SAME")
-    #can.Update()
+def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend) :
 
-    ############################################################################
-    # Print yield table
-    print "Yields for %s region"%reg.displayname
-    print 30*'-'
-    for yld in yield_tbl:
-        if 'total' in yld.lower() or 'Data/MC' in yld:
-            print 20*'-'
-        print yld
-    print 30*'-'
-
-    ############################################################################
-    # Finalize the plot
-    # draw the legend
-    #leg.Draw()
-    #leg_sig.Draw()
-    #r.gPad.RedrawAxis()
-    #can.Update()
-
-    primitives['legend'] = leg
-    primitives['axis'] = hax
-    primitives['mc_stack'] = stack
-    primitives['mc_total'] = hist_sm
-    primitives['signals'] = [s for s in sig_histos] # to pass ownership??
-    primitives['hists'] = all_histos
-    primitives['data'] = gdata
-    primitives['data_hist'] = hd
-    primitives['error_leg'] = mcError
-    primitives['mc_errors'] = nominalAsymErrors
+    axis.Draw()
+    mc_stack.Draw("HIST SAME")
+    mc_errors.Draw("E2 same")
+    mc_total.Draw('hist same')
+    for hsig in signals: hsig.Draw("hist same")
+    if data: data.Draw("option same pz 0")
+    legend.Draw()
+    pu.draw_atlas_label('Internal','Higgs LFV', reg.displayname)
 
 def save_plot(can, outname):
-    can.SaveAs(outname)
-    out = plots_dir + args.outdir
-    m_utils.mv_file_to_dir(outname, out, True)
-    #fullname = out + "/" + outname
-    #print "%s saved to : %s"%(outname, os.path.abspath(fullname))
+    save_path = os.path.join(plots_dir, args.outdir, outname)
+    can.SaveAs(save_path)
+    print "%s saved to : %s"%(outname, os.path.dirname(save_path))
+
+def root_delete(root_objects):
+    for ro in root_objects:
+        if type(ro) == list:
+            root_delete(ro)
+        elif issubclass(type(ro), r.TObject):
+            ro.Delete()
+        else:
+            print "ERROR :: Unknown primitive type", type(ro)
+
 ################################################################################
 def histos_for_legend(histos) :
     '''
@@ -675,7 +606,6 @@ if __name__ == '__main__':
         check_for_consistency()
         print_inputs(args)
 
-        yield_tbl = []
         main()
 
         if args.verbose:
