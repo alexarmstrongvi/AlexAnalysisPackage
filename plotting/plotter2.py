@@ -44,11 +44,8 @@ r.TLegend.__init__._creates = False
 
 # Local classes for plotting
 import tools.plot_utils as pu
-import tools.utils as m_utils
-import tools.sample as m_sample
-import tools.region as m_region
-import tools.plot as m_plot
-from tools.YieldTable import YieldTable, UncFloat
+from tools.plot import Types
+from tools.YieldTable import UncFloat
 from global_variables import event_list_dir, plots_dir
 
 ################################################################################
@@ -146,7 +143,7 @@ def make_plotsStack(plot, reg):
 
     # Get plotting primitives
     # Not all primitives are for drawing. Some are for preserving pointers
-    legend = make_stack_legend()
+    legend = make_stack_legend(plot)
     axis = make_stack_axis(plot)
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
     data, data_hist = add_stack_data(plot, legend, reg)
@@ -189,7 +186,7 @@ def make_plotsRatio(plot, reg) :
 
     # Get plotting primitives
     # Not all primitives are for drawing. Some are for preserving pointers
-    legend = make_stack_legend()
+    legend = make_stack_legend(plot)
     axis = make_stack_axis(plot)
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
     data, data_hist = add_stack_data(plot, legend, reg)
@@ -216,7 +213,7 @@ def make_plotsRatio(plot, reg) :
     #pdb.set_trace()
     rcan.lower_pad.cd()
 
-    ratio_axis = get_ratio_axis(mc_stack, rcan.y_label, rcan.y_lim)
+    ratio_axis = get_ratio_axis(mc_stack, rcan.ylabel, rcan.ymax)
     ratio_errors = get_ratio_errors(mc_errors)
     ratio = get_ratio_graph(data_hist, mc_errors)
 
@@ -255,24 +252,33 @@ def root_delete(root_objects):
 #Stack Plot Functions
 ################################################################################
 #TODO Clean up and optimize the methods for stack
-def make_stack_legend():
-    leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
+def make_stack_legend(plot):
+
+    if plot.leg_is_left :
+        leg = pu.default_legend(xl=0.2,yl=0.7,xh=0.47, yh=0.87)
+    elif plot.leg_is_bottom_right :
+        leg = pu.default_legend(xl=0.7, yl=0.17,xh=0.97,yh=0.41)
+    elif plot.leg_is_bottom_left :
+        leg = pu.default_legend(xl=0.2,yl=0.2,xh=0.47,yh=0.37)
+    else :
+        leg = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
+
     leg.SetNColumns(2)
     leg_sig = pu.default_legend(xl=0.55, yl=0.6, xh=0.91, yh=0.71)
     leg_sig.SetNColumns(1)
     return leg
 
-def make_stack_axis(plot, for_ratio=False):
-    hax = r.TH1F("axes", "", int(plot.nbins), plot.x_range_min, plot.x_range_max)
-    hax.SetMinimum(plot.y_range_min)
-    hax.SetMaximum(plot.y_range_max)
+def make_stack_axis(plot):
+    hax = r.TH1F("axes", "", int(plot.nbins), plot.xmin, plot.xmax)
+    hax.SetMinimum(plot.ymin)
+    hax.SetMaximum(plot.ymax)
     xax = hax.GetXaxis()
-    xax.SetTitle(plot.x_label)
+    xax.SetTitle(plot.xlabel)
     xax.SetTitleFont(42)
     xax.SetLabelFont(42)
     xax.SetLabelSize(0.035)
     xax.SetTitleSize(0.048 * 0.85)
-    if for_ratio:
+    if plot.ptype == m_plot.Types.ratio:
         hax.GetXaxis().SetTitleOffset(-999)
         hax.GetXaxis().SetLabelOffset(-999)
     else:
@@ -280,13 +286,17 @@ def make_stack_axis(plot, for_ratio=False):
         xax.SetTitleOffset(1.5 * xax.GetTitleOffset())
 
     yax = hax.GetYaxis()
-    yax.SetTitle(plot.y_label)
+    yax.SetTitle(plot.ylabel)
     yax.SetTitleFont(42)
     yax.SetLabelFont(42)
     yax.SetTitleOffset(1.4)
     yax.SetLabelOffset(0.013)
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
+
+    if plot.bin_labels and plot.ptype == m_plot.Types.stack:
+        plot.set_bin_labels(hax)
+
 
     return hax
 
@@ -309,8 +319,8 @@ def add_stack_backgrounds(plot, leg, reg):
         h_name = "h_"+reg.name+'_'+mc_sample.name+"_"+h_name_tmp
         hists_to_clear.append(h_name)
         h = pu.th1d(h_name, "", int(plot.nbins),
-                    plot.x_range_min, plot.x_range_max,
-                    plot.x_label, plot.y_label)
+                    plot.xmin, plot.xmax,
+                    plot.xlabel, plot.ylabel)
         h.leg_name = mc_sample.displayname #dynamic classes...ooo yeah!
 
         h.SetLineColor(mc_sample.color)
@@ -385,8 +395,8 @@ def add_stack_data(plot, leg, reg):
 
     hd_name = "h_"+reg.name+'_data_'+plot.variable
     hd = pu.th1d(hd_name, "", int(plot.nbins),
-                              plot.x_range_min, plot.x_range_max,
-                              plot.x_label, plot.y_label)
+                              plot.xmin, plot.xmax,
+                              plot.xlabel, plot.ylabel)
     hd.Sumw2
 
     cut = "(" + reg.tcut + ")"
@@ -462,7 +472,7 @@ def add_stack_mc_errors(plot, leg, hists, stack):
 
 def reformat_axis(plot, leg, stack, hd, hax, signals):
     # draw the MC stack and do cosmetics
-    stack.SetMinimum(plot.y_range_min)
+    stack.SetMinimum(plot.ymin)
 
     # Determine y range for plot
     max_mult = 2.0 if len(signals) else 1.66
@@ -474,8 +484,8 @@ def reformat_axis(plot, leg, stack, hd, hax, signals):
         hax.SetMaximum(max_mult*maxy)
         stack.SetMaximum(max_mult*maxy)
     else:
-        hax.SetMaximum(1e3*plot.y_range_max)
-        stack.SetMaximum(1e3*plot.y_range_max)
+        hax.SetMaximum(1e3*plot.ymax)
+        stack.SetMaximum(1e3*plot.ymax)
 
 def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name) :
     axis.Draw()
@@ -490,12 +500,12 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_n
 ################################################################################
 #Stack Plot Functions
 ################################################################################
-def get_ratio_axis(stack, y_label, y_lim):
+def get_ratio_axis(stack, ylabel, ymax):
     # yaxis
     h_sm = stack.GetStack().Last().Clone("h_sm")
     yax = h_sm.GetYaxis()
-    yax.SetRangeUser(0,y_lim)
-    yax.SetTitle(y_label)
+    yax.SetRangeUser(0,ymax)
+    yax.SetTitle(ylabel)
     yax.SetTitleSize(0.14 * 0.83)
     yax.SetLabelSize(0.13 * 0.81)
     yax.SetLabelOffset(0.98 * 0.013 * 1.08)
@@ -571,7 +581,7 @@ def draw_ratio(plot, axis, ratio_errors, ratio):
     ratio_errors.Draw("E2")
     ratio.Draw("option same pz 0")
 
-    xmin, xmax = plot.x_range_min, plot.x_range_max
+    xmin, xmax = plot.xmin, plot.xmax
     pu.draw_line(xmin, 1.5, xmax, 1.5, style = 3, width = 1)
     pu.draw_line(xmin, 1.0, xmax, 1.0, style = 2, width = 1, color = r.kBlack)
     pu.draw_line(xmin, 0.5, xmax, 0.5, style = 3, width = 1)

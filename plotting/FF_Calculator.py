@@ -121,8 +121,8 @@ def get_FF_hists(data, backgrounds, regions, plots):
             print "INFO :: Makeing histogram:", h_name
 
             h = pu.th1d(h_name, "", int(plot.nbins),
-                        plot.x_range_min, plot.x_range_max,
-                        plot.x_label, plot.y_label)
+                        plot.xmin, plot.xmax,
+                        plot.xlabel, plot.ylabel)
             h.SetLineColor(sample.color)
             h.Sumw2
             if sample.name == "Data":
@@ -130,7 +130,7 @@ def get_FF_hists(data, backgrounds, regions, plots):
             else:
                 cut = "(" + reg.tcut + ") * eventweight * " + str(sample.scale_factor)
 
-            
+
             cut = r.TCut(cut)
             sel = r.TCut("1")
             draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())

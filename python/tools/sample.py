@@ -187,6 +187,9 @@ class Sample :
         return ( self.tree.Draw("isMC", cut * sel, "goff") > other.tree.Draw("isMC", cut * sel, "goff") )
 
     # Sanity checks
+    def is_setup(self):
+        return self.tree and self.isMC != None
+
     def check_for_duplicates(self):
         if not self.tree:
             print "ERROR (sample.CheckForDuplicates) :: tree not yet defined"

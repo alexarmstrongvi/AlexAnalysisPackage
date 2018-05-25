@@ -15,6 +15,7 @@ License:
 import sys, os
 import re
 from collections import namedtuple
+from copy import deepcopy
 
 # Root data analysis framework
 import ROOT
@@ -22,9 +23,9 @@ import ROOT
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 # Local classes for plotting
-import tools.plot as plot
+from tools.plot import Plot1D, Types
 from tools.sample import Sample, MCsample, Data, Background, Signal
-import tools.region as region
+from tools.region import Region
 import tools.systematic as systematic
 from tools.YieldTable import YieldTable, UncFloat
 
@@ -243,19 +244,19 @@ VBF_stripped = "JetN_g30 >= 2 && j_pt[0] > 40 && Mjj > 400 && DEtaJJ > 3"
 # Create regions
 REGIONS = []
 
-REGIONS.append(region.Region(name = "no_sel", displayname = "No Selections"))
+REGIONS.append(Regions(name = "no_sel", displayname = "No Selections"))
 REGIONS[-1].tcut = '1' #DF_OS
 
-REGIONS.append(region.Region("trig_only", "Lepton Triggers"))
+REGIONS.append(Regions("trig_only", "Lepton Triggers"))
 REGIONS[-1].tcut = lepton_trig_pT + "&&" + DF_OS
 
-REGIONS.append(region.Region("topCR", "Top CR"))
+REGIONS.append(Regions("topCR", "Top CR"))
 REGIONS[-1].tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
 
-REGIONS.append(region.Region("zCR_ee", "Z CR (Channel: El-El)"))
+REGIONS.append(Regions("zCR_ee", "Z CR (Channel: El-El)"))
 REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
 
-REGIONS.append(region.Region("zCR_mumu", "Z CR (Channel: Mu-Mu)"))
+REGIONS.append(Regions("zCR_mumu", "Z CR (Channel: Mu-Mu)"))
 REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
@@ -263,7 +264,7 @@ ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& nBJets==0 '
               + '&& ( !'+mue+' || el1pT_trackclus_ratio < 1.2) '
               + '&&' + DF_OS)
-REGIONS.append(region.Region("ztautauCR", "Ztautau CR"))
+REGIONS.append(Regions("ztautauCR", "Ztautau CR"))
 REGIONS[-1].tcut = ZTauTau_CR
 
 # Z+Jets fake regions
@@ -297,7 +298,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
 
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
         displayname = 'Z+jets FF CR (%s)'%(chan_name)
-        REGIONS.append(region.Region(name, displayname))
+        REGIONS.append(Regions(name, displayname))
         REGIONS[-1].tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
 
 # Wjet fake regions
@@ -312,10 +313,10 @@ FF_CRden_mue_ch  = 'aID_dilep_flav == 1'
 FF_CRden_ee_ch   = 'aID_dilep_flav == 2'
 FF_CRden_mumu_ch = 'aID_dilep_flav == 3'
 
-REGIONS.append(region.Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)'))
+REGIONS.append(Regions('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)'))
 REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
 
-REGIONS.append(region.Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)'))
+REGIONS.append(Regions('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)'))
 REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
 
 wjets_FF_CRnum_base = 'nLepID == 2' # require final state
@@ -328,218 +329,210 @@ FF_CRnum_mue_ch  = 'dilep_flav == 1'
 FF_CRnum_ee_ch   = 'dilep_flav == 2'
 FF_CRnum_mumu_ch = 'dilep_flav == 3'
 
-REGIONS.append(region.Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)'))
+REGIONS.append(Regions('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)'))
 REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
 
-REGIONS.append(region.Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)'))
+REGIONS.append(Regions('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)'))
 REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
 
 # Baseline regions
-REGIONS.append(region.Region("baseline", "Baseline"))
+REGIONS.append(Regions("baseline", "Baseline"))
 REGIONS[-1].tcut = Baseline_Sel
 
-REGIONS.append(region.Region("baseline_emu", "Baseline (Channel: El-Mu)"))
+REGIONS.append(Regions("baseline_emu", "Baseline (Channel: El-Mu)"))
 REGIONS[-1].tcut = Baseline_Sel + " && " + emu
 
-REGIONS.append(region.Region("baseline_mue", "Baseline (Channel: Mu-El)"))
+REGIONS.append(Regions("baseline_mue", "Baseline (Channel: Mu-El)"))
 REGIONS[-1].tcut = Baseline_Sel + " && " + mue
 
-REGIONS.append(region.Region("vbf", "VBF"))
+REGIONS.append(Regions("vbf", "VBF"))
 REGIONS[-1].tcut = "(%s) && (%s)"%(Baseline_Sel, VBF_stripped)
 
-REGIONS.append(region.Region("optimized", "Optimized"))
+REGIONS.append(Regions("optimized", "Optimized"))
 REGIONS[-1].tcut = "(%s) && !(%s) && DphiLep1MET < 1 && MtLep0 > 50 && MtLep1 < 40 && ((MET+Lep1Pt)/Lep1Pt) > 0.5"%(Baseline_Sel, VBF_stripped)
 
 ################################################################################
 # Variables
 # - Create all the variables that one might like to plot
 ################################################################################
-### Define variables for plots
-HistOp1D = namedtuple('HistOp1D', 'regions,   nBinsX, x0, x1, y0,   y1,   logY, norm   xUnits, xLabel, yLabel, add_overflow, add_underflow, ratioPlot')
-HistOp1D.__new__.__defaults__=   ('baseline', 12,     -2,  10, None, None, False, False, '',     '',     'Events', True, False, True)
 
-'''
-Improved plot defining setup
-variables = {
-  'RunNumber' : Plot1D(nbins=25, x_range_min=0.0,  x_range_max=-1,    x_units='',    x_label='Event run number')
-}
-
-region_vars = {}
-regions_vars['baseline'] = {
-  'RunNumber' : deepcopy(variables['RunNumber'])
-}
-regions_vars['baseline']['RunNumber'].update(nbins = 25, x_range_max = -1)
-for var in vars_to_plot:
-  for region in region_ops:
-    if var in regions_vars[region]:
-      p = regions_vars[region][var]
-    elif var in variables
-      p = variables[var]
-    else:
-      assert False, ("ERROR :: requested plot not defined:", var)
-'''
-
-
-HistOpMap = {
+# Improved plot defining setup
+# These plots will be copied into new plots for each region being run
+plot_defaults = {
     # Event level
-    'RunNumber'       : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Event run number'),
-    'event_number'    : HistOp1D(nBinsX=1000, x0=0,  x1=1000000000,    xUnits='',    xLabel='Event number'),
-    'isMC'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='is Monte Carlo'),
-    'eventweight'     : HistOp1D(nBinsX=100, x0=-0.001,  x1=0.002,    xUnits='',    xLabel='Event weight', logY=True),
-    'dsid'            : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Sample DSID'),
-    'treatAsYear'     : HistOp1D(nBinsX=11, x0=2007.5,x1=2018.5,xUnits='',   xLabel='treatAsYear'),
+    'isMC'                 : Plot1D(bin_range=[-1.5, 3.5], bin_width=1, xlabel='is Monte Carlo'),
+    'eventweight'          : Plot1D(bin_range=[-0.001, 0.002], nbins=100, xlabel='Event weight'),
+    'treatAsYear'          : Plot1D(bin_range=[2007.5, 2018.5], bin_width=1, xlabel='treatAsYear'),
     # Multiplicity
-    'n_preLeptons'    : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{pre-leptons}'),
-    'n_baseLeptons'   : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{baseline leptons}'),
-    'n_leptons'       : HistOp1D(nBinsX=11, x0=-0.5, x1=10.5,  xUnits='',    xLabel='N_{signal leptons}'),
+    'n_preLeptons'         : Plot1D(bin_range=[-0.5, 10.5], bin_width=1, xlabel='N_{pre-leptons}'),
+    'n_baseLeptons'        : Plot1D(bin_range=[-0.5, 10.5], bin_width=1, xlabel='N_{baseline leptons}'),
+    'n_leptons'            : Plot1D(bin_range=[-0.5, 10.5], bin_width=1, xlabel='N_{signal leptons}'),
     # Leptons
-    'l_pt'            : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Lepton p_{T}'),
-    'aID_Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep} anti-ID', logY=True),
+    'l_pt'                 : Plot1D(bin_range=[0.0, 500.0], nbins=25, xunits='GeV', xlabel='Lepton p_{T}'),
+    'aID_Lep0Pt'           : Plot1D(bin_range=[0.0, 200.0], nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep} anti-ID'),
     ## Electrons
-    'el1_track_pt'    : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron track p_{T}'),
-    'el1_clus_pt'     : HistOp1D(nBinsX=25, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Leading electron cluster p_{T}'),
-    'preEl_Et'        : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='E_{T}^{preElectron}', add_overflow=False),
-    'preEl_pt'        : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{preElectron}'),
-    'preEl_clusEtaBE' : HistOp1D(nBinsX=60, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{preEl clusterBE}'),
-    'preEl_eta'       : HistOp1D(nBinsX=60, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{preElectron}'),
-    'baseEl_ID'       : HistOp1D(nBinsX=9,  x0=-0.5, x1=8.5,   xUnits='',    xLabel='el_{Baseline}^{ID}(non-inclusive)', logY=True),
-    'El_ID'           : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='electron ID(non-inclusive)', logY=False),
-    'el_type'         : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='electron truth type', logY=True),
-    'el_origin'       : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,   xUnits='',    xLabel='electron truth origin', logY=True),
-    'el_d0sigBSCorr'  : HistOp1D(nBinsX=60,  x0=-6, x1=6,   xUnits='mm',    xLabel='Electron d_{0}/#sigma_{d_{0}} BSCorr', add_underflow=True),
-    'el_z0SinTheta'  : HistOp1D(nBinsX=60,  x0=-0.6, x1=0.6,   xUnits='mm',    xLabel='Electron z_{0}sin(#theta)', add_underflow=True),
+    'el1_track_pt'         : Plot1D(bin_range=[0.0, 500.0], nbins =25, xunits='GeV', xlabel='Leading electron track p_{T}'),
+    'el1_clus_pt'          : Plot1D(bin_range=[0.0, 500.0], nbins =25, xunits='GeV', xlabel='Leading electron cluster p_{T}'),
+    'preEl_Et'             : Plot1D(bin_range=[0.0, 50.0],  nbins =50, add_overflow=False, xunits='GeV', xlabel='E_{T}^{preElectron}'),
+    'preEl_pt'             : Plot1D(bin_range=[0.0, 50.0],  nbins =50, xunits='GeV', xlabel='p_{T}^{preElectron}'),
+    'preEl_clusEtaBE'      : Plot1D(bin_range=[-3.0, 3.0],  nbins =60, xlabel='#eta_{preEl clusterBE}'),
+    'preEl_eta'            : Plot1D(bin_range=[-3.0, 3.0],  nbins =60, xlabel='#eta_{preElectron}'),
+    'baseEl_ID'            : Plot1D(bin_range=[-0.5, 8.5], bin_width=1, xlabel='el_{Baseline}^{ID}(non-inclusive)'),
+    'El_ID'                : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, doLogY=False, xlabel='electron ID(non-inclusive)'),
+    'el_type'              : Plot1D(bin_range=[-1.5, 39.5], nbins =41, xlabel='electron truth type'),
+    'el_origin'            : Plot1D(bin_range=[-1.5, 46.5], nbins =48, xlabel='electron truth origin'),
+    'el_d0sigBSCorr'       : Plot1D(bin_range=[-6, 6],      nbins =60, add_underflow=True, xunits='mm', xlabel='Electron d_{0}/#sigma_{d_{0}} BSCorr'),
+    'el_z0SinTheta'        : Plot1D(bin_range=[-0.6, 0.6],  nbins =60, add_underflow=True, xunits='mm', xlabel='Electron z_{0}sin(#theta)'),
     ## Muons
-    'preMu_pt'        : HistOp1D(nBinsX=50, x0=0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{preMuon}', add_overflow=False),
-    'preMu_ID'      : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{pre}^{ID} (non-inclusive)'),
-    'baseMu_pt'       : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{BaselineMuon}'),
-    'baseMu_eta'      : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{BaselineMuon}'),
-    'baseMu_ID'     : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='mu_{Baseline}^{ID}(non-inclusive)', logY=True),
-    'Mu_ID'           : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='muon ID (non-inclusive)', logY=False),
-    'mu_type'         : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='muon truth type', logY=True),
-    'mu_origin'       : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,   xUnits='',    xLabel='muon truth origin', logY=True),
-    'mu_d0sigBSCorr'  : HistOp1D(nBinsX=60,  x0=-6, x1=6,   xUnits='mm',    xLabel='Muon d_{0}/#sigma_{d_{0}} BSCorr', add_underflow=True),
-    'mu_z0SinTheta'  : HistOp1D(nBinsX=60,  x0=-0.6, x1=0.6,   xUnits='mm',    xLabel='Muon z_{0}sin(#theta)', add_underflow=True),
+    'preMu_pt'             : Plot1D(bin_range=[0, 50.0], nbins=50, add_overflow=False, xunits='GeV', xlabel='p_{T}^{preMuon}'),
+    'preMu_ID'             : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, xlabel='mu_{pre}^{ID} (non-inclusive)'),
+    'baseMu_pt'            : Plot1D(bin_range=[0.0, 200.0], nbins=20, xunits='GeV', xlabel='p_{T}^{BaselineMuon}'),
+    'baseMu_eta'           : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta_{BaselineMuon}'),
+    'baseMu_ID'            : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, xlabel='mu_{Baseline}^{ID}(non-inclusive)'),
+    'Mu_ID'                : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, doLogY=False, xlabel='muon ID (non-inclusive)'),
+    'mu_type'              : Plot1D(bin_range=[-1.5, 39.5], bin_width=1, xlabel='muon truth type'),
+    'mu_origin'            : Plot1D(bin_range=[-1.5, 46.5], bin_width=1, xlabel='muon truth origin'),
+    'mu_d0sigBSCorr'       : Plot1D(bin_range=[-6, 6], nbins=60, add_underflow=True, xunits='mm', xlabel='Muon d_{0}/#sigma_{d_{0}} BSCorr'),
+    'mu_z0SinTheta'        : Plot1D(bin_range=[-0.6, 0.6], nbins=60, add_underflow=True, xunits='mm', xlabel='Muon z_{0}sin(#theta)'),
     ## Taus
-    'preTau_q'        : HistOp1D(nBinsX=33,  x0=-5.5, x1=5.5,   xUnits='',    xLabel='Tau charge'),
-    'preTau_nTracks'  : HistOp1D(nBinsX=10,  x0=-1.5, x1=8.5,   xUnits='',    xLabel='preTau nTracks'),
-    'baseTau_pT'      : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{BaselineTau}'),
-    'baseTau_eta'     : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta_{BaselineMuon}'),
-    'baseTau_nTracks' : HistOp1D(nBinsX=10,  x0=-1.5, x1=8.5,   xUnits='',    xLabel='Baseline Tau nTracks'),
-    'baseTau_ID'      : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='tau_{Baseline}^{ID}(non-inclusive)', logY=True),
+    'preTau_q'             : Plot1D(bin_range=[-5.5, 5.5], bin_width=1, xlabel='Tau charge'),
+    'preTau_nTracks'       : Plot1D(bin_range=[-1.5, 8.5], bin_width=1, xlabel='preTau nTracks'),
+    'baseTau_pT'           : Plot1D(bin_range=[0.0, 200.0], nbins=20, xunits='GeV', xlabel='p_{T}^{BaselineTau}'),
+    'baseTau_eta'          : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta_{BaselineMuon}'),
+    'baseTau_nTracks'      : Plot1D(bin_range=[-1.5, 8.5], bin_width=1, xlabel='Baseline Tau nTracks'),
+    'baseTau_ID'           : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, xlabel='tau_{Baseline}^{ID}(non-inclusive)'),
 
     ## General lepton
-    'l_eta'           : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='Lepton #eta'),
-    'l_phi'           : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='Lepton #phi'),
-    'l_flav'          : HistOp1D(nBinsX=5,  x0=-0.5, x1=4.5,   xUnits='',    xLabel='Lepton flavor (0: e, 1: m)'),
-    'l_type'          : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Lepton type', logY=True, ratioPlot=False),
-    'l_origin'        : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Lepton origin', logY=True, ratioPlot=False),
-    'l_BkgMotherPdgId' : HistOp1D(nBinsX=41,  x0=-20.5, x1=20.5,    xUnits='',    xLabel='Lepton Mother PdgID', logY=True, add_underflow=True, ratioPlot=False),
-    'l_truthClass'    : HistOp1D(nBinsX=12,  x0=-1.5, x1=10.5,    xUnits='',    xLabel='Lepton Truth Classification', logY=True, norm=True, ratioPlot=False),
-    'l_type[0]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Leading Z Lepton type', logY=True, ratioPlot=False),
-    'l_origin[0]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Leading Z Lepton origin', logY=True, ratioPlot=False),
-    'l_type[1]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Subleading Z Lepton type', logY=True, ratioPlot=False),
-    'l_origin[1]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Subleading Z Lepton origin', logY=True, ratioPlot=False),
-    'l_type[2]'       : HistOp1D(nBinsX=41,  x0=-1.5, x1=39.5,   xUnits='',    xLabel='Fake Candidate Lepton type',  logY=True, ratioPlot=False),
-    'l_origin[2]'     : HistOp1D(nBinsX=48,  x0=-1.5, x1=46.5,    xUnits='',    xLabel='Fake Candidate Lepton origin', logY=True, ratioPlot=False),
-    'l_BkgMotherPdgId[2]': HistOp1D(nBinsX=41,  x0=-20.5, x1=20.5,    xUnits='',    xLabel='Fake Candidate Lepton Mother PdgID', logY=True, norm=True, add_underflow=True, ratioPlot=False),
-    'Lep_Iso'         : HistOp1D(nBinsX=9,  x0=-1.5, x1=7.5,   xUnits='',    xLabel='Lepton Isolation (non-inclusive)'),
-    'l_q'             : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Lepton charge'),
-    'LepLepSign'      : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leptons sign product'),
-    'Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', logY=True),
-    'Lep1Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', logY=True),
-    #'Lep0Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{leading lep}', add_overflow=False),
-    #'Lep1Pt'          : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='p_{T}^{subleading lep}', add_overflow=False),
-    'Lep0Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{leading lep}'),
-    'Lep1Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{subleading lep}'),
-    'Lep0Phi'         : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#phi^{leading lep}'),
-    'Lep1Phi'         : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#phi^{subleading lep}'),
-    'MLep0'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='M_{l0}'),
-    'MLep1'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='M_{l1}'),
-    'DEtaLL'          : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#Delta#eta_{ll}'),
-    'DphiLL'          : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='#Delta#phi_{ll}'),
-    'drll'            : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR_{ll}'),
-    'dRy_sEl_bMu_noCalo' : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR_{sig E, base nonCalo Mu}'),
-    'dRy_sEl_bMu_Calo'   : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR_{sig E, base Calo Mu}'),
-    'isCaloTagged'    : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='Calo-Tagged Muon', logY=True),
-    'dilep_flav'      : HistOp1D(nBinsX=5,  x0=-0.5, x1=4.5,   xUnits='',    xLabel='Dilepton flavor'),
-    'isEM'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='Dilepton flavor is el mu'),
-    'isME'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='Dilepton flavor is mu el'),
-    'MtLep0'          : HistOp1D(nBinsX=15, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='m_{T}(l_{0},MET)'),
-    'MtLep1'          : HistOp1D(nBinsX=20, x0=0.0,  x1=140.0, xUnits='GeV', xLabel='m_{T}(l_{1},MET)'),
-    #'MLL'             : HistOp1D(nBinsX=80, x0=50.0, x1=130, xUnits='GeV', xLabel='M_{ll}', logY=True),
-    'MLL'             : HistOp1D(nBinsX=100, x0=0.0, x1=300.0, xUnits='GeV', xLabel='M_{ll}'),
-    'ptll'            : HistOp1D(nBinsX=50, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='pT_{ll}', logY=True),
+    'l_eta'                : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='Lepton #eta'),
+    'l_phi'                : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='Lepton #phi'),
+    'l_flav'               : Plot1D(bin_range=[-0.5, 4.5], bin_width=1, xlabel='Lepton flavor (0: e, 1: m)'),
+    'l_type'               : Plot1D(bin_range=[-1.5, 39.5], bin_width=1, ptype=Types.stack, xlabel='Lepton type'),
+    'l_origin'             : Plot1D(bin_range=[-1.5, 46.5], bin_width=1, ptype=Types.stack, xlabel='Lepton origin'),
+    'l_BkgMotherPdgId'     : Plot1D(bin_range=[-20.5, 20.5], bin_width=1, add_underflow=True, ptype=Types.stack, xlabel='Lepton Mother PdgID'),
+    'l_truthClass'         : Plot1D(bin_range=[-1.5, 10.5], bin_width=1, norm=True, ptype=Types.stack, xlabel='Lepton Truth Classification'),
+    'l_truthClass[2]'      : Plot1D(bin_range=[-2.5, 9.5], bin_width=1, norm=True, ptype=Types.stack, xlabel='Fake Candidate Lepton Truth Classification'),
+    'l_type[0]'            : Plot1D(bin_range=[-1.5, 39.5], bin_width=1, ptype=Types.stack, xlabel='Leading Z Lepton type'),
+    'l_origin[0]'          : Plot1D(bin_range=[-1.5, 46.5], bin_width=1, ptype=Types.stack, xlabel='Leading Z Lepton origin'),
+    'l_type[1]'            : Plot1D(bin_range=[-1.5, 39.5], bin_width=1, ptype=Types.stack, xlabel='Subleading Z Lepton type'),
+    'l_origin[1]'          : Plot1D(bin_range=[-1.5, 46.5], bin_width=1, ptype=Types.stack, xlabel='Subleading Z Lepton origin'),
+    'l_type[2]'            : Plot1D(bin_range=[-1.5, 39.5], bin_width=1, ptype=Types.stack, xlabel='Fake Candidate Lepton type'),
+    'l_origin[2]'          : Plot1D(bin_range=[-1.5, 46.5], bin_width=1, ptype=Types.stack, xlabel='Fake Candidate Lepton origin'),
+    'l_BkgMotherPdgId[2]'  : Plot1D(bin_range=[-20.5, 20.5], bin_width=1, norm=True, add_underflow=True, ptype=Types.stack, xlabel='Fake Candidate Lepton Mother PdgID'),
+    'Lep_Iso'              : Plot1D(bin_range=[-1.5, 7.5], bin_width=1, xlabel='Lepton Isolation (non-inclusive)'),
+    'l_q'                  : Plot1D(bin_range=[-1.5, 1.5], bin_width=1, xlabel='Lepton charge'),
+    'LepLepSign'           : Plot1D(bin_range=[-1.5, 1.5], bin_width=1, xlabel='Leptons sign product'),
+    'Lep0Pt'               : Plot1D(bin_range=[0.0, 200.0], nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep}'),
+    'Lep1Pt'               : Plot1D(bin_range=[0.0, 200.0], nbins=40, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
+    #'Lep0Pt'              : Plot1D(bin_range=[0.0, 50.0], nbins=50, add_overflow=False, xunits='GeV', xlabel='p_{T}^{leading lep}'),
+    #'Lep1Pt'              : Plot1D(bin_range=[0.0, 50.0], nbins=50, add_overflow=False, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
+    'Lep0Eta'              : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta^{leading lep}'),
+    'Lep1Eta'              : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta^{subleading lep}'),
+    'Lep0Phi'              : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='#phi^{leading lep}'),
+    'Lep1Phi'              : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='#phi^{subleading lep}'),
+    'MLep0'                : Plot1D(bin_range=[0.0, -1], nbins=25, xunits='GeV', xlabel='M_{l0}'),
+    'MLep1'                : Plot1D(bin_range=[0.0, -1], nbins=25, xunits='GeV', xlabel='M_{l1}'),
+    'DEtaLL'               : Plot1D(bin_range=[0.0, 6.0], nbins=20, xlabel='#Delta#eta_{ll}'),
+    'DphiLL'               : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='#Delta#phi_{ll}'),
+    'drll'                 : Plot1D(bin_range=[0.0, 6.0], nbins=60, xlabel='#DeltaR_{ll}'),
+    'dRy_sEl_bMu_noCalo'   : Plot1D(bin_range=[0.0, 6.0], nbins=60, xlabel='#DeltaR_{sig E, base nonCalo Mu}'),
+    'dRy_sEl_bMu_Calo'     : Plot1D(bin_range=[0.0, 6.0], nbins=60, xlabel='#DeltaR_{sig E, base Calo Mu}'),
+    'isCaloTagged'         : Plot1D(bin_range=[-1.5, 3.5], bin_width=1, xlabel='Calo-Tagged Muon'),
+    'dilep_flav'           : Plot1D(bin_range=[-0.5, 4.5], bin_width=1, xlabel='Dilepton flavor'),
+    'isEM'                 : Plot1D(bin_range=[-1.5, 3.5], bin_width=1, xlabel='Dilepton flavor is el mu'),
+    'isME'                 : Plot1D(bin_range=[-1.5, 3.5], bin_width=1, xlabel='Dilepton flavor is mu el'),
+    'MtLep0'               : Plot1D(bin_range=[0.0, 250.0], nbins=15, xunits='GeV', xlabel='m_{T}(l_{0},MET)'),
+    'MtLep1'               : Plot1D(bin_range=[0.0, 140.0], nbins=20, xunits='GeV', xlabel='m_{T}(l_{1},MET)'),
+    #'MLL'                 : Plot1D(bin_range=[50.0, 130], nbins=80, xunits='GeV', xlabel='M_{ll}'),
+    'MLL'                  : Plot1D(bin_range=[0.0, 300.0], nbins=100, xunits='GeV', xlabel='M_{ll}'),
+    'ptll'                 : Plot1D(bin_range=[0.0, 500.0], nbins=50, xunits='GeV', xlabel='pT_{ll}'),
     # MET + leptons
-    'MET'             : HistOp1D(nBinsX=50, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='E_{T}^{miss}', logY=True),
-    'METPhi'          : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='MET_{#phi}'),
-    'MCollASym'       : HistOp1D(nBinsX=25, x0=0.0,  x1=250.0, xUnits='GeV', xLabel='LFV Collinear Mass m_{coll}'),
-    'dpt_ll'          : HistOp1D(nBinsX=20, x0=0.0,  x1=150.0, xUnits='GeV', xLabel='#Deltap_{T}^{ll}'),
-    'DphiLep0MET'     : HistOp1D(nBinsX=63, x0=-3.15,  x1=3.15,  xUnits='',    xLabel='#Delta#phi(l_{0},MET)', add_underflow=True, logY=True),
-    'DphiLep1MET'     : HistOp1D(nBinsX=63, x0=-3.15,  x1=3.15,  xUnits='',    xLabel='#Delta#phi(l_{1},MET)', add_underflow=True, logY=True),
-    'tau_pT'          : HistOp1D(nBinsX=20, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{subleading lep + MET}'),
-    'taulep1_pT_ratio': HistOp1D(nBinsX=20, x0=0.0,  x1=3,     xUnits='',    xLabel='p_{T}^{subleading lep + MET} / p_{T}^{leading lep}'),
+    'MET'                  : Plot1D(bin_range=[0.0, 200.0], nbins=50, xunits='GeV', xlabel='E_{T}^{miss}'),
+    'METPhi'               : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='MET_{#phi}'),
+    'MCollASym'            : Plot1D(bin_range=[0.0, 250.0], nbins=25, xunits='GeV', xlabel='LFV Collinear Mass m_{coll}'),
+    'dpt_ll'               : Plot1D(bin_range=[0.0, 150.0], nbins=20, xunits='GeV', xlabel='#Deltap_{T}^{ll}'),
+    'DphiLep0MET'          : Plot1D(bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{0},MET)'),
+    'DphiLep1MET'          : Plot1D(bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{1},MET)'),
+    'tau_pT'               : Plot1D(bin_range=[0.0, 200.0], nbins=20, xunits='GeV', xlabel='p_{T}^{subleading lep + MET}'),
+    'taulep1_pT_ratio'     : Plot1D(bin_range=[0.0, 3], nbins=20, xlabel='p_{T}^{subleading lep + MET} / p_{T}^{leading lep}'),
     # Jets
-    'preJet_pt'       : HistOp1D(nBinsX=20, x0=0.0,  x1=100.0, xUnits='GeV', xLabel='p_{T}^{preJet}'),
-    'preJet_eta'      : HistOp1D(nBinsX=100, x0=-5.0, x1=5.0,   xUnits='',    xLabel='#eta_{preJet}'),
-    'preJet_JVT'      : HistOp1D(nBinsX=39, x0=-0.2,  x1=1.1,     xUnits='',    xLabel='preJet JVT (|eta|<=2.4 & pT < 60)', logY=True),
-    'baseJet_eta'     : HistOp1D(nBinsX=100, x0=-5.0, x1=5.0,   xUnits='',    xLabel='#eta_{baseJet}'),
-    'baseJet_mv2c10'  : HistOp1D(nBinsX=80, x0=-2,   x1=2,    xUnits='',    xLabel='mv2c10_{baseJet}', logY=True),
-    'jetN'            : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{base jet}'),
-    'jet_N2p4Eta25Pt' : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{jet} (p_{T}>25GeV, |#eta|<2.5)'),
-    'signalJetN'      : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{sig jets}'),
-    'jetN_g30'        : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{jet} (p_{T}>30GeV)'),
-    'nLJets'          : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CL jet}', logY=True),
-    'nBJets'          : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{CB jet}', logY=True),
-    'btag'            : HistOp1D(nBinsX=5,  x0=-1.5, x1=3.5,   xUnits='',    xLabel='B-tagged jet'),
-    'nForwardJets'    : HistOp1D(nBinsX=8,  x0=-0.5, x1=7.5,   xUnits='',    xLabel='N_{F jet}'),
-    'j_pt[0]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{leading jet}', logY=True),
-    'j_pt[1]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{subleading jet}', logY=True),
-    'j_pt[2]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{3rd leading jet}', logY=True),
-    'j_pt[3]'         : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='p_{T}^{4th leading jet}', logY=True),
-    'j_pt'            : HistOp1D(nBinsX=20, x0=0.0,  x1=500.0, xUnits='GeV', xLabel='Jet p_{T}'),
-    'mjj'             : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='GeV', xLabel='Dijet mass'),
-    'dEtaJJ'          : HistOp1D(nBinsX=20, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#Delta#eta(j0,j1)'),
-    'j_eta'           : HistOp1D(nBinsX=100, x0=-5.0, x1=5.0,   xUnits='',    xLabel='Jet #eta'),
-    'j_jvt'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Jet JVT'),
-    'j_jvf'           : HistOp1D(nBinsX=25, x0=0.0,  x1=-1,    xUnits='',    xLabel='Jet JVF'),
-    'j_phi'           : HistOp1D(nBinsX=30, x0=0.0,  x1=3.15,  xUnits='',    xLabel='Jet #phi'),
-    'j_flav'          : HistOp1D(nBinsX=5,  x0=-0.5, x1=4.5,   xUnits='',    xLabel='Jet flavor (0:NA,1:CL,2:CB,3:F)'),
+    'preJet_pt'            : Plot1D(bin_range=[0.0, 100.0], nbins=20, xunits='GeV', xlabel='p_{T}^{preJet}'),
+    'preJet_eta'           : Plot1D(bin_range=[-5.0, 5.0], nbins=100, xlabel='#eta_{preJet}'),
+    'preJet_JVT'           : Plot1D(bin_range=[-0.2, 1.1], nbins=39, xlabel='preJet JVT (|eta|<=2.4 & pT < 60)'),
+    'baseJet_eta'          : Plot1D(bin_range=[-5.0, 5.0], nbins=100, xlabel='#eta_{baseJet}'),
+    'baseJet_mv2c10'       : Plot1D(bin_range=[-2, 2], nbins=80, xlabel='mv2c10_{baseJet}'),
+    'jetN'                 : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{base jet}'),
+    'jet_N2p4Eta25Pt'      : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{jet} (p_{T}>25GeV, |#eta|<2.5)'),
+    'signalJetN'           : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{sig jets}'),
+    'jetN_g30'             : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{jet} (p_{T}>30GeV)'),
+    'nLJets'               : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{CL jet}'),
+    'nBJets'               : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{CB jet}'),
+    'btag'                 : Plot1D(bin_range=[-1.5, 3.5], bin_width=1, xlabel='B-tagged jet'),
+    'nForwardJets'         : Plot1D(bin_range=[-0.5, 7.5], bin_width=1, xlabel='N_{F jet}'),
+    'j_pt[0]'              : Plot1D(bin_range=[0.0, 500.0], nbins=20, xunits='GeV', xlabel='p_{T}^{leading jet}'),
+    'j_pt[1]'              : Plot1D(bin_range=[0.0, 500.0], nbins=20, xunits='GeV', xlabel='p_{T}^{subleading jet}'),
+    'j_pt[2]'              : Plot1D(bin_range=[0.0, 500.0], nbins=20, xunits='GeV', xlabel='p_{T}^{3rd leading jet}'),
+    'j_pt[3]'              : Plot1D(bin_range=[0.0, 500.0], nbins=20, xunits='GeV', xlabel='p_{T}^{4th leading jet}'),
+    'j_pt'                 : Plot1D(bin_range=[0.0, 500.0], nbins=20, xunits='GeV', xlabel='Jet p_{T}'),
+    'mjj'                  : Plot1D(bin_range=[0.0, -1], nbins=25, xunits='GeV', xlabel='Dijet mass'),
+    'dEtaJJ'               : Plot1D(bin_range=[0.0, 6.0], nbins=20, xlabel='#Delta#eta(j0,j1)'),
+    'j_eta'                : Plot1D(bin_range=[-5.0, 5.0], nbins=100, xlabel='Jet #eta'),
+    'j_jvt'                : Plot1D(bin_range=[0.0, -1], nbins=25, xlabel='Jet JVT'),
+    'j_jvf'                : Plot1D(bin_range=[0.0, -1], nbins=25, xlabel='Jet JVF'),
+    'j_phi'                : Plot1D(bin_range=[0.0, 3.15], nbins=30, xlabel='Jet #phi'),
+    'j_flav'               : Plot1D(bin_range=[-0.5, 4.5], nbins=5, xlabel='Jet flavor (0:NA,1:CL,2:CB,3:F)'),
     # Leptons
-    'preEl_EcaloClus'           : HistOp1D(nBinsX=50, x0= 0,   x1=50, xUnits='GeV', xLabel='E_{preEl CaloCluster}', add_overflow=False),
-    'preEl_etaCaloClus'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0, xUnits='',    xLabel='#eta_{preEl CaloCluster}'),
-    'baseEl_etconetopo20'       : HistOp1D(nBinsX=50, x0= -7,   x1=15, xUnits='GeV', xLabel='E_{T}^{baselineEl} conetopo20' , logY=False),
-    'baseEl_ptvarcone20'        : HistOp1D(nBinsX=25, x0= -1,   x1=4, xUnits='GeV', xLabel='p_{T}^{baselineEl} ptvarcone20' , logY=False),
-    'baseMu_etconetopo20'       : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='E_{T}^{baselineMu} conetopo20' ),
-    'baseMu_ptvarcone30'        : HistOp1D(nBinsX=60, x0= -3,   x1=3, xUnits='GeV', xLabel='p_{T}^{baselineMu} ptvarcone30' , logY=False),
-    'el1pT_trackclus_ratio'     : HistOp1D(nBinsX=30, x0=0,    x1=3,   xUnits='', xLabel='el_{subleading pT}^{track} / el_{subleading pT}^{cluster}', logY=True),
-
+    'preEl_EcaloClus'      : Plot1D(bin_range=[ 0, 50],nbins=50,  add_overflow=False, xunits='GeV', xlabel='E_{preEl CaloCluster}'),
+    'preEl_etaCaloClus'    : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta_{preEl CaloCluster}'),
+    'baseEl_etconetopo20'  : Plot1D(bin_range=[ -7, 15],nbins=50,  doLogY=False, xunits='GeV', xlabel='E_{T}^{baselineEl} conetopo20' ),
+    'baseEl_ptvarcone20'   : Plot1D(bin_range=[ -1, 4],nbins=25,  doLogY=False, xunits='GeV', xlabel='p_{T}^{baselineEl} ptvarcone20' ),
+    'baseMu_etconetopo20'  : Plot1D(bin_range=[ -3, 3],nbins=60,  xunits='GeV', xlabel='E_{T}^{baselineMu} conetopo20' ),
+    'baseMu_ptvarcone30'   : Plot1D(bin_range=[ -3, 3],nbins=60,  doLogY=False, xunits='GeV', xlabel='p_{T}^{baselineMu} ptvarcone30' ),
+    'el1pT_trackclus_ratio': Plot1D(bin_range=[0, 3], nbins=30, xlabel='el_{subleading pT}^{track} / el_{subleading pT}^{cluster}'),
     # Fakes
-    'nLepID' : HistOp1D(nBinsX=9, x0=-1.5,    x1=7.5,   xUnits='', xLabel='ID lepton multiplicity', logY=True),
-    'nLepAntiID' : HistOp1D(nBinsX=9, x0=-1.5,    x1=7.5,   xUnits='', xLabel='anti-ID lepton multiplicity', logY=True),
-    'aID_Lep0Pt'          : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='p_{T}^{leading lep} anti-ID', logY=True),
-    'aID_Lep1Pt'          : HistOp1D(nBinsX=20, x0=0.0,  x1=100.0, xUnits='GeV', xLabel='p_{T}^{subleading lep} anti-ID', logY=True),
-    'aID_Lep0Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{leading lep} anti-ID', logY=True),
-    'aID_Lep1Eta'         : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='#eta^{subleading lep} anti-ID', logY=True),
-    'aID_MLL'             : HistOp1D(nBinsX=100, x0=0.0, x1=300.0, xUnits='GeV', xLabel='M_{ll}(ID, anti-ID)'),
-    'aID_Lep0Flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Leading antiID flavor', logY=True),
-    'aID_Lep1Flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Subleading antiID flavor', logY=True),
-    'aID_Lep0Q'           : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Leading anti-ID charge'),
-    'aID_Lep1Q'           : HistOp1D(nBinsX=3,  x0=-1.5, x1=1.5,   xUnits='',    xLabel='Subleading anti-ID charge'),
-    'Z_MLL'               : HistOp1D(nBinsX=50, x0=65, x1=115.0, xUnits='GeV', xLabel='M_{ll} (best lep pair)'),
-    'Z2_MLL'               : HistOp1D(nBinsX=50, x0=0, x1=200.0, xUnits='GeV', xLabel='M_{ll} (2nd best lep pair)'),
-    'aID_dpt_ll'          : HistOp1D(nBinsX=20, x0=0.0,  x1=150.0, xUnits='GeV', xLabel='#Deltap_{T}^{ll}(ID, anti-ID)'),
-    'aID_drll'            : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR_{ll}(ID, anti-ID)'),
-    'dR_Zl'               : HistOp1D(nBinsX=60, x0=0.0,  x1=6.0,   xUnits='',    xLabel='#DeltaR(Z, lep)'),
-    'Z_dilep_flav'        : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='Z dilepton flavor', logY=True),
-    'Z2_dilep_flav'       : HistOp1D(nBinsX=7,  x0=-1.5, x1=5.5,   xUnits='',    xLabel='2nd Z dilepton flavor', logY=True),
-    'Z_Lep2_pT'         : HistOp1D(nBinsX=40, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=True),
-    #'Z_Lep2_pT'         : HistOp1D(nBinsX=50, x0=0.0,  x1=50.0, xUnits='GeV', xLabel='3rd leading lepton p_{T}', logY=False),
-    'Z_Lep2_eta'        : HistOp1D(nBinsX=20, x0=-3.0, x1=3.0,   xUnits='',    xLabel='3rd leading lepton #eta', logY=True),
-    'Z_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='Z Dilepton Sign : OS(-1) SS(1)', logY=True),
-    'Z2_dilep_sign'       :HistOp1D(nBinsX=5, x0=-2.5, x1=2.5,   xUnits='',    xLabel='2nd Z Dilepton Sign : OS(-1) SS(1)', logY=True),
-    'Z_Lep2_dPhi_MET'     : HistOp1D(nBinsX=63, x0=-3.15,  x1=3.15,  xUnits='',    xLabel='#Delta#phi(l_{3},MET)', add_underflow=True, logY=True),
-    'Z_Lep2_mT'           : HistOp1D(nBinsX=50, x0=0.0,  x1=200.0, xUnits='GeV', xLabel='3rd leading lepton m_{T}', logY=False),
+    'nLepID'               : Plot1D(bin_range=[-1.5, 7.5], bin_width=1, xlabel='ID lepton multiplicity'),
+    'nLepAntiID'           : Plot1D(bin_range=[-1.5, 7.5], bin_width=1, xlabel='anti-ID lepton multiplicity'),
+    'aID_Lep0Pt'           : Plot1D(bin_range=[0.0, 200.0], nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep} anti-ID'),
+    'aID_Lep1Pt'           : Plot1D(bin_range=[0.0, 100.0], nbins=20, xunits='GeV', xlabel='p_{T}^{subleading lep} anti-ID'),
+    'aID_Lep0Eta'          : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta^{leading lep} anti-ID'),
+    'aID_Lep1Eta'          : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='#eta^{subleading lep} anti-ID'),
+    'aID_MLL'              : Plot1D(bin_range=[0.0, 300.0], nbins=100, xunits='GeV', xlabel='M_{ll}(ID, anti-ID)'),
+    'aID_Lep0Flav'         : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, xlabel='Leading antiID flavor'),
+    'aID_Lep1Flav'         : Plot1D(bin_range=[-1.5, 5.5], bin_width=1, xlabel='Subleading antiID flavor'),
+    'aID_Lep0Q'            : Plot1D(bin_range=[-1.5, 1.5], bin_width=1, xlabel='Leading anti-ID charge'),
+    'aID_Lep1Q'            : Plot1D(bin_range=[-1.5, 1.5], bin_width=1, xlabel='Subleading anti-ID charge'),
+    'Z_MLL'                : Plot1D(bin_range=[65, 115.0], nbins=50, xunits='GeV', xlabel='M_{ll} (best lep pair)'),
+    'Z2_MLL'               : Plot1D(bin_range=[0, 200.0], nbins=50, xunits='GeV', xlabel='M_{ll} (2nd best lep pair)'),
+    'aID_dpt_ll'           : Plot1D(bin_range=[0.0, 150.0], nbins=20, xunits='GeV', xlabel='#Deltap_{T}^{ll}(ID, anti-ID)'),
+    'aID_drll'             : Plot1D(bin_range=[0.0, 6.0], nbins=60, xlabel='#DeltaR_{ll}(ID, anti-ID)'),
+    'dR_Zl'                : Plot1D(bin_range=[0.0, 6.0], nbins=60, xlabel='#DeltaR(Z, lep)'),
+    'Z_dilep_flav'         : Plot1D(bin_range=[-1.5, 5.5], nbins=7, xlabel='Z dilepton flavor'),
+    'Z2_dilep_flav'        : Plot1D(bin_range=[-1.5, 5.5], nbins=7, xlabel='2nd Z dilepton flavor'),
+    'Z_Lep2_pT'            : Plot1D(bin_range=[0.0, 200.0], nbins=40, xunits='GeV', xlabel='3rd leading lepton p_{T}'),
+    #'Z_Lep2_pT'           : Plot1D(bin_range=[0.0, 50.0], nbins=50, doLogY=False, xunits='GeV', xlabel='3rd leading lepton p_{T}'),
+    'Z_Lep2_eta'           : Plot1D(bin_range=[-3.0, 3.0], nbins=20, xlabel='3rd leading lepton #eta'),
+    'Z_dilep_sign'         : Plot1D(bin_range=[-2.5, 2.5], bin_width=1, xlabel='Z Dilepton Sign : OS(-1) SS(1)'),
+    'Z2_dilep_sign'        : Plot1D(bin_range=[-2.5, 2.5], bin_width=1, xlabel='2nd Z Dilepton Sign : OS(-1) SS(1)'),
+    'Z_Lep2_dPhi_MET'      : Plot1D(bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{3},MET)'),
+    'Z_Lep2_mT'            : Plot1D(bin_range=[0.0, 200.0], nbins=50, doLogY=False, xunits='GeV', xlabel='3rd leading lepton m_{T}'),
 }
+
+# Add any
+plot_defaults['l_truthClass[2]'].bin_labels = [
+    '', 'Unkown Conv','Undefined','prompt El','prompt Mu', 'prompt Pho',
+    'hadron','Mu as e','HF tau','HF B','HF C',' ']
+
+# To alter the plot properties for a specific region
+# Deep copy the default plot into new plot dictionary
+# Edit that copy as needed
+
+region_vars = {}
+region_plots['zjets_FF_CRden_eem'] = {
+  'isMC' : deepcopy(plot_defaults['isMC'])
+}
+region_plots['zjets_FF_CRden_eem']['isMC'].update(bin_range=[-1.5, 3.5], bin_width=1)
+
+### Define variables for plots
+
 
 ################################################################################
 # Toggle options for execution
@@ -569,7 +562,8 @@ wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir)
 htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir)
 hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir)
 #signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_ntuple_dir)
-SAMPLES = [s for s in SAMPLES if s.tree]
+SAMPLES = [s for s in SAMPLES if s.is_setup()]
+assert SAMPLES, "ERROR :: No samples are setup"
 
 #######################################
 # Yield Table
@@ -593,7 +587,7 @@ region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
 # What variables to plot
 vars_to_plot = []
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
-#vars_to_plot += ['Z_MLL']
+vars_to_plot += ['Z_MLL','l_truthClass[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))
@@ -602,52 +596,57 @@ vars_to_plot = list(set(vars_to_plot))
 # Create plots
 ################################################################################
 PLOTS = []
+import pdb
+pdb.set_trace()
 for var in vars_to_plot:
 
-    # Use vector settings when plotting a specific element of the vector
-    # i.e. lepton_flav[1] uses lepton_flav settings if lepton_flav[1]
-    # is not defined
-    if '[' in var and var not in HistOpMap:
-        var_trim = var.split('[')[0]
-        ops = HistOpMap[var_trim]
+    # Use defualt settings, if needed, when plotting a specific element of a
+    # vector (i.e. lepton_flav[1] uses lepton_flav settings if lepton_flav[1]
+    # is not defined separately)
+    if '[' in var and var not in plot_defaults:
+        key = var.split('[')[0]
     else:
-        ops = HistOpMap[var]
+        key = var
 
-
-    # Set contingent defaults
-    y0_def = 0.1 if ops.logY and not ops.norm else 1e-4 if ops.norm else 0
-    y1_def = 1e7 if ops.logY and not ops.norm else 1 if ops.norm else 5000
-
-    # Determine plot properties
-    name_ = re.sub(r'[(){}[\]]+','',var)
-    bin_width = (ops.x1 - ops.x0) / float(ops.nBinsX)
-    width_label = str(round(bin_width, 2))
-    if not ops.xUnits and width_label == '1.0':
-        yLabel = ops.yLabel
-    elif width_label == '1.0':
-        yLabel = "%s / %s"%(ops.yLabel, ops.xUnits)
-    else:
-        yLabel = "%s / %s %s"%(ops.yLabel,width_label,ops.xUnits)
-    y0 = ops.y0 if ops.y0 else y0_def
-    y1 = ops.y1 if ops.y1 else y1_def
-
-    # Create plot for each indicated region
-    #for region in ops.regions.split(','):
+    # Create plot for each region
     for region in region_ops:
-        region = region.strip()
-        p = plot.Plot1D()
-        p.initialize(region, var, name="%s_%s"%(region, name_))
-        p.doLogY = ops.logY
-        p.doNorm = ops.norm
-        p.add_overflow = ops.add_overflow
-        p.labels(x=ops.xLabel, y=yLabel)
-        p.xax(bin_width, ops.x0, ops.x1)
-        p.yax(y0, y1)
-        assert SAMPLES, "No data or backgrounds defined"
-        if data and len(SAMPLES)>1 and ops.ratioPlot:
-            p.setRatioPads(p.name)
+
+        # Grab the default plot unless a region specific one is defined
+        if key in region_plots[region]:
+            p = deepcopy(region_plots[region][key])
+        elif key in variables:
+            p = deepcopy(plot_defaults[key])
         else:
+            assert False, ("ERROR :: requested plot not defined:", var)
+
+        p.update(region, var)
+
+        # Set plot type if not already set
+        if p.ptype == Types.default:
+            n_bkgds = len([s for s in SAMPLES if s.isMC and not s.isSignal])
+            n_signal = len([s for s in SAMPLES if s.isMC and s.isSignal])
+            n_data = len([s for s in SAMPLES if not s.isMC])
+            assert n_data <= 1, "ERROR :: More than one data sample setup"
+
+            if n_bkgds and n_data:
+                p.ptype = Types.ratio
+            elif n_bkgds or n_data:
+                 p.ptype = Types.stack
+            elif n_signal:
+                #TODO: Setup comparison plots
+                #p.setComparisonPads(p.name)
+                pass
+            else:
+                assert False, "ERROR :: No samples are setup"
+
+        # Setup correct canvas for plotting
+        if p.pype == Types.ratio:
+            p.setRatioPads(p.name)
+        elif p.pype == Types.stack:
             p.setStackPads(p.name)
+        else:
+            print "WARNING :: %s plots are not yet setup"%p.ptype.name
+            continue
 
         PLOTS.append(p)
 

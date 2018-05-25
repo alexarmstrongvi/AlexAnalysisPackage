@@ -63,7 +63,7 @@ class UncFloat :
     def __le__(self, other) :
         return self.value <= other.value
     def __eq__(self, other) :
-        return (isinstance(self, other)
+        return (isinstance(other, self.__class__)
             and self.value == other.value
             and self.uncertainty == other.uncertainty)
     def __ne__(self, other) :
