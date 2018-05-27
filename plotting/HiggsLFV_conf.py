@@ -170,6 +170,14 @@ hww.set_color(ROOT.kBlue+3)
 hww.set_treename("hww")
 hww.set_chain_from_dsid_list(g.groups['hww'], rawdir)
 
+## Fakes
+fakes = background.Background("fakes", "Fakes")
+fakes.set_fillStyle(0)
+fakes.setLineStyle(1)
+fakes.set_color(ROOT.kGray)
+fakes.set_treename("fakes")
+#fakes.set_chain_from_dsid_list(g.groups['data15']+g.groups['data16'], data_rawdir, search_strs='FFest')
+
 signal_branching_ratio = 0.01
 signal_SF = 1
 signal_label = "Higgs LFV" if signal_SF == 1 else "Higgs LFV (%dX)"%signal_SF
@@ -606,6 +614,7 @@ backgrounds.append(wjets)
 #backgrounds.append(wgamma)
 backgrounds.append(htt)
 backgrounds.append(hww)
+#backgrounds.append(fakes)
 #backgrounds.append(signal)
 #data = None
 
@@ -625,8 +634,7 @@ vars_to_plot = []
 #vars_to_plot += ['treatAsYear']
 
 ## Quick Plots
-#vars_to_plot += ['Lep0Pt', 'Lep1Pt']
-vars_to_plot += ['l_BkgMotherPdgId']
+vars_to_plot += ['Lep0Pt']
 
 ## Z CR
 #vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'MLL']
@@ -664,8 +672,8 @@ vars_to_plot += ['l_BkgMotherPdgId']
     # Z+Jets
 #vars_to_plot += ['MET','Z_Lep2_mT']
 #vars_to_plot += ['Z_MLL', 'Z_Lep2_pT', 'dR_Zl', 'Z_Lep2_eta', 'MET', 'DphiLep0MET', 'Z_Lep2_dPhi_MET', 'Z2_MLL']
-#vars_to_plot += ['l_type[0]','l_type[1]','l_type[2]']
-#vars_to_plot += ['l_origin[0]','l_origin[1]','l_origin[2]']
+#vars_to_plot += ['l_truthClass']
+#vars_to_plot += ['Z_Lep2_pT']
 
 ## Object Definitions Plots
 #vars_to_plot += ['n_preLeptons',
