@@ -1,5 +1,5 @@
 import ROOT
-from math import sqrt
+from math import sqrt, log10
 ROOT.gROOT.SetBatch(True)
 import array
 
@@ -16,10 +16,15 @@ ROOT.TLegend.__init__._creates = False
 ROOT.TGraphErrors.__init__._creates = False
 ROOT.TGraphAsymmErrors.__init__._creates = False
 ROOT.TLatex.__init__._creates = False
+ROOT.THStack.__init__._creates = False
 
 
 # TODO Check how many of these methods I need
 # many can probably be removed
+
+def get_order_of_mag(num):
+    return int(log10(num)) 
+
 # ----------------------------------------------
 #  TH1D Methods
 # ----------------------------------------------
@@ -49,6 +54,43 @@ def th1d(name, title, nbin, nlow, nhigh, xtitle, ytitle) :
     # 2 is better than 1
     h.Sumw2()
     return h
+
+def get_tgraph_y_values(tgraph):
+    ''' 
+        Get the y-values stored in a TGraph
+
+        One cannot loop over TGraph.GetY() as it causes a crash
+    '''
+    y_values = []
+    for ibin in range(tgraph.GetN()):
+        y_values.append(tgraph.GetY()[ibin])
+    return y_values
+
+def get_tgraph_max(tgraph):
+    ''' 
+    Getting maximum y-value of TGraph because doesn't make things easy
+    
+    TGraphs cannot calculate their own maximum for reasons discuessed here:
+        https://root-forum.cern.ch/t/tgraph-getmaximum-getminimum/8867
+
+    '''
+    maxy = tgraph.GetMaximum()
+    if maxy == -1111: #default
+        maxy = max(get_tgraph_y_values(tgraph)) 
+    return maxy
+
+def get_tgraph_min(tgraph):
+    ''' 
+    Getting minimum y-value of TGraph because doesn't make things easy
+    
+    TGraphs cannot calculate their own minimum for reasons discuessed here:
+        https://root-forum.cern.ch/t/tgraph-getmaximum-getminimum/8867
+    '''
+    miny = tgraph.GetMinimum()
+    if miny == -1111: #default
+        miny = min(get_tgraph_y_values(tgraph)) 
+    return miny
+
 
 def draw_text_on_top(text="", size=0.04, pushright=1.0, pushup=1.0) :
     s = size
@@ -390,8 +432,27 @@ def th2f(name, title, nxbin, xlow, xhigh, nybin, ylow, yhigh, xtitle, ytitle) :
     h.Sumw2()
     return h
 
+def scale_thstack(stack, scale_factor):
+    '''
+    Scale each hist in a thstack
 
-
+    It is important to call Modified() to overwite the reset the stack object.
+    Otherwise, the scaling will not be present when drawing the stack.
+    '''
+    for hist in stack.GetHists():
+        hist.Scale(scale_factor)
+    stack.Modified()
+    
+def scale_tgraph(tgraph, scale_factor):
+    for ii in range(tgraph.GetN()):
+        tgraph.GetY()[ii] *= scale_factor
+        if isinstance(tgraph, ROOT.TGraphErrors):
+            tgraph.GetEY()[ii] *= scale_factor
+        elif isinstance(tgraph, ROOT.TGraphAsymmErrors):
+            tgraph.GetEYhigh()[ii] *= scale_factor
+            tgraph.GetEYlow()[ii] *= scale_factor
+        elif isinstance(tgraph, ROOT.TGraphBentErrors):
+            print "WARNING :: No scaling implemented yet"
 
 # ----------------------------------------------
 #  TLegend Methods

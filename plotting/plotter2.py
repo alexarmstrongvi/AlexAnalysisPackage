@@ -41,6 +41,7 @@ r.TH1F.__init__._creates = False
 r.TGraphErrors.__init__._creates = False
 r.TGraphAsymmErrors.__init__._creates = False
 r.TLegend.__init__._creates = False
+r.THStack.__init__._creates = False
 
 # Local classes for plotting
 import tools.plot_utils as pu
@@ -95,7 +96,7 @@ def make_plots() :
         # Make 1D and 2D plots
         n_total = len(plots_with_region)
         for n_current, plot in enumerate(plots_with_region, 1):
-            print 20*"-","Plotting [%d/%d] %s"%(n_current, n_total, plot.name), 20*'-'
+            print "[%d/%d] Plotting %s"%(n_current, n_total, plot.name), 40*'-'
 
             # Clear the yield table
             YIELD_TBL.reset()
@@ -121,11 +122,11 @@ def make_plots() :
 ################################################################################
 def make_plots1D(plot, reg) :
     ''' '''
-    if plot.ptype == m_plot.Types.ratio :
+    if plot.ptype == Types.ratio :
         make_plotsRatio(plot, reg)
-    elif plot.ptype == m_plot.Types.comparison :
+    elif plot.ptype == Types.comparison :
         make_plotsComparison(plot, reg)
-    elif plot.ptype == m_plot.Types.stack :
+    elif plot.ptype == Types.stack :
         make_plotsStack(plot, reg)
     else:
         print "ERROR :: Unknown plot type,", plot.ptype.name
@@ -148,6 +149,8 @@ def make_plotsStack(plot, reg):
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
     data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
+    if plot.doNorm:
+        normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
     reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
     # Checks - Move on to next plot in case of failure
@@ -155,8 +158,9 @@ def make_plotsStack(plot, reg):
         print "WARNING :: Stack plot has either no MC. Skipping."
         return
 
+
     # Draw the histograms
-    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
+    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname, plot.doNorm)
 
     # Reset axis
     can.RedrawAxis()
@@ -168,9 +172,7 @@ def make_plotsStack(plot, reg):
     save_plot(can, plot.name+".eps")
 
     # Clean up
-    # TODO: Automate cleanup more
-    root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
-                 data_hist, legend, hists])
+    root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data, data_hist, legend, hists])
     plot.pads.canvas.Clear()
 
 def make_plotsRatio(plot, reg) :
@@ -191,8 +193,10 @@ def make_plotsRatio(plot, reg) :
     mc_stack, mc_total, signals, hists = add_stack_backgrounds(plot, legend, reg)
     data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
+    if plot.doNorm:
+        normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
     reformat_axis(plot, legend, mc_stack, data, axis, signals)
-
+    
     # Checks - Move on to next plot in case of failure
     if not mc_stack and data:
         print "WARNING :: Ratio plot has either no MC or not data. Skipping."
@@ -200,7 +204,7 @@ def make_plotsRatio(plot, reg) :
 
 
     # Draw the histograms
-    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname)
+    draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg.displayname, plot.doNorm)
 
     # Reset axis
     rcan.upper_pad.RedrawAxis()
@@ -209,8 +213,6 @@ def make_plotsRatio(plot, reg) :
 
     ############################################################################
     # Bottom ratio plot
-    #import pdb
-    #pdb.set_trace()
     rcan.lower_pad.cd()
 
     ratio_axis = get_ratio_axis(mc_stack, rcan.ylabel, rcan.ymax)
@@ -235,13 +237,14 @@ def save_plot(can, outname):
     save_path = os.path.join(plots_dir, args.outdir, outname)
     save_path = os.path.normpath(save_path)
     can.SaveAs(save_path)
-    #print "%s saved to : %s"%(outname, os.path.dirname(save_path))
+    #OFILE.cd()
+    #can.Write()
 
 def root_delete(root_objects):
     for ro in root_objects:
-        if type(ro) == type(None):
+        if not ro or isinstance(ro, r.THStack):
             continue
-        elif type(ro) == list:
+        elif isinstance(ro, list):
             root_delete(ro)
         elif issubclass(type(ro), r.TObject):
             ro.Delete()
@@ -253,7 +256,6 @@ def root_delete(root_objects):
 ################################################################################
 #TODO Clean up and optimize the methods for stack
 def make_stack_legend(plot):
-
     if plot.leg_is_left :
         leg = pu.default_legend(xl=0.2,yl=0.7,xh=0.47, yh=0.87)
     elif plot.leg_is_bottom_right :
@@ -278,7 +280,7 @@ def make_stack_axis(plot):
     xax.SetLabelFont(42)
     xax.SetLabelSize(0.035)
     xax.SetTitleSize(0.048 * 0.85)
-    if plot.ptype == m_plot.Types.ratio:
+    if plot.ptype == Types.ratio:
         hax.GetXaxis().SetTitleOffset(-999)
         hax.GetXaxis().SetLabelOffset(-999)
     else:
@@ -294,7 +296,7 @@ def make_stack_axis(plot):
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
 
-    if plot.bin_labels and plot.ptype == m_plot.Types.stack:
+    if plot.bin_labels and plot.ptype == Types.stack:
         plot.set_bin_labels(hax)
 
 
@@ -369,8 +371,8 @@ def add_stack_backgrounds(plot, leg, reg):
 
     # Order the hists by total events
     histos = sorted(histos, key=lambda h: h.Integral())
+    
     for h in histos :
-        if "fake" in h.GetName() or "Fake" in h.GetName() : continue
         stack.Add(h)
 
     h_leg = sorted(all_histos, key=lambda h: h.Integral(), reverse=True)
@@ -470,24 +472,67 @@ def add_stack_mc_errors(plot, leg, hists, stack):
 
     return mcError, nominalAsymErrors
 
-def reformat_axis(plot, leg, stack, hd, hax, signals):
-    # draw the MC stack and do cosmetics
-    stack.SetMinimum(plot.ymin)
+def normalize_stack(mc_total, signals, data, mc_stack, mc_errors):
+    mc_norm_factor = 1.0/mc_total.Integral() 
+    sig_norm_factors = [1.0/s.Integral() for s in signals]
+    data_norm_factor = 1.0/data.Integral()
 
-    # Determine y range for plot
-    max_mult = 2.0 if len(signals) else 1.66
-    if hd:
-        maxy = max(hd.GetMaximum(), stack.GetMaximum())
+    pu.scale_thstack(mc_stack, mc_norm_factor) 
+    mc_total.Scale(mc_norm_factor)
+    pu.scale_tgraph(mc_errors, mc_norm_factor) 
+    signals = [s.Scale(f) for s,f in zip(signals, sig_norm_factors)]
+    pu.scale_tgraph(data, data_norm_factor)
+
+def reformat_axis(plot, leg, stack, data, hax, signals):
+    ''' Reformat axis to fit content and labels'''
+    # Get maximum histogram y-value
+    if data:
+        maxy = max(pu.get_tgraph_max(data), stack.GetMaximum())
+        miny = min(pu.get_tgraph_min(data), stack.GetMinimum())
     else:
         maxy = stack.GetMaximum()
-    if not plot.doLogY:
-        hax.SetMaximum(max_mult*maxy)
-        stack.SetMaximum(max_mult*maxy)
-    else:
-        hax.SetMaximum(1e3*plot.ymax)
-        stack.SetMaximum(1e3*plot.ymax)
+        miny = stack.GetMinimum()
 
-def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name) :
+    # Get default y-axis max and min limits
+    logy = plot.doLogY
+    norm = plot.doNorm
+    if logy and norm:
+        ymax = plot.logy_norm_max
+        ymin = plot.logy_norm_min
+    elif logy:
+        ymax = plot.logy_max
+        ymin = plot.logy_min
+    elif norm:
+        ymax = plot.norm_max
+        ymin = plot.norm_min
+    else:
+        ymax = plot.ymax
+        ymin = plot.ymin
+    
+    # Adjust y-axis limits if necessary
+    assert maxy > 0
+    if maxy > ymax:
+        ymax = maxy if not logy else 10**(pu.get_order_of_mag(maxy) + 1)
+    
+    if miny < ymin: 
+        if miny < 0 and not logy:
+            ymin = 1.5*miny
+        elif miny >= 0:
+            ymin = 0.5*miny if not logy else 10**(pu.get_order_of_mag(miny) - 1)
+    
+    # Get y-axis max multiplier to fit labels
+    if logy:
+        max_mult = 1e4 if signals else 1e3
+    else:
+        max_mult = 2.0 if signals else 1.66
+
+    # reformat the axis
+    stack.SetMaximum(max_mult*maxy)
+    stack.SetMinimum(ymin)
+    hax.SetMaximum(max_mult*maxy)
+    hax.SetMinimum(ymin)
+
+def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name, do_norm) :
     axis.Draw()
     mc_stack.Draw("HIST SAME")
     mc_errors.Draw("E2 same")
@@ -760,8 +805,11 @@ if __name__ == '__main__':
 
         check_for_consistency()
         print_inputs(args)
-
+        
+        #tfile_path = os.path.join(plots_dir, args.outdir, 'plotter_hists.root')
+        #OFILE = r.TFile(tfile_path,'RECREATE')
         main()
+        #OFILE.Close()
 
         if args.verbose:
             print time.asctime()

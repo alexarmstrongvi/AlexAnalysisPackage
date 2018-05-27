@@ -38,16 +38,16 @@ class Types(Enum):
 ################################################################################
 # TODO add some generic functions to plot utils
 
-class Plot1D :
+class Plot1D(object) :
 
     # Class defaults for axis range depending on log and normalization settings
     xmin = 0.0
     xmax = 50.0
     ymin = 0
-    ymax = 1e7
+    ymax = 1e6
 
-    logy_min = 0.1
-    logy_max = 1e7
+    logy_min = 1e-1
+    logy_max = 1e6
 
     norm_ymin = 0
     norm_ymax = 1
@@ -67,7 +67,7 @@ class Plot1D :
         bin_width = None, # Can specify to override nbins
         nbins = 20,
         is2D = False,
-        doLogY = True,
+        doLogY = True, # change to do_logy
         doNorm = False,
         add_overflow = True,
         add_underflow = False,
@@ -95,6 +95,7 @@ class Plot1D :
         self.doNorm = doNorm
         self.add_overflow = add_overflow
         self.add_underflow = add_underflow
+        self.using_labels = False
         self.leg_is_left = leg_is_left
         self.leg_is_bottom_right = leg_is_bottom_right
         self.leg_is_bottom_left = leg_is_bottom_left
@@ -107,10 +108,18 @@ class Plot1D :
 
         self.xunits = xunits
         self.yunits = yunits
-        self.xlabel, self.label = determine_labels(xlable, ylabel)
+        self.xlabel, self.ylabel = self.determine_labels(xlabel, ylabel)
 
-        self.bin_labels = []
+        self._bin_labels = []
 
+    @property
+    def bin_labels(self):
+        return self._bin_labels
+    @bin_labels.setter
+    def bin_labels(self, labels):
+        self.using_labels = True if labels else False
+        self._bin_labels = labels
+    
     def update(self,
         region = None,
         variable = None,
@@ -148,6 +157,8 @@ class Plot1D :
         if nbins or bin_width:
             self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
 
+
+
     def determine_nbins(self, bin_width, update_range = True):
         '''
         Intelligently determine the number of bins.
@@ -165,13 +176,17 @@ class Plot1D :
         returns:
             (int) - the number x-axis bins
         '''
-        assert self.xmax != self.xmax, ("ERROR :: x-axis range not set")
+        assert self.xmax != self.xmin, ("ERROR :: x-axis range not set")
         bin_width = float(bin_width)
         x_range = float(self.xmax - self.xmin)
-        cutoff_range = bin_width - (x_range % bin_width)
+        remainder = x_range % bin_width
+        cutoff_range = bin_width - remainder if remainder else 0
         int_bins = (isinstance(self.xmin, (int, long))
                 and isinstance(self.xmax, (int, long)))
 
+        if update_range and cutoff_range != 0:
+            print "WARNING :: bin_width is not a divisor of x-axis range.",
+            print "Expanding range by %.f to fit"%cutoff_range
         if update_range and self.xmin == 0:
             self.xmax += cutoff_range
         elif update_range and self.xmin != 0:
@@ -186,6 +201,9 @@ class Plot1D :
         nbins = round( x_range / bin_width )
 
         return nbins
+
+    def bin_width(self):
+        return (self.xmax - self.xmin) / self.nbins
 
     def determine_range(self, bin_range):
         '''
@@ -238,21 +256,21 @@ class Plot1D :
             xlabel = "%s [%s]"%(xlabel, self.xunits)
 
         # set y-axis label
-        width_label = str(round(self.bin_width, 2))
+        width_label = str(round(self.bin_width(), 2))
         if not self.xunits and width_label == '1.0':
             pass
         elif self.xunits and width_label == '1.0':
             ylabel = "%s / %s"%(ylabel, self.xunits)
         else:
-            ylabel = "%s / %s %s"%(ops.ylabel,width_label,self.xunits)
+            ylabel = "%s / %s %s"%(ylabel,width_label,self.xunits)
 
         return xlabel, ylabel
 
-    def determine_name(region, variable):
+    def determine_name(self, region, variable):
         var_stripped = re.sub(r'[(){}[\]]+','', variable)
         return "%s_%s"%(region, var_stripped)
 
-    def set_labeled_bins(axis_hist):
+    def set_bin_labels(self, axis_hist):
         '''
         Add arbitrary labels to TH1 bins
 
@@ -263,16 +281,20 @@ class Plot1D :
         empty labels
 
         args:
-            hist_axis (TH1): histogram
+            axis_hist (TH1): histogram that includes plot axis
 
         '''
         n_labels = len(self.bin_labels)
-        n_bins = hist_axis.GetNbinsX()
-        assert n_labels != n_bins, (
+        n_bins = axis_hist.GetNbinsX()
+        assert n_labels == n_bins, (
             "ERROR :: nbins (%d) != nlabels (%d)"%(n_bins, n_labels))
+
+        x_axis = axis_hist.GetXaxis()
         for ibin, label in zip(range(n_labels), self.bin_labels):
             if not label: continue
-            hist_axis.SetBinLabel(ibin+1, label)
+            x_axis.SetBinLabel(ibin+1, label)
+        x_axis.SetLabelOffset(0.005)
+        x_axis.SetLabelSize(1.5*x_axis.GetLabelSize())
 
     #TODO: Function to add bin quantity labels to histogram
 
@@ -281,7 +303,7 @@ class Plot1D :
         self.ptype = Types.default
 
     def setStackPads(self, name):
-        self.pads = StackPads(name)
+        self.pads = StackPads(name, self.using_labels)
         self.ptype = Types.stack
 
     def setRatioPads(self, name) :
@@ -394,19 +416,19 @@ class Plot2D :
 ################################################################################
 # TPad handler classes
 ################################################################################
-#TODO: rename Canvas -> Pad based names
 class Pads :
-    def __init__(self,name):
+    def __init__(self, name, using_labels=False):
         self.name = "c_" + name
         self.canvas = r.TCanvas(self.name, self.name, 800, 600)
+        self.using_labels = using_labels
         self.set_pad_dimensions()
 
     def set_pad_dimensions(self):
         pass
 
 class StackPads(Pads):
-    def __init__(self, name):
-        Pads.__init__(self, name)
+    def __init__(self, name, using_labels=False):
+        Pads.__init__(self, name, using_labels)
 
     def set_pad_dimensions(self):
         can = self.canvas
