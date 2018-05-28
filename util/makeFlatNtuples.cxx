@@ -20,7 +20,7 @@ using std::cout;
 using std::cerr;
 using std::vector;
 
-// Various superflow classes 
+// Various superflow classes
 using namespace sflow;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,17 +28,26 @@ using namespace sflow;
 ////////////////////////////////////////////////////////////////////////////////
 // Useful macros
 // TODO: Run over a vector of leptons
+//#define ADD_1LEP_TRIGGER_VAR(trig_name, leptons) { \
+//    *superflow << NewVar(#trig_name" trigger bit"); { \
+//        *superflow << HFTname(#trig_name); \
+//        *superflow << [&](Superlink* sl, var_bool*) -> bool { \
+//            return is_1lep_trig_matched(#trig_name, leptons) \
+//        *superflow << SaveVar(); \
+//    } \
+//}
+
 #define ADD_1LEP_TRIGGER_VAR(trig_name, lep) { \
-  *superflow << NewVar(#trig_name" trigger bit"); { \
-      *superflow << HFTname(#trig_name); \
-      *superflow << [&](Superlink* sl, var_bool*) -> bool { \
-          if(!lep) return false;\
-          bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
-          if (!trig_fired) return false;\
-          bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
-          return trig_matched; }; \
-      *superflow << SaveVar(); \
-  } \
+    *superflow << NewVar(#trig_name" trigger bit"); { \
+        *superflow << HFTname(#trig_name); \
+        *superflow << [&](Superlink* sl, var_bool*) -> bool { \
+            if(!lep) return false;\
+            bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
+            if (!trig_fired) return false;\
+            bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
+            return trig_matched; }; \
+        *superflow << SaveVar(); \
+    } \
 }
 // Trig Matching for dilep triggers is buggy
 // so currently not trigger matching
@@ -77,12 +86,13 @@ struct Args {
 
     // Optional arguments with defaults
     unsigned int n_events  = -1; ///< number of events processed
+    unsigned int n_skipped = 0; ///< number of initila entries to skip
     string name_suffix = ""; ///< suffix appended to output name
     bool baseline_sel = true;  ///< Apply baseline denominator selection
     bool baseline_den = false;  ///< Apply baseline denominator selection
     bool fake_num = false;  ///< Apply fake numerator selection
     bool fake_den = false;  ///< Apply fake denominator selection
-    bool apply_ff = false; ///< Apply fake factor event weight to denominator events 
+    bool apply_ff = false; ///< Apply fake factor event weight to denominator events
 
     ////////////////////////////////////////////////////////////////////////////
     // Print information
@@ -96,6 +106,7 @@ struct Args {
         printf("\t-i, --input     Input file name\n");
         printf("\nOptional Parameters:\n");
         printf("\t-n, --nevents   number of events to process\n");
+        printf("\t-k, --nskipped  number of initial entries to skip\n");
         printf("\t-s, --suffix    suffix appended to output name\n");
         printf("\t--baseline_sel  use baseline event selection [default selection]\n");
         printf("\t--baseline_den  use baseline denominator event selection \n");
@@ -112,6 +123,7 @@ struct Args {
         printf("===========================================================\n");
         printf("\tInput file name : %s\n", input_name.c_str());
         printf("\tnevents         : %i\n", n_events);
+        printf("\tnskipped        : %i\n", n_skipped);
         printf("\tsuffix          : %s\n", name_suffix.c_str());
         printf("\tbaseline_sel    : %i\n", baseline_sel);
         printf("\tbaseline_den    : %i\n", baseline_den);
@@ -140,6 +152,8 @@ struct Args {
                 input_name = arg_value;
             } else if (arg == "-n" || arg == "--nevents") {
                 n_events = atoi(arg_value.c_str());
+            } else if (arg == "-k" || arg == "--nskipped") {
+                n_skipped = atoi(arg_value.c_str());
             } else if (arg == "-s" || arg == "--suffix") {
                 name_suffix = true;
             } else if (arg == "--baseline_sel") {
@@ -201,7 +215,6 @@ int main(int argc, char* argv[]) {
 
     if (args.apply_ff) initialize_fake_factor_tool(m_applyFakeFactorTool);
 
-
     vector<Superflow*> superflows;
     if (args.baseline_sel) {
         superflows.push_back(get_cutflow(m_chain, BASELINE));
@@ -220,8 +233,7 @@ int main(int argc, char* argv[]) {
     for (uint ii = 0; ii < superflows.size(); ii++) {
         printf("\n\n [%u/%lu] Running cutflow \n\n",ii+1, superflows.size());
         Superflow *sf = superflows.at(ii);
-        // TODO: Add m_first_entry to user args
-        m_chain->Process(sf, args.input_name.c_str(), args.n_events);//, n_skip_events);
+        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
         delete sf;
     }
     delete m_chain;
@@ -297,7 +309,12 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
     add_event_variables(superflow);
     add_trigger_variables(superflow);
     add_met_variables(superflow);
-    add_lepton_variables(superflow);
+    add_prelepton_variables(superflow);
+    add_baselepton_variables(superflow);
+    add_signallepton_variables(superflow);
+    add_xtau_lepton_variables(superflow);
+    add_tau_variables(superflow);
+    add_other_lepton_variables(superflow);
     add_jet_variables(superflow);
     add_fake_variables(superflow);
 
@@ -308,7 +325,6 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
     return superflow;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 // TODO: Switch to using references instead of pointers
 string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff) {
     string full_suffix = user_suffix;
@@ -324,7 +340,6 @@ string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff) {
 
     return full_suffix;
 }
-
 Superflow* initialize_superflow(TChain *chain, string name_suffix) {
     // Move run_mode to globals
 
@@ -341,13 +356,16 @@ Superflow* initialize_superflow(TChain *chain, string name_suffix) {
 
     return superflow;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Add lambda expression to superflow
 void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
-    *superflow << CutName("(No Cuts) Define shortcut variables")
-             << [&](Superlink* sl, var_void*) -> bool {
+    *superflow << CutName("read in") << [&](Superlink* sl) -> bool {
         m_cutflags = sl->nt->evt()->cutFlags[NtSys::NOM];
 
         ////////////////////////////////////////////////////////////////////////
         // Lepton shortcuts
+        // TODO: remove the globals that are just new names for sl objects
         m_preLeptons = *sl->preLeptons;
         m_baseLeptons =  *sl->baseLeptons;
         m_signalLeptons = *sl->leptons;
@@ -418,11 +436,7 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         return true; // All events pass this cut
     };
 }
-
 void add_pre_cuts(Superflow* superflow, Sel sel_type) {
-  // All events before cuts
-  *superflow << CutName("read in") << [](Superlink* /*sl*/) -> bool { return true; };
-
   // xTauFW Cut
   if (sel_type == BASELINE || sel_type == BASE_DEN) {
     *superflow << CutName("xTau: 2+ Loose Leptons") << [&](Superlink* /*sl*/) -> bool {
@@ -450,7 +464,6 @@ void add_cleaing_cuts(Superflow* superflow) {
       return (sl->tools->passSCTErr(m_cutflags));
   };
 }
-
 void add_baseline_lepton_cuts(Superflow* superflow) {
     *superflow << CutName("nBaselineLep = nSignalLep") << [](Superlink* /*sl*/) -> bool {
         return (m_signalLeptons.size() == m_baseLeptons.size());
@@ -478,7 +491,6 @@ void add_fake_den_lepton_cuts(Superflow* superflow) {
     };
     add_SFOS_lepton_cut(superflow);
 }
-
 void add_final_cuts(Superflow* superflow, Sel sel_type) {
     *superflow << CutName("pass good vertex") << [&](Superlink* sl) -> bool {
         return (sl->tools->passGoodVtx(m_cutflags));
@@ -495,7 +507,6 @@ void add_final_cuts(Superflow* superflow, Sel sel_type) {
         return (m_signalTaus.size() == 0);
     };
 }
-
 void add_event_variables(Superflow* superflow) {
   *superflow << NewVar("Event run number"); {
     *superflow << HFTname("RunNumber");
@@ -539,70 +550,77 @@ void add_event_variables(Superflow* superflow) {
   }
 }
 void add_trigger_variables(Superflow* superflow) {
-  //////////////////////////////////////////////////////////////////////////////
-  // Trigger Variables
-  // ADD_*_TRIGGER_VAR preprocessor defined
+    ////////////////////////////////////////////////////////////////////////////
+    // Trigger Variables
+    // ADD_*_TRIGGER_VAR preprocessor defined
 
-  //////////////////////////////////////////////////////////////////////////////
-  // 2015
+    ////////////////////////////////////////////////////////////////////////////
+    // 2015
 
-  // Dilepton Triggers
-  ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_mu14, m_el0, m_mu0)
-  ADD_2LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1, m_el0, m_mu0)
-  ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_mu24, m_mu0, m_el0)
-  ADD_2LEP_TRIGGER_VAR(HLT_2e12_lhloose_L12EM10VH, m_el0, m_el1)
-  // TODO: Add to SusyNts HLT_2mu10)
+    // Dilepton Triggers
+    ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_mu14, m_el0, m_mu0)
+    ADD_2LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1, m_el0, m_mu0)
+    ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_mu24, m_mu0, m_el0)
+    ADD_2LEP_TRIGGER_VAR(HLT_2e12_lhloose_L12EM10VH, m_el0, m_el1)
+    // TODO: Add to SusyNts HLT_2mu10)
 
-  // Single Electron Triggers
-  ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, m_el0)
-  ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, m_el0)
-  ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, m_el0)
+    // Single Electron Triggers
+    ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, m_el0)
 
-  // Single Muon Triggers
-  ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_mu0)
-  ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_mu0)
+    // Single Muon Triggers
+    ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_mu0)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_mu0)
 
-  //////////////////////////////////////////////////////////////////////////////
-  // 2016
+    ////////////////////////////////////////////////////////////////////////////
+    // 2016
 
-  // Dilepton Triggers
-  ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14, m_el0, m_mu0)
-  // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1, m_el0, m_mu0)
-  ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24, m_mu0, m_el0)
-  ADD_2LEP_TRIGGER_VAR(HLT_2e17_lhvloose_nod0, m_el0, m_el1)
-  // TODO: Add to SusyNts HLT_2mu14)
+    // Dilepton Triggers
+    ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_nod0_mu14, m_el0, m_mu0)
+    // TODO: Add to SusyNts HLT_e24_lhmedium_nod0_L1EM20VHI_mu8noL1, m_el0, m_mu0)
+    ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_nod0_mu24, m_mu0, m_el0)
+    ADD_2LEP_TRIGGER_VAR(HLT_2e17_lhvloose_nod0, m_el0, m_el1)
+    // TODO: Add to SusyNts HLT_2mu14)
 
-  // Single Electron Triggers
-  ADD_1LEP_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose, m_el0)
-  ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium_nod0, m_el0)
-  ADD_1LEP_TRIGGER_VAR(HLT_e140_lhloose_nod0, m_el0)
+    // Single Electron Triggers
+    ADD_1LEP_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium_nod0, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e140_lhloose_nod0, m_el0)
 
-  // Single Muon Triggers
-  ADD_1LEP_TRIGGER_VAR(HLT_mu26_ivarmedium, m_mu0)
-  ADD_1LEP_TRIGGER_VAR(HLT_mu50, m_mu0)
+    // Single Muon Triggers
+    ADD_1LEP_TRIGGER_VAR(HLT_mu26_ivarmedium, m_mu0)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu50, m_mu0)
 }
+void add_met_variables(Superflow* superflow) {
+  //////////////////////////////////////////////////////////////////////////////
+  // MET
 
-void add_lepton_variables(Superflow* superflow) {
-    //////////////////////////////////////////////////////////////////////////////
-    // Lepton informtion
-    //////////////////////////////////////////////////////////////////////////////
-
-    //////////////////////////////////////////////////////////////////////////////
-    // Get multiplicity variables
-    // ADD_MULTIPLICITY_VAR preprocessor defined
+  // Fill MET variable inside Et var
+  TLorentzVector m_MET;
+  *superflow << NewVar("transverse missing energy (Et)"); {
+    *superflow << HFTname("MET");
+    *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
+      m_MET.SetPxPyPzE(m_met.Et*cos(m_met.phi),
+                     m_met.Et*sin(m_met.phi),
+                     0.,
+                     m_met.Et);
+      return m_MET.Pt();
+    };
+    *superflow << SaveVar();
+  }
+  *superflow << NewVar("transverse missing energy (Phi)"); {
+    *superflow << HFTname("METPhi");
+    *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
+      return m_MET.Phi();
+    };
+    *superflow << SaveVar();
+  }
+}
+void add_prelepton_variables(Superflow* superflow) {
     ADD_MULTIPLICITY_VAR(preLeptons)
-    ADD_MULTIPLICITY_VAR(baseLeptons)
-    ADD_MULTIPLICITY_VAR(leptons)
     ADD_MULTIPLICITY_VAR(preElectrons)
-    ADD_MULTIPLICITY_VAR(baseElectrons)
-    ADD_MULTIPLICITY_VAR(electrons)
     ADD_MULTIPLICITY_VAR(preMuons)
-    ADD_MULTIPLICITY_VAR(baseMuons)
-    ADD_MULTIPLICITY_VAR(muons)
-    ADD_MULTIPLICITY_VAR(preTaus)
-    ADD_MULTIPLICITY_VAR(baseTaus)
-    ADD_MULTIPLICITY_VAR(taus)
-
     //////////////////////////////////////////////////////////////////////////////
     // PreElectrons
     *superflow << NewVar("preElectron E_caloClus"); {
@@ -667,6 +685,48 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
+    //////////////////////////////////////////////////////////////////////////////
+    // PreMuons
+
+    *superflow << NewVar("preMuon pt"); {
+      *superflow << HFTname("preMu_pt");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& mu : m_preMuons) {out.push_back(mu->Pt()); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("isCaloTagged"); {
+      *superflow << HFTname("isCaloTagged");
+      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& mu : m_preMuons) { out.push_back(mu->isCaloTagged);}
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+
+    *superflow << NewVar("PreMuon ID (non-inclusive)"); {
+      *superflow << HFTname("preMu_ID");
+      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& mu : m_preMuons) {
+          if (mu->tight) out.push_back(0);
+          else if (mu->medium) out.push_back(1);
+          else if (mu->loose) out.push_back(2);
+          else if (mu->veryLoose) out.push_back(3);
+          else out.push_back(4);
+        }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+}
+void add_baselepton_variables(Superflow* superflow) {
+    ADD_MULTIPLICITY_VAR(baseLeptons)
+    ADD_MULTIPLICITY_VAR(baseElectrons)
+    ADD_MULTIPLICITY_VAR(baseMuons)
 
     //////////////////////////////////////////////////////////////////////////////
     // Baseline Electrons
@@ -704,7 +764,64 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-
+    //////////////////////////////////////////////////////////////////////////////
+    // Baseline Muons
+    *superflow << NewVar("baseline Muon pt"); {
+      *superflow << HFTname("baseMu_pt");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& mu : m_baseMuons) {out.push_back(mu->Pt()); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Muon eta"); {
+      *superflow << HFTname("baseMu_eta");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& mu : m_baseMuons) {out.push_back(mu->Eta()); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Muon etconetopo20"); {
+      *superflow << HFTname("baseMu_etconetopo20");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& mu : m_baseMuons) {out.push_back(mu->etconetopo20); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Muon ptvarcone30"); {
+      *superflow << HFTname("baseMu_ptvarcone30");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& mu : m_baseMuons) {out.push_back(mu->ptvarcone30); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Muon ID (non-inclusive)"); {
+      *superflow << HFTname("baseMu_ID");
+      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& mu : m_baseMuons) {
+          if (mu->tight) out.push_back(0);
+          else if (mu->medium) out.push_back(1);
+          else if (mu->loose) out.push_back(2);
+          else if (mu->veryLoose) out.push_back(3);
+          else out.push_back(4);
+        }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+}
+void add_signallepton_variables(Superflow* superflow) {
+    ADD_MULTIPLICITY_VAR(leptons)
+    ADD_MULTIPLICITY_VAR(electrons)
+    ADD_MULTIPLICITY_VAR(muons)
     //////////////////////////////////////////////////////////////////////////////
     // Signal Electrons
     *superflow << NewVar("Electron type"); {
@@ -776,8 +893,8 @@ void add_lepton_variables(Superflow* superflow) {
         vector<double> out;
         for (auto& el : m_signalElectrons) {
           for (auto& mu : m_preMuons) {
-            if (!superflow->nttools().m_muonSelector->isBaseline(mu)) continue;
-            if (superflow->nttools().isSignal(mu)) continue;
+            if (!sl->tools->muonSelector()->isBaseline(mu)) continue;
+            if (sl->tools->muonSelector()->isSignal(mu)) continue;
             if (mu->isCaloTagged) continue;
             out.push_back(el->DeltaRy(*mu));
           }
@@ -792,8 +909,8 @@ void add_lepton_variables(Superflow* superflow) {
         vector<double> out;
         for (auto& el : m_signalElectrons) {
           for (auto& mu : m_preMuons) {
-            if (!superflow->nttools().m_muonSelector->isBaseline(mu)) continue;
-            if (superflow->nttools().isSignal(mu)) continue;
+            if (!sl->tools->muonSelector()->isBaseline(mu)) continue;
+            if (sl->tools->muonSelector()->isSignal(mu)) continue;
             if (!mu->isCaloTagged) continue;
             out.push_back(el->DeltaRy(*mu));
           }
@@ -856,98 +973,10 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    //////////////////////////////////////////////////////////////////////////////
-    // PreMuons
 
-    *superflow << NewVar("preMuon pt"); {
-      *superflow << HFTname("preMu_pt");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& mu : m_preMuons) {out.push_back(mu->Pt()); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("isCaloTagged"); {
-      *superflow << HFTname("isCaloTagged");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for (auto& mu : m_preMuons) { out.push_back(mu->isCaloTagged);}
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-
-    *superflow << NewVar("PreMuon ID (non-inclusive)"); {
-      *superflow << HFTname("preMu_ID");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for (auto& mu : m_preMuons) {
-          if (mu->tight) out.push_back(0);
-          else if (mu->medium) out.push_back(1);
-          else if (mu->loose) out.push_back(2);
-          else if (mu->veryLoose) out.push_back(3);
-          else out.push_back(4);
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
 
     //////////////////////////////////////////////////////////////////////////////
-    // Baseline Muons
-    *superflow << NewVar("baseline Muon pt"); {
-      *superflow << HFTname("baseMu_pt");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& mu : m_baseMuons) {out.push_back(mu->Pt()); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Muon eta"); {
-      *superflow << HFTname("baseMu_eta");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& mu : m_baseMuons) {out.push_back(mu->Eta()); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Muon etconetopo20"); {
-      *superflow << HFTname("baseMu_etconetopo20");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& mu : m_baseMuons) {out.push_back(mu->etconetopo20); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Muon ptvarcone30"); {
-      *superflow << HFTname("baseMu_ptvarcone30");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& mu : m_baseMuons) {out.push_back(mu->ptvarcone30); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Muon ID (non-inclusive)"); {
-      *superflow << HFTname("baseMu_ID");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for (auto& mu : m_baseMuons) {
-          if (mu->tight) out.push_back(0);
-          else if (mu->medium) out.push_back(1);
-          else if (mu->loose) out.push_back(2);
-          else if (mu->veryLoose) out.push_back(3);
-          else out.push_back(4);
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-
+    // Signal Muons
     *superflow << NewVar("Muon ID (non-inclusive)"); {
       *superflow << HFTname("Mu_ID");
       *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
@@ -963,8 +992,6 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    //////////////////////////////////////////////////////////////////////////////
-    // Signal Muons
     *superflow << NewVar("Muon type"); {
       *superflow << HFTname("mu_type");
       *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
@@ -1001,72 +1028,6 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-
-    //////////////////////////////////////////////////////////////////////////////
-    // PreTaus
-    *superflow << NewVar("preTau charge"); {
-      *superflow << HFTname("preTau_q");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& tau : m_preTaus) {out.push_back(tau->q); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("preTau nTracks"); {
-      *superflow << HFTname("preTau_nTracks");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& tau : m_preTaus) {out.push_back(tau->nTrack); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-
-    //////////////////////////////////////////////////////////////////////////////
-    // Baseline Taus
-    *superflow << NewVar("Baseline Tau pT"); {
-      *superflow << HFTname("baseTau_pT");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& tau : m_preTaus) {out.push_back(tau->Pt()); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Tau eta"); {
-      *superflow << HFTname("baseTau_eta");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& tau : m_preTaus) {out.push_back(tau->Eta()); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Tau nTracks"); {
-      *superflow << HFTname("baseTau_nTracks");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for (auto& tau : m_baseTaus) {out.push_back(tau->nTrack); }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Baseline Tau ID (non-inclusive)"); {
-      *superflow << HFTname("baseTau_ID");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for (auto& tau : m_baseTaus) {
-          if (!tau->loose) out.push_back(3);
-          else if (tau->loose && !tau->medium) out.push_back(2);
-          else if (tau->medium && !tau->tight) out.push_back(1);
-          else if (tau->tight) out.push_back(0);
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-
     //////////////////////////////////////////////////////////////////////////////
     // Signal Leptons
     *superflow << NewVar("Lepton Iso (non-inclusive)"); {
@@ -1198,115 +1159,18 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << SaveVar();
     }
     *superflow << NewVar("lepton classification"); {
-      *superflow << HFTname("l_truthClass");
-      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
-        vector<int> out;
-        for(auto& lepton : m_selectLeptons) {
-          if (!lepton) continue;
-          // TODO: Move to more modules
-          // Get Truth information
-          int T = lepton->mcType;
-          int O = lepton->mcOrigin;
-          int MO = lepton->mcBkgTruthOrigin;
-          int MT = 0; // Not stored in SusyNt::Lepton
-          int M_ID = lepton->mcBkgMotherPdgId;
-
-          uint lep_class = 0;
-          using namespace MCTruthPartClassifier;
-
-          bool mother_is_el = fabs(M_ID) == 11;
-          //bool mother_is_piZero = fabs(M_ID) == 111;
-          bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
-          bool bkgEl_from_EMproc = T==BkgElectron && O==ElMagProc;
-          bool fromSMBoson = O==WBoson || O==ZBoson || O==Higgs || O==DiBoson;
-          bool MfromSMBoson = MO==WBoson || MO==ZBoson || MO==Higgs || MO==DiBoson;
-          //bool noChargeFlip = M_ID*lepton->q < 0;
-          //bool chargeFlip = M_ID*lepton->q > 0;
-
-          // Defs from https://indico.cern.ch/event/725960/contributions/2987219/attachments/1641430/2621432/TruthDef_April242018.pdf
-          //TODO: Remove photon conversion prompt electrons
-          bool promptEl1 = T==IsoElectron; //&& noChargeFlip;
-          bool promptEl2 = (bkgEl_from_phoConv && mother_is_el); //&& noChargeFlip;
-          bool promptEl3 = bkgEl_from_EMproc && MT==IsoElectron && (MO==top || MfromSMBoson);
-          bool promptEl4 = bkgEl_from_phoConv && MO==FSRPhot;
-          bool promptEl5 = T==NonIsoPhoton && O==FSRPhot;
-          bool promptEl = promptEl1 || promptEl2 || promptEl3 || promptEl4 || promptEl5;
-
-          //bool promptChargeFlipEl1 = T==IsoElectron && chargeFlip;
-          //bool promptChargeFlipEl2 = (bkgEl_from_phoConv && mother_is_el) && chargeFlip;
-          //bool promptChargeFlipEl = promptChargeFlipEl1 || promptChargeFlipEl2;
-
-          bool promptMuon = T==IsoMuon && (
-              O==top || fromSMBoson || O==HiggsMSSM || O==MCTruthPartClassifier::SUSY);
-
-          bool promptPho1 = T==IsoPhoton && O==PromptPhot;
-          bool promptPho2 = bkgEl_from_phoConv && MT==IsoPhoton && MO==PromptPhot;
-          bool promptPho3 = bkgEl_from_EMproc  && MT==IsoPhoton && MO==PromptPhot;
-          bool promptPho4 = bkgEl_from_phoConv && MT==BkgPhoton && MO==UndrPhot;
-          bool promptPho5 = T==BkgPhoton && O==UndrPhot;
-          bool promptPho = promptPho1 || promptPho2 || promptPho3 || promptPho4 || promptPho5;
-
-          bool hadDecay1 = T==BkgElectron && (
-              O==DalitzDec || O==ElMagProc || O==LightMeson || O==StrangeMeson);
-          bool hadDecay2 = bkgEl_from_phoConv && MT==BkgPhoton && (
-              MO==PiZero || MO==LightMeson || MO==StrangeMeson);
-          bool hadDecay3 = bkgEl_from_EMproc &&
-              ((MT==BkgElectron && MO==StrangeMeson) || (MT==BkgPhoton && MO==PiZero));
-          bool hadDecay4 = T==BkgPhoton && (O==LightMeson || O==PiZero);
-          bool hadDecay5 = T==BkgMuon && (
-              O==LightMeson || O==StrangeMeson || O==PionDecay || O==KaonDecay);
-          bool hadDecay6 = T==Hadron;
-          bool hadDecay = hadDecay1 || hadDecay2 || hadDecay3 || hadDecay4 || hadDecay5 || hadDecay6;
-
-          bool Mu_as_e1 = (T==NonIsoElectron || T==NonIsoPhoton) && O==Mu;
-          bool Mu_as_e2 = bkgEl_from_EMproc && MT==NonIsoElectron && MO==Mu;
-          bool Mu_as_e3 = bkgEl_from_phoConv && MT==NonIsoPhoton && MO==Mu;
-          bool Mu_as_e = Mu_as_e1 || Mu_as_e2 || Mu_as_e3;
-
-          bool HF_tau1 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==TauLep;
-          bool HF_tau2 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==TauLep;
-          bool HF_tau3 =  T==NonIsoMuon && O==TauLep;
-          bool HF_tau =  HF_tau1 || HF_tau2 || HF_tau3;
-
-          bool HF_B1 = T==NonIsoElectron && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
-          bool HF_B2 = T==BkgPhoton && O==BottomMeson;
-          bool HF_B3 = bkgEl_from_phoConv && MT==BkgPhoton && MO==BottomMeson;
-          bool HF_B4 = (T==IsoMuon || T==NonIsoMuon) && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
-          bool HF_B = HF_B1 || HF_B2 || HF_B3 || HF_B4;
-
-          bool HF_C1 = T==NonIsoElectron && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
-          bool HF_C2 = T==BkgElectron && O==CCbarMeson;
-          bool HF_C3 = T==BkgPhoton && (O==CharmedMeson || O==CCbarMeson);
-          bool HF_C4 = bkgEl_from_phoConv && MT==BkgPhoton && (MO==CharmedMeson || MO==CCbarMeson);
-          bool HF_C5 = T==NonIsoMuon && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
-          bool HF_C6 = (T==IsoMuon || T==BkgMuon) && (O==CCbarMeson || MO==CCbarMeson);
-          bool HF_C =  HF_C1 || HF_C2 || HF_C3 || HF_C4 || HF_C5 || HF_C6;
-
-          if (promptEl) lep_class = 1;
-         // else if (promptChargeFlipEl) lep_class = 2;
-          else if (promptMuon) lep_class = 2;
-          else if (promptPho) lep_class = 3;
-          else if (hadDecay) lep_class = 4;
-          // Stand-in while Mother type is not available
-          else if (Mu_as_e) lep_class = 5;
-          else if (HF_tau) lep_class = 6;
-          else if (HF_B) lep_class = 7;
-          else if (HF_C) lep_class = 8;
-          else if (bkgEl_from_phoConv) lep_class = -1;
-          else if (T && O && M_ID) {
-              cout << "Unexpected Truth Class: "
-                   << "T = " << T << ", "
-                   << "O = " << O << ", "
-                   << "MT = " << MT << ", "
-                   << "MO = " << MO << ", "
-                   << "M_ID = " << M_ID << endl;
-          }
-          out.push_back(lep_class);
-        }
-        return out;
-      };
-      *superflow << SaveVar();
+        *superflow << HFTname("l_truthClass");
+        *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+            vector<int> out;
+            for(auto& lepton : m_selectLeptons) {
+                out.push_back(get_lepton_truth_class(lepton));
+            }
+            return out;
+        };
+        *superflow << SaveVar();
     }
+}
+void add_xtau_lepton_variables(Superflow* superflow) {
     // xTauFW variable
     *superflow << NewVar("leptons sign product"); {
       *superflow << HFTname("LepLepSign");
@@ -1316,10 +1180,6 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-
-    //////////////////////////////////////////////////////////////////////////////
-    // Two-lepton properties
-
     // Lepton variables
     // xTauFW variable
     *superflow << NewVar("Leading lepton pT"); {
@@ -1369,7 +1229,6 @@ void add_lepton_variables(Superflow* superflow) {
         return m_lepton1.Phi(); };
       *superflow << SaveVar();
     }
-
     *superflow << NewVar("Leading lepton invariant mass"); {
       *superflow << HFTname("MLep0");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
@@ -1384,6 +1243,79 @@ void add_lepton_variables(Superflow* superflow) {
         return m_lepton1.M(); };
       *superflow << SaveVar();
     }
+}
+void add_tau_variables(Superflow* superflow) {
+    ADD_MULTIPLICITY_VAR(preTaus)
+    ADD_MULTIPLICITY_VAR(baseTaus)
+    ADD_MULTIPLICITY_VAR(taus)
+    //////////////////////////////////////////////////////////////////////////////
+    // PreTaus
+    *superflow << NewVar("preTau charge"); {
+      *superflow << HFTname("preTau_q");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& tau : m_preTaus) {out.push_back(tau->q); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("preTau nTracks"); {
+      *superflow << HFTname("preTau_nTracks");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& tau : m_preTaus) {out.push_back(tau->nTrack); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+    // Baseline Taus
+    *superflow << NewVar("Baseline Tau pT"); {
+      *superflow << HFTname("baseTau_pT");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& tau : m_preTaus) {out.push_back(tau->Pt()); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Tau eta"); {
+      *superflow << HFTname("baseTau_eta");
+      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& tau : m_preTaus) {out.push_back(tau->Eta()); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Tau nTracks"); {
+      *superflow << HFTname("baseTau_nTracks");
+      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& tau : m_baseTaus) {out.push_back(tau->nTrack); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Baseline Tau ID (non-inclusive)"); {
+      *superflow << HFTname("baseTau_ID");
+      *superflow << [&](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& tau : m_baseTaus) {
+          if (!tau->loose) out.push_back(3);
+          else if (tau->loose && !tau->medium) out.push_back(2);
+          else if (tau->medium && !tau->tight) out.push_back(1);
+          else if (tau->tight) out.push_back(0);
+        }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+}
+void add_other_lepton_variables(Superflow* superflow) {
+    //////////////////////////////////////////////////////////////////////////////
+    // Two-lepton properties
     *superflow << NewVar("Delta eta between leptons"); {
       *superflow << HFTname("DEtaLL");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
@@ -1517,31 +1449,6 @@ void add_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-}
-void add_met_variables(Superflow* superflow) {
-  //////////////////////////////////////////////////////////////////////////////
-  // MET
-
-  // Fill MET variable inside Et var
-  TLorentzVector m_MET;
-  *superflow << NewVar("transverse missing energy (Et)"); {
-    *superflow << HFTname("MET");
-    *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
-      m_MET.SetPxPyPzE(m_met.Et*cos(m_met.phi),
-                     m_met.Et*sin(m_met.phi),
-                     0.,
-                     m_met.Et);
-      return m_MET.Pt();
-    };
-    *superflow << SaveVar();
-  }
-  *superflow << NewVar("transverse missing energy (Phi)"); {
-    *superflow << HFTname("METPhi");
-    *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
-      return m_MET.Phi();
-    };
-    *superflow << SaveVar();
-  }
 }
 void add_jet_variables(Superflow* superflow) {
     ////////////////////////////////////////////////////////////////////////////
@@ -1771,14 +1678,14 @@ void add_fake_variables(Superflow* superflow) {
     //////////////////////////////////////////////////////////////////////////////
     // 1 antiID lepton case
     *superflow << NewVar("Leading anti-ID lepton charge"); {
-      *superflow << HFTname("aID_Lep0Q");
-      *superflow << [&](Superlink* /*sl*/, var_int*) -> int {
-        if (m_lepAntiID_n < 1) return -INT_MAX;
-        // TODO: Add antiID_lep0 lepton object
-        auto* fakelep0 = m_baseLeptons.at(m_antiID_idx0);
-        return fakelep0->q;
+        *superflow << HFTname("aID_Lep0Q");
+        *superflow << [&](Superlink* /*sl*/, var_int*) -> int {
+            if (m_lepAntiID_n < 1) return -INT_MAX;
+            // TODO: Add antiID_lep0 lepton object
+            auto* fakelep0 = m_baseLeptons.at(m_antiID_idx0);
+            return fakelep0->q;
         };
-      *superflow << SaveVar();
+        *superflow << SaveVar();
     }
     *superflow << NewVar("Leading aID-lepton pT"); {
       *superflow << HFTname("aID_Lep0Pt");
@@ -2116,6 +2023,7 @@ void add_shortcut_variables_reset(Superflow* superflow) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Useful functions
 void add_fake_shortcut_variables() {
 
     vector<int> lepID_vec, lepAntiID_vec;
@@ -2182,7 +2090,6 @@ void add_fake_shortcut_variables() {
         }
     }
 }
-
 bool is_ID_lepton(Susy::Lepton* lepton) {
     for (Susy::Lepton* sig_lepton : m_signalLeptons) {
         if (lepton == sig_lepton) {
@@ -2217,6 +2124,18 @@ bool is_antiID_lepton(Susy::Lepton* lepton) {
     return pt_pass && eta_pass && passAntiID_cuts && !passID_cuts;
 }
 
+bool is_1lep_trig_matched(string trig_name, LeptonVector leptons) {
+    bool trig_matched = false;
+    for (Susy::Lepton* lep : leptons) {
+        if(!lep) continue;
+        bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, trig_name);
+        if (!trig_fired) continue;
+        bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, trig_name)
+        trig_matched = true;
+    }
+    return trig_matched;
+}
+
 void add_SFOS_lepton_cut(Superflow* superflow) {
     *superflow << CutName("SFOS leptons") << [&](Superlink* /*sl*/) -> bool {
         bool SF = m_selectLeptons.at(0)->isEle() == m_selectLeptons.at(1)->isEle();
@@ -2233,6 +2152,104 @@ void add_DFOS_lepton_cut(Superflow* superflow) {
     };
 }
 
+int get_lepton_truth_class(Susy::Lepton* lepton) {
+    if (lepton==nullptr) return -INT_MAX;
+
+    // Get Truth information
+    int T = lepton->mcType;
+    int O = lepton->mcOrigin;
+    int MO = lepton->mcBkgTruthOrigin;
+    int MT = 0; // Not stored in SusyNt::Lepton
+    int M_ID = lepton->mcBkgMotherPdgId;
+
+    using namespace MCTruthPartClassifier;
+
+    bool mother_is_el = fabs(M_ID) == 11;
+    //bool mother_is_piZero = fabs(M_ID) == 111;
+    bool bkgEl_from_phoConv = T==BkgElectron && O==PhotonConv;
+    bool bkgEl_from_EMproc = T==BkgElectron && O==ElMagProc;
+    bool fromSMBoson = O==WBoson || O==ZBoson || O==Higgs || O==DiBoson;
+    bool MfromSMBoson = MO==WBoson || MO==ZBoson || MO==Higgs || MO==DiBoson;
+    //bool noChargeFlip = M_ID*lepton->q < 0;
+    //bool chargeFlip = M_ID*lepton->q > 0;
+
+    // Defs from https://indico.cern.ch/event/725960/contributions/2987219/attachments/1641430/2621432/TruthDef_April242018.pdf
+    bool promptEl1 = T==IsoElectron; //&& noChargeFlip;
+    bool promptEl2 = (bkgEl_from_phoConv && mother_is_el); //&& noChargeFlip;
+    bool promptEl3 = bkgEl_from_EMproc && MT==IsoElectron && (MO==top || MfromSMBoson);
+    bool promptEl = promptEl1 || promptEl2 || promptEl3;
+
+    bool promptEl_from_FSR1 = bkgEl_from_phoConv && MO==FSRPhot;
+    bool promptEl_from_FSR2 = T==NonIsoPhoton && O==FSRPhot;
+    bool promptEl_from_FSR = promptEl_from_FSR1 || promptEl_from_FSR2;
+
+    //bool promptChargeFlipEl1 = T==IsoElectron && chargeFlip;
+    //bool promptChargeFlipEl2 = (bkgEl_from_phoConv && mother_is_el) && chargeFlip;
+    //bool promptChargeFlipEl = promptChargeFlipEl1 || promptChargeFlipEl2;
+
+    bool promptMuon = T==IsoMuon && (O==top || fromSMBoson || O==HiggsMSSM || O==MCTruthPartClassifier::SUSY);
+
+    bool promptPho1 = T==IsoPhoton && O==PromptPhot;
+    bool promptPho2 = bkgEl_from_phoConv && MT==IsoPhoton && MO==PromptPhot;
+    bool promptPho3 = bkgEl_from_EMproc  && MT==IsoPhoton && MO==PromptPhot;
+    bool promptPho4 = bkgEl_from_phoConv && MT==BkgPhoton && MO==UndrPhot;
+    bool promptPho5 = T==BkgPhoton && O==UndrPhot;
+    bool promptPho = promptPho1 || promptPho2 || promptPho3 || promptPho4 || promptPho5;
+
+    bool hadDecay1 = T==BkgElectron && (O==DalitzDec || O==ElMagProc || O==LightMeson || O==StrangeMeson);
+    bool hadDecay2 = bkgEl_from_phoConv && MT==BkgPhoton && (MO==PiZero || MO==LightMeson || MO==StrangeMeson);
+    bool hadDecay3 = bkgEl_from_EMproc && ((MT==BkgElectron && MO==StrangeMeson) || (MT==BkgPhoton && MO==PiZero));
+    bool hadDecay4 = T==BkgPhoton && (O==LightMeson || O==PiZero);
+    bool hadDecay5 = T==BkgMuon && (O==LightMeson || O==StrangeMeson || O==PionDecay || O==KaonDecay);
+    bool hadDecay6 = T==Hadron;
+    bool hadDecay = hadDecay1 || hadDecay2 || hadDecay3 || hadDecay4 || hadDecay5 || hadDecay6;
+
+    bool Mu_as_e1 = (T==NonIsoElectron || T==NonIsoPhoton) && O==Mu;
+    bool Mu_as_e2 = bkgEl_from_EMproc && MT==NonIsoElectron && MO==Mu;
+    bool Mu_as_e3 = bkgEl_from_phoConv && MT==NonIsoPhoton && MO==Mu;
+    bool Mu_as_e = Mu_as_e1 || Mu_as_e2 || Mu_as_e3;
+
+    bool HF_tau1 =  (T==NonIsoElectron || T==NonIsoPhoton) && O==TauLep;
+    bool HF_tau2 =  bkgEl_from_phoConv && MT==NonIsoPhoton && MO==TauLep;
+    bool HF_tau3 =  T==NonIsoMuon && O==TauLep;
+    bool HF_tau =  HF_tau1 || HF_tau2 || HF_tau3;
+
+    bool HF_B1 = T==NonIsoElectron && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
+    bool HF_B2 = T==BkgPhoton && O==BottomMeson;
+    bool HF_B3 = bkgEl_from_phoConv && MT==BkgPhoton && MO==BottomMeson;
+    bool HF_B4 = (T==IsoMuon || T==NonIsoMuon) && (O==BottomMeson || O==BBbarMeson || O==BottomBaryon);
+    bool HF_B = HF_B1 || HF_B2 || HF_B3 || HF_B4;
+
+    bool HF_C1 = T==NonIsoElectron && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
+    bool HF_C2 = T==BkgElectron && O==CCbarMeson;
+    bool HF_C3 = T==BkgPhoton && (O==CharmedMeson || O==CCbarMeson);
+    bool HF_C4 = bkgEl_from_phoConv && MT==BkgPhoton && (MO==CharmedMeson || MO==CCbarMeson);
+    bool HF_C5 = T==NonIsoMuon && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
+    bool HF_C6 = (T==IsoMuon || T==BkgMuon) && (O==CCbarMeson || MO==CCbarMeson);
+    bool HF_C =  HF_C1 || HF_C2 || HF_C3 || HF_C4 || HF_C5 || HF_C6;
+
+
+    if      (promptEl)           return 1;
+    else if (promptMuon)         return 2;
+    else if (promptPho)          return 3;
+    else if (bkgEl_from_phoConv) return 4;
+    else if (promptEl_from_FSR)  return 5;
+    else if (hadDecay)           return 6;
+    else if (Mu_as_e)            return 7;
+    else if (HF_tau)             return 8;
+    else if (HF_B)               return 9;
+    else if (HF_C)               return 10;
+    // else if (promptChargeFlipEl) return 2;
+    else if (T && O && M_ID) {
+        cout << "Unexpected Truth Class: "
+             << "T = " << T << ", "
+             << "O = " << O << ", "
+             << "MT = " << MT << ", "
+             << "MO = " << MO << ", "
+             << "M_ID = " << M_ID << endl;
+             return -1;
+    }
+}
 
 
 

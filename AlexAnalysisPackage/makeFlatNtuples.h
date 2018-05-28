@@ -53,17 +53,25 @@ void add_fake_den_lepton_cuts(Superflow* superflow);
 void add_final_cuts(Superflow* superflow, Sel sel_type);
 void add_event_variables(Superflow* superflow);
 void add_trigger_variables(Superflow* superflow);
-void add_lepton_variables(Superflow* superflow);
+void add_prelepton_variables(Superflow* superflow);
+void add_baselepton_variables(Superflow* superflow);
+void add_signallepton_variables(Superflow* superflow);
+void add_xtau_lepton_variables(Superflow* superflow);
+void add_tau_variables(Superflow* superflow);
+void add_other_lepton_variables(Superflow* superflow);
 void add_met_variables(Superflow* superflow);
 void add_jet_variables(Superflow* superflow);
 void add_fake_variables(Superflow* superflow);
 void add_shortcut_variables_reset(Superflow* superflow);
 
+
 void add_fake_shortcut_variables();
 bool is_ID_lepton(Susy::Lepton* lepton);
 bool is_antiID_lepton(Susy::Lepton* lepton);
+bool is_1lep_trig_matched(string trig_name, LeptonVector leptons);
 void add_SFOS_lepton_cut(Superflow* superflow);
 void add_DFOS_lepton_cut(Superflow* superflow);
+int get_lepton_truth_class(Susy::Lepton* lepton);
 
 // Important globals
 TChain* m_chain = new TChain("susyNt");
