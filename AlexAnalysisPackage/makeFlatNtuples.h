@@ -34,34 +34,41 @@
 enum Sel {FAKE_NUM, FAKE_DEN, BASELINE, BASE_DEN};
 
 using std::string;
+using sflow::Superflow;
 
-TChain* setup_chain();
-ApplyFakeFactor* initialize_fake_factor_tool();
+void setup_chain(TChain* chain, string iname);
+ApplyFakeFactor* initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool);
 Superflow* get_cutflow(TChain* chain, Sel sel_type);
+string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff);
+Superflow* initialize_superflow(TChain *chain, string name_suffix);
 
-//
-Superflow* initialize_superflow(TChain *chain);
-void add_xtau_cuts(Superflow* superflow, Sel sel_type);
-void add_cleaing_cuts(Superflow* superflow, Sel sel_type);
-void add_fake_var_defs(Superflow* superflow, Sel sel_type);
-void add_lepton_cuts(Superflow* superflow, Sel sel_type);
-void add_final_cuts(Superflow* superflow, Sel sel_type);
 void add_shortcut_variables(Superflow* superflow, Sel sel_type);
-void add_event_variables(Superflow* superflow, Sel sel_type);
-void add_trigger_variables(Superflow* superflow, Sel sel_type);
-void add_lepton_variables(Superflow* superflow, Sel sel_type);
-void add_met_variables(Superflow* superflow, Sel sel_type);
-void add_jet_variables(Superflow* superflow, Sel sel_type);
-void add_fake_var_defs(Superflow* superflow, Sel sel_type);
-void add_shortcut_variables_reset(Superflow* superflow, Sel sel_type);
+void add_pre_cuts(Superflow* superflow;
+void add_cleaing_cuts(Superflow* superflow);
+void add_baseline_lepton_cuts(Superflow* superflow);
+void add_baseline_den_lepton_cuts(Superflow* superflow);
+void add_fake_num_lepton_cuts(Superflow* superflow);
+void add_fake_den_lepton_cuts(Superflow* superflow);
+void add_final_cuts(Superflow* superflow, Sel sel_type);
+void add_event_variables(Superflow* superflow);
+void add_trigger_variables(Superflow* superflow);
+void add_lepton_variables(Superflow* superflow;
+void add_met_variables(Superflow* superflow);
+void add_jet_variables(Superflow* superflow);
+void add_fake_variables(Superflow* superflow);
+void add_shortcut_variables_reset(Superflow* superflow);
 
-//
+void add_fake_shortcut_variables(Superflow* superflow);
+bool is_ID_lepton(Susy::Lepton* lepton)
+bool is_antiID_lepton(Susy::Lepton* lepton)
+void add_SFOS_lepton_cut(Superflow* superflow);
+void add_DFOS_lepton_cut(Superflow* superflow);
 
 // Important globals
 TChain* m_chain = new TChain("susyNt");
 ApplyFakeFactor* m_applyFakeFactorTool = new ApplyFakeFactor("FF_tool");
 
-bool m_do_fakes = false;
+bool m_denominator_selection = false;
 
 // TODO: Final check on globals
 // Search by removing m_ and see if anything turns up in search
@@ -84,7 +91,7 @@ TauVector m_baseTaus;
 TauVector m_signalTaus;
 Susy::Met  m_met;
 
-uint m_lepID_n = 0,
+uint m_lepID_n = 0;
 uint m_lepAntiID_n = 0;
 int m_antiID_idx0 = -1;  // TODO: Change to a Susy::Lepton m_antiID_lep0
 int m_antiID_idx1 = -1;  // TODO: Change to a Susy::Lepton m_antiID_lep1
@@ -118,7 +125,7 @@ TLorentzVector m_JetP4, m_Jet1, m_Jet0;
 // Configuration settings
 ////////////////////////////////////////////////////////////////////////////////
 
-SuperflowRunMode m_run_mode = SuperflowRunMode::nominal; ///< The mode in which
+SuperflowRunMode m_run_mode = SuperflowRunMode::nominal;  ///< The mode in which
             ///< Superflow will process events (e.g. compute weights or not)
 
 ////////////////////////////////////////////////////////////////////////////////
