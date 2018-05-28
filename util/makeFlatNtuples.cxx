@@ -15,7 +15,13 @@
 
 #include "AlexAnalysisPackage/makeFlatNtuples.h"
 
-using std::string, std::cout, std::cerr, std::vector;
+using std::string;
+using std::cout;
+using std::cerr;
+using std::vector;
+
+// Various superflow classes 
+using namespace sflow;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Declarations
@@ -67,7 +73,7 @@ struct Args {
     string PROG_NAME;  // always required
 
     // Required arguments
-    string ifile_name;  ///< Input file name
+    string input_name;  ///< Input file name
 
     // Optional arguments with defaults
     unsigned int n_events  = -1; ///< number of events processed
@@ -76,20 +82,15 @@ struct Args {
     bool baseline_den = false;  ///< Apply baseline denominator selection
     bool fake_num = false;  ///< Apply fake numerator selection
     bool fake_den = false;  ///< Apply fake denominator selection
-    bool apply_ff = false; ///< TODO: change to apply_ff
-    // TODO:
-    // fake_num, fake_den, -fake_est, -base_sel
-    // Produces ntuples for up to 4 options
-    // no option -> base_sel, fake option -> base_sel = false unless explicitely requested
+    bool apply_ff = false; ///< Apply fake factor event weight to denominator events 
 
     ////////////////////////////////////////////////////////////////////////////
     // Print information
-    // TODO: remove single char option for fake stuff
     ////////////////////////////////////////////////////////////////////////////
     void print_usage() const {
         printf("===========================================================\n");
         printf(" %s\n", PROG_NAME.c_str());
-        printf(" TODO : Brief description of executable\n");
+        printf(" Makeing analysis flat ntuples from SusyNts\n");
         printf("===========================================================\n");
         printf("Required Parameters:\n");
         printf("\t-i, --input     Input file name\n");
@@ -109,7 +110,7 @@ struct Args {
         printf("===========================================================\n");
         printf(" %s Configuration\n", PROG_NAME.c_str());
         printf("===========================================================\n");
-        printf("\tInput file name : %s\n", ifile_name.c_str());
+        printf("\tInput file name : %s\n", input_name.c_str());
         printf("\tnevents         : %i\n", n_events);
         printf("\tsuffix          : %s\n", name_suffix.c_str());
         printf("\tbaseline_sel    : %i\n", baseline_sel);
@@ -136,9 +137,9 @@ struct Args {
 
             // Check for required arguments
             if (arg == "-i" || arg == "--input") {
-                ifile_name = arg_value;
+                input_name = arg_value;
             } else if (arg == "-n" || arg == "--nevents") {
-                n_events = arg_value;
+                n_events = atoi(arg_value.c_str());
             } else if (arg == "-s" || arg == "--suffix") {
                 name_suffix = true;
             } else if (arg == "--baseline_sel") {
@@ -162,13 +163,10 @@ struct Args {
         }
 
         // Check arguments
-        bool denominator_selection = baseline_den || fake_den;
-        bool numerator_selection = baseline_sel || fake_num;
-
-        if (ifile_name.size() == 0) {
+        if (input_name.size() == 0) {
             cerr << "ERROR :: No input source given\n";
             return false;
-        } else if (apply_ff && !denominator_selection) {
+        } else if (apply_ff && !(baseline_den || fake_den)) {
             cerr << "ERROR :: trying to apply fake factor without using any "
                  << "denominator selection options\n";
             return false;
@@ -191,7 +189,7 @@ int main(int argc, char* argv[]) {
         // Failed to parse arguments or help requested
         return 1;
     }
-    m_denominator_selection = args.fake_den || args.base_den;
+    m_denominator_selection = args.fake_den || args.baseline_den;
 
     cout << "TESTING :: Stop here to check" << std::endl;
     return 0;
@@ -205,28 +203,29 @@ int main(int argc, char* argv[]) {
 
 
     vector<Superflow*> superflows;
-    if (base_sel) {
-        superflows.push_back(get_cutflow(m_chain, BASE_SEL))
+    if (args.baseline_sel) {
+        superflows.push_back(get_cutflow(m_chain, BASELINE));
     } else if (args.fake_num) {
-        superflows.push_back(get_cutflow(m_chain, FAKE_NUM))
+        superflows.push_back(get_cutflow(m_chain, FAKE_NUM));
     } else if (args.fake_den) {
-        superflows.push_back(get_cutflow(m_chain, FAKE_DEN))
-    } else if (args.base_den) {
-        superflows.push_back(get_cutflow(m_chain, BASE_DEN))
+        superflows.push_back(get_cutflow(m_chain, FAKE_DEN));
+    } else if (args.baseline_den) {
+        superflows.push_back(get_cutflow(m_chain, BASE_DEN));
     } else {
         cout << "ERROR :: No configuration for that region yet\n";
         //TODO: ttbar, zll, W+jets, Diboson, Ztautau
     }
 
     // Run the chosen cutflows
-    for (uint ii = 0; ii < superflows.size(); i++) {
-        printf("\n\n [%d/%d] Running cutflow \n\n",ii+1, superflows.size())
-        Superflow *sf = superflows.at(ii)
-        chain->Process(sf, input_name, n_events, n_skip_events);
+    for (uint ii = 0; ii < superflows.size(); ii++) {
+        printf("\n\n [%u/%lu] Running cutflow \n\n",ii+1, superflows.size());
+        Superflow *sf = superflows.at(ii);
+        // TODO: Add m_first_entry to user args
+        m_chain->Process(sf, args.input_name.c_str(), args.n_events);//, n_skip_events);
         delete sf;
-        delete chain;
     }
-    superflows.clear()
+    delete m_chain;
+    superflows.clear();
     cout << "\n====== SUCCESSFULLY RAN " << argv[0] << " ====== \n";
     return 0;
 }
@@ -249,14 +248,11 @@ void setup_chain(TChain* chain, string iname) {
     } else if (inputIsDir) {
         ChainHelper::addFileDir(chain, iname);
     } else {
-        printf("ERROR (initialize_chain) :: Unrecognized input %s", iname);
-        return 0;
+        printf("ERROR (initialize_chain) :: Unrecognized input %s", iname.c_str());
     }
 }
 
-ApplyFakeFactor* initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool) {
-    //////////////////////////////////////////////////////////////////////////////
-    // Initialize relevant fake variables. Set inside cutflow
+void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool) {
     applyFakeFactorTool->set_savedFakeFactorFileName(m_fake_path);
     applyFakeFactorTool->set_saved_elFakeFactorName(m_el_FF_hist);
     applyFakeFactorTool->set_saved_muFakeFactorName(m_mu_FF_hist);
@@ -282,16 +278,17 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
 
     ////////////////////////////////////////////////////////////////////////////
     // Add cuts
-    add_pre_cuts(superflow);
+    add_pre_cuts(superflow, sel_type);
     add_cleaing_cuts(superflow);
-    if (sel_type = BASELINE) {
+    if (sel_type == BASELINE) {
         add_baseline_lepton_cuts(superflow);
-    } else if (self_type = BASE_DEN) {
+    } else if (sel_type == BASE_DEN) {
         add_baseline_den_lepton_cuts(superflow);
-    } else if (sel_type = FAKE_NUM) {
+    } else if (sel_type == FAKE_NUM) {
         add_fake_num_lepton_cuts(superflow);
-    } else if (sel_type = FAKE_DEN) {
+    } else if (sel_type == FAKE_DEN) {
         add_fake_den_lepton_cuts(superflow);
+    }
 
     add_final_cuts(superflow, sel_type);
 
@@ -299,11 +296,10 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
     // Add superflow variables
     add_event_variables(superflow);
     add_trigger_variables(superflow);
-    add_lepton_variables(superflow);
-
     add_met_variables(superflow);
+    add_lepton_variables(superflow);
     add_jet_variables(superflow);
-    add_fake_variables(superflow, sel_type);
+    add_fake_variables(superflow);
 
     ////////////////////////////////////////////////////////////////////////////
     // Reset helpful variables
@@ -319,14 +315,14 @@ string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff) {
 
     if (user_suffix != "") full_suffix += "_";
 
-    if (apply_ff) full_suffix += 'fakes_';
+    if (apply_ff) full_suffix += "fakes_";
 
-    if (sel_type = FAKE_NUM) full_suffix += "zjets_num";
-    else if (sel_type = FAKE_DEN) full_suffix += "zjets_den";
-    else if (sel_type = BASE_SEL) full_suffix +=
-    else if (self_type = BASE_DEN) full_suffix += "baseline_den";
+    if (sel_type == FAKE_NUM) full_suffix += "zjets_num";
+    else if (sel_type == FAKE_DEN) full_suffix += "zjets_den";
+    else if (sel_type == BASELINE) full_suffix += "baseline";
+    else if (sel_type == BASE_DEN) full_suffix += "baseline_den";
 
-    return full_suffix
+    return full_suffix;
 }
 
 Superflow* initialize_superflow(TChain *chain, string name_suffix) {
@@ -374,7 +370,7 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
 
         ////////////////////////////////////////////////////////////////////////
         // Fake shortcuts
-        add_fake_shortcut_variables(superflow, sel_type);
+        add_fake_shortcut_variables();
 
         if (m_signalLeptons.size() >= 1) m_lepton0 = *m_signalLeptons.at(0);
         if (m_signalLeptons.size() >= 2) m_lepton1 = *m_signalLeptons.at(1);
@@ -420,16 +416,16 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         std::sort(m_forwardJets.begin(), m_forwardJets.end(), comparePt);
 
         return true; // All events pass this cut
-    }
+    };
 }
 
-void add_pre_cuts(Superflow* superflow) {
+void add_pre_cuts(Superflow* superflow, Sel sel_type) {
   // All events before cuts
   *superflow << CutName("read in") << [](Superlink* /*sl*/) -> bool { return true; };
 
   // xTauFW Cut
-  if (!do_fakes_zjets) {
-    *superflow << CutName("xTau: 2+ Loose Leptons") << [&](Superlink* sl) -> bool {
+  if (sel_type == BASELINE || sel_type == BASE_DEN) {
+    *superflow << CutName("xTau: 2+ Loose Leptons") << [&](Superlink* /*sl*/) -> bool {
         uint nLooseLeptons = 0;
         for (const auto* mu : m_preMuons) {if (mu->loose) nLooseLeptons++;}
         for (const auto* ele : m_preElectrons) {if (ele->looseLLH) nLooseLeptons++;}
@@ -456,10 +452,10 @@ void add_cleaing_cuts(Superflow* superflow) {
 }
 
 void add_baseline_lepton_cuts(Superflow* superflow) {
-    *superflow << CutName("nBaselineLep = nSignalLep") << [](Superlink* sl) -> bool {
-        return (m_signalLeptons.size() == m_baseLeptons->size());
+    *superflow << CutName("nBaselineLep = nSignalLep") << [](Superlink* /*sl*/) -> bool {
+        return (m_signalLeptons.size() == m_baseLeptons.size());
     };
-    *superflow << CutName("2+ leptons") << [](Superlink* sl) -> bool {
+    *superflow << CutName("2+ leptons") << [](Superlink* /*sl*/) -> bool {
         return (m_signalLeptons.size() >= 2);
     };
     add_DFOS_lepton_cut(superflow);
@@ -485,17 +481,17 @@ void add_fake_den_lepton_cuts(Superflow* superflow) {
 
 void add_final_cuts(Superflow* superflow, Sel sel_type) {
     *superflow << CutName("pass good vertex") << [&](Superlink* sl) -> bool {
-        return (sl->tools->passGoodVtx(cutflags));
+        return (sl->tools->passGoodVtx(m_cutflags));
     };
     *superflow << CutName("jet cleaning") << [&](Superlink* sl) -> bool {
         return (sl->tools->passJetCleaning(&m_baseJets));
     };
     if (sel_type == BASELINE) {
-      *superflow << CutName("2 leptons") << [](Superlink* sl) -> bool {
+      *superflow << CutName("2 leptons") << [](Superlink* /*sl*/) -> bool {
           return (m_signalLeptons.size() == 2);
       };
     }
-    *superflow << CutName("Tau veto") << [](Superlink* sl) -> bool {
+    *superflow << CutName("Tau veto") << [](Superlink* /*sl*/) -> bool {
         return (m_signalTaus.size() == 0);
     };
 }
@@ -558,7 +554,6 @@ void add_trigger_variables(Superflow* superflow) {
   // TODO: Add to SusyNts HLT_2mu10)
 
   // Single Electron Triggers
-  // TODO: Trigger match a provided vector of electrons instead of just one
   ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, m_el0)
   ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, m_el0)
   ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, m_el0)
@@ -1474,7 +1469,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("DphiLep0MET");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 1) return -DBL_MAX;
-          return m_lepton0.DeltaPhi(MET);
+          return m_lepton0.DeltaPhi(m_MET);
       };
       *superflow << SaveVar();
     }
@@ -1485,7 +1480,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("DphiLep1MET");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 2) return -DBL_MAX;
-          return m_lepton1.DeltaPhi(MET);
+          return m_lepton1.DeltaPhi(m_MET);
       };
       *superflow << SaveVar();
     }
@@ -1493,7 +1488,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("MtLep0");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 1) return -DBL_MAX;
-          return sqrt( 2*m_lepton0.Pt()*MET.Pt()*(1-cos (m_lepton0.DeltaPhi(MET)) ) );
+          return sqrt( 2*m_lepton0.Pt()*m_MET.Pt()*(1-cos (m_lepton0.DeltaPhi(m_MET)) ) );
       };
       *superflow << SaveVar();
     }
@@ -1501,7 +1496,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("MtLep1");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 2) return -DBL_MAX;
-          return sqrt( 2*m_lepton1.Pt()*MET.Pt()*(1-cos (m_lepton1.DeltaPhi(MET)) ) );
+          return sqrt( 2*m_lepton1.Pt()*m_MET.Pt()*(1-cos (m_lepton1.DeltaPhi(m_MET)) ) );
       };
       *superflow << SaveVar();
     }
@@ -1509,7 +1504,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("tau_pT");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 2) return -DBL_MAX;
-          return (MET + m_lepton1).Pt();
+          return (m_MET + m_lepton1).Pt();
       };
       *superflow << SaveVar();
     }
@@ -1517,7 +1512,7 @@ void add_lepton_variables(Superflow* superflow) {
       *superflow << HFTname("taulep1_pT_ratio");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_signalLeptons.size() < 2) return -DBL_MAX;
-          TLorentzVector tau_estimate = MET + m_lepton1;
+          TLorentzVector tau_estimate = m_MET + m_lepton1;
           return tau_estimate.Pt() / m_lepton0.Pt();
       };
       *superflow << SaveVar();
@@ -1528,22 +1523,22 @@ void add_met_variables(Superflow* superflow) {
   // MET
 
   // Fill MET variable inside Et var
-  TLorentzVector MET;
+  TLorentzVector m_MET;
   *superflow << NewVar("transverse missing energy (Et)"); {
     *superflow << HFTname("MET");
-    *superflow << [&](Superlink* sl, var_double*) -> double {
-      MET.SetPxPyPzE(m_met.Et*cos(m_met.phi),
+    *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
+      m_MET.SetPxPyPzE(m_met.Et*cos(m_met.phi),
                      m_met.Et*sin(m_met.phi),
                      0.,
                      m_met.Et);
-      return MET.Pt();
+      return m_MET.Pt();
     };
     *superflow << SaveVar();
   }
   *superflow << NewVar("transverse missing energy (Phi)"); {
     *superflow << HFTname("METPhi");
     *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
-      return MET.Phi();
+      return m_MET.Phi();
     };
     *superflow << SaveVar();
   }
@@ -1810,7 +1805,7 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("aID_MtLep0");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_lepAntiID_n < 1) return -DBL_MAX;
-          return sqrt( 2*m_LepFake0.Pt()*MET.Pt()*(1-cos (m_LepFake0.DeltaPhi(MET)) ) );
+          return sqrt( 2*m_LepFake0.Pt()*m_MET.Pt()*(1-cos (m_LepFake0.DeltaPhi(m_MET)) ) );
       };
       *superflow << SaveVar();
     }
@@ -1909,7 +1904,7 @@ void add_fake_variables(Superflow* superflow) {
     *superflow << NewVar("DeltaPhi of Non-Z lep and MET"); {
       *superflow << HFTname("Z_Lep2_dPhi_MET");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->DeltaPhi(MET);
+        if (m_Zlep.at(2)) return m_Zlep.at(2)->DeltaPhi(m_MET);
         return -DBL_MAX;
       };
       *superflow << SaveVar();
@@ -1918,7 +1913,7 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("Z_Lep2_mT");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
         if (m_Zlep.at(2)) {
-            return sqrt( 2*m_Zlep.at(2)->Pt()*MET.Pt()*(1-cos (m_Zlep.at(2)->DeltaPhi(MET)) ) );
+            return sqrt( 2*m_Zlep.at(2)->Pt()*m_MET.Pt()*(1-cos (m_Zlep.at(2)->DeltaPhi(m_MET)) ) );
         }
         return -DBL_MAX;
       };
@@ -2096,13 +2091,15 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("aID2_MtLep1");
       *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
           if (m_lepAntiID_n < 2) return -DBL_MAX;
-          return sqrt( 2*m_LepFake1.Pt()*MET.Pt()*(1-cos (m_LepFake1.DeltaPhi(MET)) ) );
+          return sqrt( 2*m_LepFake1.Pt()*m_MET.Pt()*(1-cos (m_LepFake1.DeltaPhi(m_MET)) ) );
       };
       *superflow << SaveVar();
     }
 }
 void add_shortcut_variables_reset(Superflow* superflow) {
   *superflow << [&](Superlink* /*sl*/, var_void*) {
+    m_cutflags = 0;
+    m_met.clear(); m_MET = {};
     m_preLeptons.clear(); m_baseLeptons.clear(); m_signalLeptons.clear(), m_selectLeptons.clear();
     m_preElectrons.clear(); m_baseElectrons.clear(); m_signalElectrons.clear();
     m_preMuons.clear(); m_baseMuons.clear(); m_signalMuons.clear();
@@ -2119,47 +2116,75 @@ void add_shortcut_variables_reset(Superflow* superflow) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void add_fake_shortcut_variables(Superflow* superflow) {
+void add_fake_shortcut_variables() {
 
+    vector<int> lepID_vec, lepAntiID_vec;
     // ID Leptons - same as signal leptons
     for (Susy::Lepton* lepton : m_baseLeptons) {
-      if (is_ID_lepton(lepton)) m_lepID_n++;
+        bool lepID_bool = is_ID_lepton(lepton);
+        lepID_vec.push_back(lepID_bool);
+        if (lepID_bool) m_lepID_n++;
     }
     // Anti-ID Leptons
     for (Susy::Lepton* lepton : m_baseLeptons) {
-      if (is_antiID_lepton(lepton)) m_lepAntiID_n++;
+        bool lepAntiID_bool = is_antiID_lepton(lepton);
+        lepAntiID_vec.push_back(lepAntiID_bool);
+      if (lepAntiID_bool) m_lepAntiID_n++;
     }
 
     std::vector<int>::iterator begin = lepAntiID_vec.begin();
     std::vector<int>::iterator end = lepAntiID_vec.end();
     if (m_lepAntiID_n >= 1) {
       m_antiID_idx0 = std::find(begin, end, true) - begin;
-      m_LepFake0 = m_baseLeptons.at(m_antiID_idx0);
+      m_LepFake0 = *m_baseLeptons.at(m_antiID_idx0);
     }
     if (m_lepAntiID_n >= 2) {
       m_antiID_idx1 = std::find(begin + m_antiID_idx0 + 1, end, true) - begin;
-      m_LepFake1 = m_baseLeptons.at(m_antiID_idx1);
+      m_LepFake1 = *m_baseLeptons.at(m_antiID_idx1);
     }
 
     // Find ID lepton combination with MLL closest to Z-peak
     float Z_diff = FLT_MAX;
     int zlep_idx2 = -1;
-    for (uint ii = 0; ii < m_signalLeptons.size(); ++ii) {.at(1] = lep_jj;
+    for (uint ii = 0; ii < m_signalLeptons.size(); ++ii) {
+        Susy::Lepton *lep_ii = m_signalLeptons.at(ii);
+        for (uint jj = ii+1; jj < m_signalLeptons.size(); ++jj) {
+            Susy::Lepton *lep_jj = m_signalLeptons.at(jj);
+            float Z_diff_cf = fabs((*lep_ii+*lep_jj).M() - 91.2);
+            if (Z_diff_cf < Z_diff) {
+                Z_diff = Z_diff_cf;
+                m_Zlep.at(0) = lep_ii;
+                m_Zlep.at(1) = lep_jj;
                 zlep_idx2 = ii > 0 ? 0 : jj > 1 ? 1 : 2;
             }
-        })    }
-
-    if (m_signalLeptons.size() == 2 && m_lepAntiID_n >= 1) {.at(2] = m_baseLeptons.at(m_antiID_idx0);)    } else if (m_signalLeptons.size() >= 3) {.at(2] = m_signalLeptons.at(zlep_idx2);)    }
-    // Find base lepton combination with MLL closest to Zpeak
+        }
+    }
+    if (m_signalLeptons.size() == 2 && m_lepAntiID_n >= 1) {
+        m_Zlep.at(2) = m_baseLeptons.at(m_antiID_idx0);
+    } else if (m_signalLeptons.size() >= 3) {
+        m_Zlep.at(2) = m_signalLeptons.at(zlep_idx2);
+    }
+    // Find base lepton combination with MLL closest to Z-peak
     // Exclude ID leptons already matched with Z
     Z_diff = FLT_MAX;
-    for (uint ii = 0; ii < m_baseLeptons.size(); ++ii) {.at(4] = lep_jj;
+    for (uint ii = 0; ii < m_baseLeptons.size(); ++ii) {
+        Susy::Lepton *lep_ii = m_baseLeptons.at(ii);
+        if (lep_ii == m_Zlep.at(0) || lep_ii == m_Zlep.at(1)) continue;
+        for (uint jj = ii+1; jj < m_baseLeptons.size(); ++jj) {
+            Susy::Lepton *lep_jj = m_baseLeptons.at(jj);
+            if (lep_jj == m_Zlep.at(0) || lep_jj == m_Zlep.at(1)) continue;
+            float Z_diff_cf = fabs((*lep_ii+*lep_jj).M() - 91.2);
+            if (Z_diff_cf < Z_diff) {
+                Z_diff = Z_diff_cf;
+                m_Zlep.at(3) = lep_ii;
+                m_Zlep.at(4) = lep_jj;
             }
-        })    }
+        }
+    }
 }
 
 bool is_ID_lepton(Susy::Lepton* lepton) {
-    for (Susy::lepton* sig_lepton : m_signalLeptons) {
+    for (Susy::Lepton* sig_lepton : m_signalLeptons) {
         if (lepton == sig_lepton) {
             return true;
         }
@@ -2193,7 +2218,7 @@ bool is_antiID_lepton(Susy::Lepton* lepton) {
 }
 
 void add_SFOS_lepton_cut(Superflow* superflow) {
-    *superflow << CutName("SFOS leptons") << [&](Superlink /*sl*/) -> bool {
+    *superflow << CutName("SFOS leptons") << [&](Superlink* /*sl*/) -> bool {
         bool SF = m_selectLeptons.at(0)->isEle() == m_selectLeptons.at(1)->isEle();
         bool OS = m_selectLeptons.at(0)->q != m_selectLeptons.at(1)->q;
         return SF && OS;
@@ -2201,7 +2226,7 @@ void add_SFOS_lepton_cut(Superflow* superflow) {
 }
 
 void add_DFOS_lepton_cut(Superflow* superflow) {
-    *superflow << CutName("DFOS leptons") << [&](Superlink* sl) -> bool {
+    *superflow << CutName("DFOS leptons") << [&](Superlink* /*sl*/) -> bool {
         bool DF = m_selectLeptons.at(0)->isEle() != m_selectLeptons.at(1)->isEle();
         bool OS = m_selectLeptons.at(0)->q != m_selectLeptons.at(1)->q;
         return DF && OS;
