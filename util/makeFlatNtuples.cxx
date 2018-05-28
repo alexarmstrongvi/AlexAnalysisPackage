@@ -32,7 +32,7 @@ using namespace sflow;
 //    *superflow << NewVar(#trig_name" trigger bit"); { \
 //        *superflow << HFTname(#trig_name); \
 //        *superflow << [&](Superlink* sl, var_bool*) -> bool { \
-//            return is_1lep_trig_matched(#trig_name, leptons) \
+//            return is_1lep_trig_matched(sl, #trig_name, leptons) \
 //        *superflow << SaveVar(); \
 //    } \
 //}
@@ -205,8 +205,6 @@ int main(int argc, char* argv[]) {
     }
     m_denominator_selection = args.fake_den || args.baseline_den;
 
-    cout << "TESTING :: Stop here to check" << std::endl;
-    return 0;
     ////////////////////////////////////////////////////////////////////////////
     // Main implementation
     ////////////////////////////////////////////////////////////////////////////
@@ -217,13 +215,17 @@ int main(int argc, char* argv[]) {
 
     vector<Superflow*> superflows;
     if (args.baseline_sel) {
+        cout << "\n\n Creating baseline cutflow \n\n";
         superflows.push_back(get_cutflow(m_chain, BASELINE));
-    } else if (args.fake_num) {
-        superflows.push_back(get_cutflow(m_chain, FAKE_NUM));
-    } else if (args.fake_den) {
-        superflows.push_back(get_cutflow(m_chain, FAKE_DEN));
     } else if (args.baseline_den) {
+        cout << "\n\n Creating baseline denominator cutflow \n\n";
         superflows.push_back(get_cutflow(m_chain, BASE_DEN));
+    } else if (args.fake_den) {
+        cout << "\n\n Creating Z+jets denominator cutflow \n\n";
+        superflows.push_back(get_cutflow(m_chain, FAKE_DEN));
+    } else if (args.fake_num) {
+        cout << "\n\n Creating Z+jets numerator cutflow \n\n";
+        superflows.push_back(get_cutflow(m_chain, FAKE_NUM));
     } else {
         cout << "ERROR :: No configuration for that region yet\n";
         //TODO: ttbar, zll, W+jets, Diboson, Ztautau
@@ -597,7 +599,6 @@ void add_met_variables(Superflow* superflow) {
   // MET
 
   // Fill MET variable inside Et var
-  TLorentzVector m_MET;
   *superflow << NewVar("transverse missing energy (Et)"); {
     *superflow << HFTname("MET");
     *superflow << [&](Superlink* /*sl*/, var_double*) -> double {
@@ -889,12 +890,12 @@ void add_signallepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("dRy(sigEl, baseMu not Calo)"); {
       *superflow << HFTname("dRy_sEl_bMu_noCalo");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      *superflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
         vector<double> out;
         for (auto& el : m_signalElectrons) {
           for (auto& mu : m_preMuons) {
-            if (!sl->tools->muonSelector()->isBaseline(mu)) continue;
-            if (sl->tools->muonSelector()->isSignal(mu)) continue;
+            if (!sl->tools->muonSelector().isBaseline(mu)) continue;
+            if (sl->tools->muonSelector().isSignal(mu)) continue;
             if (mu->isCaloTagged) continue;
             out.push_back(el->DeltaRy(*mu));
           }
@@ -905,12 +906,12 @@ void add_signallepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("dRy(sigEl, baseMu CaloTag)"); {
       *superflow << HFTname("dRy_sEl_bMu_Calo");
-      *superflow << [&](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+      *superflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
         vector<double> out;
         for (auto& el : m_signalElectrons) {
           for (auto& mu : m_preMuons) {
-            if (!sl->tools->muonSelector()->isBaseline(mu)) continue;
-            if (sl->tools->muonSelector()->isSignal(mu)) continue;
+            if (!sl->tools->muonSelector().isBaseline(mu)) continue;
+            if (sl->tools->muonSelector().isSignal(mu)) continue;
             if (!mu->isCaloTagged) continue;
             out.push_back(el->DeltaRy(*mu));
           }
@@ -2124,16 +2125,16 @@ bool is_antiID_lepton(Susy::Lepton* lepton) {
     return pt_pass && eta_pass && passAntiID_cuts && !passID_cuts;
 }
 
-bool is_1lep_trig_matched(string trig_name, LeptonVector leptons) {
-    bool trig_matched = false;
+bool is_1lep_trig_matched(Superlink* sl, string trig_name, LeptonVector leptons) {
     for (Susy::Lepton* lep : leptons) {
         if(!lep) continue;
         bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, trig_name);
         if (!trig_fired) continue;
-        bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, trig_name)
-        trig_matched = true;
+        bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, trig_name);
+        if (trig_matched) return true
+
     }
-    return trig_matched;
+    return false;
 }
 
 void add_SFOS_lepton_cut(Superflow* superflow) {
@@ -2247,8 +2248,8 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
              << "MT = " << MT << ", "
              << "MO = " << MO << ", "
              << "M_ID = " << M_ID << endl;
-             return -1;
     }
+    return -1;
 }
 
 
