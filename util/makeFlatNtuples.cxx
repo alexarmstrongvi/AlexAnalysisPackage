@@ -93,6 +93,7 @@ struct Args {
     bool baseline_den = false;  ///< Apply baseline denominator selection
     bool fake_num = false;  ///< Apply fake numerator selection
     bool fake_den = false;  ///< Apply fake denominator selection
+    bool zll_cr = false;  ///< Apply fake denominator selection
     bool apply_ff = false; ///< Apply fake factor event weight to denominator events
 
     ////////////////////////////////////////////////////////////////////////////
@@ -113,6 +114,7 @@ struct Args {
         printf("\t--baseline_den  use baseline denominator event selection \n");
         printf("\t--fake_num      use Z+jets numerator event selection \n");
         printf("\t--fake_den      use Z+jets denominator event selection \n");
+        printf("\t--zll_cr        use Zll CR event selection \n");
         printf("\t--apply_ff      apply fake factor to denominator events\n");
         printf("\t-h, --help      print this help message\n");
         printf("===========================================================\n");
@@ -130,6 +132,7 @@ struct Args {
         printf("\tbaseline_den    : %i\n", baseline_den);
         printf("\tfake_num        : %i\n", fake_num);
         printf("\tfake_den        : %i\n", fake_den);
+        printf("\tzll_cr          : %i\n", zll_cr);
         printf("\tapply_ff        : %i\n", apply_ff);
         printf("===========================================================\n");
     }
@@ -157,14 +160,11 @@ struct Args {
                 n_skipped = atoi(arg_value.c_str());
             } else if (arg == "-s" || arg == "--suffix") {
                 name_suffix = true;
-            } else if (arg == "--baseline_sel") {
-                baseline_sel = true;
-            } else if (arg == "--baseline_den") {
-                baseline_den = true;
-            } else if (arg == "--fake_num") {
-                fake_num = true;
-            } else if (arg == "--fake_den") {
-                fake_den = true;
+            } else if (arg == "--baseline_sel") {baseline_sel = true;
+            } else if (arg == "--baseline_den") {baseline_den = true;
+            } else if (arg == "--fake_num") {fake_num = true;
+            } else if (arg == "--fake_den") {fake_den = true;
+            } else if (arg == "--zll_cr") {zll_cr = true;
             } else if (arg == "--apply_ff") {
                 apply_ff = true;
             } else if (arg == "-h" || arg == "--help") {
@@ -217,31 +217,27 @@ int main(int argc, char* argv[]) {
 
     // Run the chosen cutflows
     if (args.baseline_sel) {
-        cout << "\n\n Creating baseline cutflow \n\n";
-        Superflow* sf = get_cutflow(m_chain, BASELINE);
-        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
-        delete sf; sf = 0;
+        cout << "\n\n Running baseline cutflow \n\n";
+        run_superflow(BASELINE);
     }
     if (args.baseline_den) {
-        cout << "\n\n Creating baseline denominator cutflow \n\n";
-        Superflow* sf = get_cutflow(m_chain, BASE_DEN);
-        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
-        delete sf; sf = 0;
+        cout << "\n\n Running baseline denominator cutflow \n\n";
+        run_superflow(BASE_DEN);
     }
     if (args.fake_den) {
-        cout << "\n\n Creating Z+jets denominator cutflow \n\n";
-        Superflow* sf = get_cutflow(m_chain, FAKE_DEN);
-        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
-        delete sf; sf = 0;
+        cout << "\n\n Running Z+jets denominator cutflow \n\n";
+        run_superflow(FAKE_DEN);
     }
     if (args.fake_num) {
-        cout << "\n\n Creating Z+jets numerator cutflow \n\n";
-        Superflow* sf = get_cutflow(m_chain, FAKE_NUM);
-        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
-        delete sf; sf = 0;
+        cout << "\n\n Running Z+jets numerator cutflow \n\n";
+        run_superflow(FAKE_NUM);
     }
-    
-    //TODO: ttbar, zll, W+jets, Diboson, Ztautau Regions
+    if (args.zll_cr) {
+        cout << "\n\n Running ZLL CR cutflow \n\n";
+        run_superflow(ZLL_CR);
+    }
+
+    //TODO: ttbar, W+jets, Diboson, Ztautau Regions
 
     delete m_chain;
     cout << "\n====== SUCCESSFULLY RAN " << argv[0] << " ====== \n";
@@ -277,6 +273,12 @@ void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool) {
     applyFakeFactorTool->initialize().ignore();
 }
 
+void run_superflow(Sel sel_type) {
+    Superflow* sf = get_cutflow(m_chain, sel_type);
+    m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
+    delete sf; sf = 0;
+}
+
 Superflow* get_cutflow(TChain* chain, Sel sel_type) {
     args.name_suffix = determine_suffix(args.name_suffix, sel_type, args.apply_ff);
 
@@ -306,6 +308,8 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
         add_fake_num_lepton_cuts(superflow);
     } else if (sel_type == FAKE_DEN) {
         add_fake_den_lepton_cuts(superflow);
+    } else if (sel_type == ZLL_CR) {
+        add_zll_cr_lepton_cuts(superflow);
     }
 
     add_final_cuts(superflow, sel_type);
@@ -343,6 +347,7 @@ string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff) {
     else if (sel_type == FAKE_DEN) full_suffix += "zjets_den";
     else if (sel_type == BASELINE) full_suffix += "baseline";
     else if (sel_type == BASE_DEN) full_suffix += "baseline_den";
+    else if (sel_type == ZLL_CR) full_suffix += "zll_cr";
 
     return full_suffix;
 }
@@ -387,15 +392,25 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
             m_triggerLeptons.push_back(m_Zlep.at(1));
         } else if (sel_type == BASELINE ) {
             m_selectLeptons = *sl->leptons;
-            if (sl->leptons->size() > 0) m_triggerLeptons.push_back(sl->leptons->at(0));
+            if (sl->leptons->size() > 0) {
+                m_triggerLeptons.push_back(sl->leptons->at(0));
+            }
         } else if (sel_type == BASE_DEN){
             // TODO: add function to return vector of leptons for this selection
             cout << "ERROR :: Not configured for this region yet\n";
+        } else if (sel_type == ZLL_CR) {
+            m_selectLeptons = *sl->leptons;
+            if (sl->leptons->size() > 0) {
+                m_triggerLeptons.push_back(sl->leptons->at(0));
+            }
+            if (sl->leptons->size() > 1) {
+                m_triggerLeptons.push_back(sl->leptons->at(1));
+            }
         } else {
             cout << "ERROR :: Region configuration not yet defined\n";
         }
-            
-            
+
+
             // TODO: Add case of baseline denominator
 
         int n_selectleps = 0;
@@ -504,6 +519,12 @@ void add_fake_den_lepton_cuts(Superflow* superflow) {
     };
     add_SFOS_lepton_cut(superflow);
 }
+void add_zll_cr_lepton_cuts(Superflow* superflow) {
+    *superflow << CutName("2-ID Leptons") << [=](Superlink* /*sl*/) -> bool {
+        return (sl->leptons->size() == 2);
+    };
+    add_SFOS_lepton_cut(superflow);
+}
 void add_final_cuts(Superflow* superflow, Sel sel_type) {
     *superflow << CutName("pass good vertex") << [=](Superlink* sl) -> bool {
         return (sl->tools->passGoodVtx(m_cutflags));
@@ -583,7 +604,7 @@ void add_trigger_variables(Superflow* superflow) {
     // Single Muon Triggers
     ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_triggerLeptons)
     ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_triggerLeptons)
-    
+
 
     ////////////////////////////////////////////////////////////////////////////
     // 2016

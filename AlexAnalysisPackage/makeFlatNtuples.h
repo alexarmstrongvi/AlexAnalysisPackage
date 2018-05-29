@@ -31,7 +31,7 @@
 #include "AlexAnalysisPackage/ApplyFakeFactor.h"
 
 /// @brief Available run selections
-enum Sel {FAKE_NUM, FAKE_DEN, BASELINE, BASE_DEN};
+enum Sel {FAKE_NUM, FAKE_DEN, BASELINE, BASE_DEN, ZLL_CR};
 
 using std::string;
 using sflow::Superflow;
@@ -40,6 +40,7 @@ using sflow::Superlink;
 
 void setup_chain(TChain* chain, string iname);
 void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool);
+void run_superflow(Superflow* sf, Sel sel_type);
 Superflow* get_cutflow(TChain* chain, Sel sel_type);
 string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff);
 Superflow* initialize_superflow(TChain *chain, string name_suffix);
