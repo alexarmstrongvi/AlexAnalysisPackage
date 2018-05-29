@@ -40,7 +40,7 @@ using sflow::Superlink;
 
 void setup_chain(TChain* chain, string iname);
 void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool);
-void run_superflow(Superflow* sf, Sel sel_type);
+void run_superflow(Sel sel_type);
 Superflow* get_cutflow(TChain* chain, Sel sel_type);
 string determine_suffix(string user_suffix, Sel sel_type, bool apply_ff);
 Superflow* initialize_superflow(TChain *chain, string name_suffix);
@@ -52,6 +52,7 @@ void add_baseline_lepton_cuts(Superflow* superflow);
 void add_baseline_den_lepton_cuts(Superflow* superflow);
 void add_fake_num_lepton_cuts(Superflow* superflow);
 void add_fake_den_lepton_cuts(Superflow* superflow);
+void add_zll_cr_lepton_cuts(Superflow* superflow);
 void add_final_cuts(Superflow* superflow, Sel sel_type);
 void add_event_variables(Superflow* superflow);
 void add_trigger_variables(Superflow* superflow);

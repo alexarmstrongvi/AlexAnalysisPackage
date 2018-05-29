@@ -520,7 +520,7 @@ void add_fake_den_lepton_cuts(Superflow* superflow) {
     add_SFOS_lepton_cut(superflow);
 }
 void add_zll_cr_lepton_cuts(Superflow* superflow) {
-    *superflow << CutName("2-ID Leptons") << [=](Superlink* /*sl*/) -> bool {
+    *superflow << CutName("2-ID Leptons") << [=](Superlink* sl) -> bool {
         return (sl->leptons->size() == 2);
     };
     add_SFOS_lepton_cut(superflow);
