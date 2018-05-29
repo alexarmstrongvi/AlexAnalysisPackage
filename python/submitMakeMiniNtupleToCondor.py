@@ -7,24 +7,27 @@ import re
 import global_variables as g
 
 # Configuration settings
-ana_name      = "makeMiniNtuple_HIGGS"
-use_local     = True  # run over brick samples instead of fax 
+ana_name      = "makeFlatNtuple" #"makeMiniNtuple_HIGGS"
+use_local     = True  # run over brick samples instead of fax
 submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
-dry_run = False
+dry_run       = False
+file_name_suffix = 'test'
 
-# Run analysis with fake configuration
-do_zjets_num_fakes  = True
-do_zjets_den_fakes  = True
-estimate_fakes      = True # apply fake factor to denom events
-only_fakes          = False  # only output fake ntuples
+# Run analysis with selections
+do_baseline        = False
+do_baseline_den    = False
+do_zjets_num_fakes = False
+do_zjets_den_fakes = False
+do_zll_cr          = True
+apply_ff           = False  # apply fake factor to denom events
+only_fakes         = False  # only output fake ntuples
 assert not (only_fakes and do_zjets_num_fakes)
 
-
 # Where to submit condor jobs
-doBrick       = True 
-doLocal       = False 
-doSDSC        = False 
-doUC          = False 
+doBrick       = True
+doLocal       = False
+doSDSC        = False
+doUC          = False
 
 # Local samples are only stored on the brick so the
 # condor jobs should only be submitted to the brick
@@ -33,18 +36,18 @@ if use_local:
     doBrick = True
 
 # Settings defined in global_variables.py
-tar_location        = g.analysis_path 
 if use_local:
-    filelist_dir        = g.local_input_files 
-    in_job_filelist_dir = g.local_input_files 
+    filelist_dir        = g.local_input_files
+    in_job_filelist_dir = g.local_input_files
 else:
     filelist_dir        = g.input_files
-    in_job_filelist_dir = g.input_files 
-out_dir             = g.output_dir
-log_dir             = g.logs_dir 
-samples             = g.groups.keys()
-tarred_dir          = g.analysis_dir 
+    in_job_filelist_dir = g.input_files
 
+tar_location = g.analysis_path
+out_dir      = g.output_dir
+log_dir      = g.logs_dir
+samples      = g.groups.keys()
+tarred_dir   = g.analysis_dir
 
 def main() :
     print "SubmitCondorSF"
@@ -53,7 +56,7 @@ def main() :
         missing_dsids     = []
         missing_dsid_file = open(g.missing_dsids_file)
         for dsid in missing_dsid_file:
-            if not dsid.strip().isdigit(): 
+            if not dsid.strip().isdigit():
                 continue
             missing_dsids.append(dsid.split('\n')[0])
         missing_dsid_file.close()
@@ -74,7 +77,7 @@ def main() :
             fullname = str(os.path.abspath(dataset))
             did = dataset.split("/")[-1]
 
-            # Only submit datasets indicated in global_variables or missing_dsids 
+            # Only submit datasets indicated in global_variables or missing_dsids
             if submitMissing:
                 if not any(dsid in dataset for dsid in missing_dsids):
                     continue
@@ -97,11 +100,11 @@ def main() :
                 print " >>> Expected submission directory : %s"%os.path.abspath(out_dir)
                 print " >>> You are running from PWD =",str(os.environ['PWD'])
                 sys.exit()
-            
-            if s.endswith('DWNLD'): 
-                dataset = dataset + '/' 
-                print "    >> %s"%dataset        
-            
+
+            if s.endswith('DWNLD'):
+                dataset = dataset + '/'
+                print "    >> %s"%dataset
+
             isData =  re.search("data1[5-8]", dataset.split("/")[-1])
 
             def create_run_cmd(do_fakes, region):
@@ -115,24 +118,30 @@ def main() :
                 run_cmd += ' %s '%dataset
                 lname = dataset.split("/")[-1].replace(".txt", "")
                 ops = ""
-                suffix = []
-            
-                if do_zjets_num_fakes and region=='zjets_num':
-                    suffix.append("zjets_num")
-                    ops += ' -f zjets_num'
+
+do_baseline
+do_baseline_den
+do_zjets_num_fakes
+do_zjets_den_fakes
+do_zll_cr
+                if do_baseline and region=='baseline':
+                    ops += ' --baseline_sel'
+                elif do_baseline_den:
+                    sys.exit()
+                elif do_zll_cr and region=='zll_cr':
+                    ops += ' --zll_cr'
+                elif do_zjets_num_fakes and region=='zjets_num':
+                    ops += ' --fake_num'
                 elif do_zjets_den_fakes and region=='zjets_den':
-                    suffix.append("zjets_den")
-                    ops += ' -f zjets_den'
+                    ops += ' --fake_den'
                 else:
-                    # run baseline
-                    pass
-                
+                    sys.exit()
+
                 if submit_fakes and region != 'zjets_num':
-                    suffix.append('FFest')
-                    ops = ops + ' -e'
-                
-                if suffix:
-                    ops = ops + ' -s %s'%('_'.join(suffix))
+                    ops += ' --apply_ff'
+
+                if file_name_suffix:
+                    ops += ' -s %s'%file_name_suffix
 
                 lname = '_'.join([lname] + suffix)
 
@@ -146,15 +155,15 @@ def main() :
                 return run_cmd
 
             for submit_fakes in [False, True]:
-                if submit_fakes and not (estimate_fakes and isData): continue
-                if not submit_fakes and estimate_fakes and only_fakes: continue
-                for region in ['baseline', 'zjets_num', 'zjets_den']:
+                if submit_fakes and not (apply_ff and isData): continue
+                if not submit_fakes and apply_ff and only_fakes: continue
+                for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
                     if region == 'zjets_num' and submit_fakes: continue
-                    if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue 
-                    
+                    if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue
+
                     run_cmd = create_run_cmd(submit_fakes, region)
                     print run_cmd.replace(g.analysis_path, "")
-                    if not dry_run: 
+                    if not dry_run:
                         subprocess.call(run_cmd, shell=True)
     if dry_run:
         print "END OF DRY RUN"
@@ -196,7 +205,7 @@ def look_for_condor_script(brick_ = False, local_ = False, sdsc_ = False, uc_ = 
     f.close()
 
 def look_for_condor_executable() :
-    f = open('RunCondorSF.sh', 'w') 
+    f = open('RunCondorSF.sh', 'w')
     f.write('#!/bin/bash\n\n\n')
     f.write('echo " ------- RunCondorSF -------- "\n')
     f.write('output_dir=${1}\n')
