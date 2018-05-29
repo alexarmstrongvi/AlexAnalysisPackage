@@ -82,27 +82,14 @@ bool m_denominator_selection = false;
 // All globals must be initialized here and reset in the source file
 int m_cutflags = 0;  ///< Cutflags used for cleaning cuts
 
-LeptonVector m_preLeptons;
-LeptonVector m_baseLeptons;
-LeptonVector m_signalLeptons;
-ElectronVector m_preElectrons;
-ElectronVector m_baseElectrons;
-ElectronVector m_signalElectrons;
-MuonVector m_preMuons;
-MuonVector m_baseMuons;
-MuonVector m_signalMuons;
-TauVector m_preTaus;
-TauVector m_baseTaus;
-TauVector m_signalTaus;
-Susy::Met  m_met;
 TLorentzVector m_MET;
 
 uint m_lepID_n = 0;
 uint m_lepAntiID_n = 0;
-int m_antiID_idx0 = -1;  // TODO: Change to a Susy::Lepton m_antiID_lep0
-int m_antiID_idx1 = -1;  // TODO: Change to a Susy::Lepton m_antiID_lep1
-TLorentzVector m_LepFake0;
-TLorentzVector m_LepFake1;
+Susy::Lepton* m_antiID_lep0 = nullptr;
+Susy::Lepton* m_antiID_lep1 = nullptr;
+TLorentzVector m_antiID_lep0_TLV;
+TLorentzVector m_antiID_lep1_TLV;
 
 // Find leptons paired with Z
 // Indices 0 and 1 are closest Z pair
@@ -110,6 +97,7 @@ TLorentzVector m_LepFake1;
 // Indices 3 and 4 are second closest Z pair
 LeptonVector m_Zlep(5, nullptr); //TODO: change name to m_Zordered_leptons
 LeptonVector m_selectLeptons;
+LeptonVector m_triggerLeptons;
 
 TLorentzVector m_lepton0;
 TLorentzVector m_lepton1;
@@ -119,13 +107,10 @@ Susy::Electron* m_el1 = nullptr;
 Susy::Muon* m_mu0 = nullptr;
 Susy::Muon* m_mu1 = nullptr;
 
-JetVector m_preJets;
-JetVector m_baseJets;
-JetVector m_signalJets;
 JetVector m_lightJets;
 JetVector m_BJets;
 JetVector m_forwardJets;
-TLorentzVector m_JetP4, m_Jet1, m_Jet0;
+TLorentzVector m_Jet_TLV, m_Jet1, m_Jet0;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Configuration settings
@@ -140,7 +125,7 @@ SuperflowRunMode m_run_mode = SuperflowRunMode::nominal;  ///< The mode in which
 // set path to where the fake factor histograms are located
 string m_path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists/";
 
-//TODO: Get this working again
+//TODO: Get a better toggle setup than just commenting out lines
 //// My own fake factors
 //fake_file = "FF_hists.root";
 //m_el_FF_hist = "h_zjets_FF_CR_e_data_Z_Lep2_pT_minus_bkgd";
