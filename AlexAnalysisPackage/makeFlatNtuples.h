@@ -69,7 +69,7 @@ void add_shortcut_variables_reset(Superflow* superflow);
 void add_fake_shortcut_variables(Superlink* sl);
 bool is_ID_lepton(Superlink* sl, Susy::Lepton* lepton);
 bool is_antiID_lepton(Susy::Lepton* lepton);
-bool is_1lep_trig_matched(string trig_name, LeptonVector leptons);
+bool is_1lep_trig_matched(Superlink* sl, string trig_name, LeptonVector leptons);
 void add_SFOS_lepton_cut(Superflow* superflow);
 void add_DFOS_lepton_cut(Superflow* superflow);
 int get_lepton_truth_class(Susy::Lepton* lepton);

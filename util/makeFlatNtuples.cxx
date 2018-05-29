@@ -28,27 +28,28 @@ using namespace sflow;
 ////////////////////////////////////////////////////////////////////////////////
 // Useful macros
 // TODO: Run over a vector of leptons
-//#define ADD_1LEP_TRIGGER_VAR(trig_name, leptons) { \
-//    *superflow << NewVar(#trig_name" trigger bit"); { \
-//        *superflow << HFTname(#trig_name); \
-//        *superflow << [=](Superlink* sl, var_bool*) -> bool { \
-//            return is_1lep_trig_matched(sl, #trig_name, leptons) \
-//        *superflow << SaveVar(); \
-//    } \
-//}
-
-#define ADD_1LEP_TRIGGER_VAR(trig_name, lep) { \
+#define ADD_1LEP_TRIGGER_VAR(trig_name, leptons) { \
     *superflow << NewVar(#trig_name" trigger bit"); { \
         *superflow << HFTname(#trig_name); \
         *superflow << [=](Superlink* sl, var_bool*) -> bool { \
-            if(!lep) return false;\
-            bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
-            if (!trig_fired) return false;\
-            bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
-            return trig_matched; }; \
+            return is_1lep_trig_matched(sl, #trig_name, leptons); \
+        }; \
         *superflow << SaveVar(); \
     } \
 }
+
+//#define ADD_1LEP_TRIGGER_VAR(trig_name, lep) { \
+//    *superflow << NewVar(#trig_name" trigger bit"); { \
+//        *superflow << HFTname(#trig_name); \
+//        *superflow << [=](Superlink* sl, var_bool*) -> bool { \
+//            if(!lep) return false;\
+//            bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
+//            if (!trig_fired) return false;\
+//            bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
+//            return trig_matched; }; \
+//        *superflow << SaveVar(); \
+//    } \
+//}
 // Trig Matching for dilep triggers is buggy
 // so currently not trigger matching
 #define ADD_2LEP_TRIGGER_VAR(trig_name, lep0, lep1) { \
@@ -379,6 +380,7 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         // should be used in determining dilepton properties (e.g. MLL, dphi)
         // and requirements (e.g. SFOS, DFOS). The third is an additional,
         // usually probe lepton.
+        // TODO: Add grabbing of lepton to its own function for each selection type
         if (sel_type == FAKE_DEN || sel_type == FAKE_NUM) {
             m_selectLeptons = m_Zlep;
             m_triggerLeptons.push_back(m_Zlep.at(0));
@@ -574,13 +576,13 @@ void add_trigger_variables(Superflow* superflow) {
     // TODO: Add to SusyNts HLT_2mu10)
 
     // Single Electron Triggers
-    ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, m_el0)
-    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, m_el0)
-    ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VH, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_e120_lhloose, m_triggerLeptons)
 
     // Single Muon Triggers
-    ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_mu0)
-    ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_mu0)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_triggerLeptons)
     
 
     ////////////////////////////////////////////////////////////////////////////
@@ -594,13 +596,13 @@ void add_trigger_variables(Superflow* superflow) {
     // TODO: Add to SusyNts HLT_2mu14)
 
     // Single Electron Triggers
-    ADD_1LEP_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose, m_el0)
-    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium_nod0, m_el0)
-    ADD_1LEP_TRIGGER_VAR(HLT_e140_lhloose_nod0, m_el0)
+    ADD_1LEP_TRIGGER_VAR(HLT_e26_lhtight_nod0_ivarloose, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_e60_lhmedium_nod0, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_e140_lhloose_nod0, m_triggerLeptons)
 
     // Single Muon Triggers
-    ADD_1LEP_TRIGGER_VAR(HLT_mu26_ivarmedium, m_mu0)
-    ADD_1LEP_TRIGGER_VAR(HLT_mu50, m_mu0)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu26_ivarmedium, m_triggerLeptons)
+    ADD_1LEP_TRIGGER_VAR(HLT_mu50, m_triggerLeptons)
 }
 void add_met_variables(Superflow* superflow) {
   //////////////////////////////////////////////////////////////////////////////
