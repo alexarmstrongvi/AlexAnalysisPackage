@@ -36,6 +36,7 @@ enum Sel {FAKE_NUM, FAKE_DEN, BASELINE, BASE_DEN};
 using std::string;
 using sflow::Superflow;
 using sflow::SuperflowRunMode;
+using sflow::Superlink;
 
 void setup_chain(TChain* chain, string iname);
 void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool);
@@ -65,8 +66,8 @@ void add_fake_variables(Superflow* superflow);
 void add_shortcut_variables_reset(Superflow* superflow);
 
 
-void add_fake_shortcut_variables();
-bool is_ID_lepton(Susy::Lepton* lepton);
+void add_fake_shortcut_variables(Superlink* sl);
+bool is_ID_lepton(Superlink* sl, Susy::Lepton* lepton);
 bool is_antiID_lepton(Susy::Lepton* lepton);
 bool is_1lep_trig_matched(string trig_name, LeptonVector leptons);
 void add_SFOS_lepton_cut(Superflow* superflow);
@@ -110,7 +111,7 @@ Susy::Muon* m_mu1 = nullptr;
 JetVector m_lightJets;
 JetVector m_BJets;
 JetVector m_forwardJets;
-TLorentzVector m_Jet_TLV, m_Jet1, m_Jet0;
+TLorentzVector m_Dijet_TLV, m_Jet1_TLV, m_Jet0_TLV;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Configuration settings

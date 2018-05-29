@@ -88,7 +88,7 @@ struct Args {
     unsigned int n_events  = -1; ///< number of events processed
     unsigned int n_skipped = 0; ///< number of initila entries to skip
     string name_suffix = ""; ///< suffix appended to output name
-    bool baseline_sel = true;  ///< Apply baseline denominator selection
+    bool baseline_sel = false;  ///< Apply baseline denominator selection
     bool baseline_den = false;  ///< Apply baseline denominator selection
     bool fake_num = false;  ///< Apply fake numerator selection
     bool fake_den = false;  ///< Apply fake denominator selection
@@ -210,36 +210,39 @@ int main(int argc, char* argv[]) {
     ////////////////////////////////////////////////////////////////////////////
     // Build list of cutflows to run
     setup_chain(m_chain, args.input_name);
+    printf("makeFlatNtuple :: Total events available : %lli\n",m_chain->GetEntries());
 
     if (args.apply_ff) initialize_fake_factor_tool(m_applyFakeFactorTool);
 
-    vector<Superflow*> superflows;
+    // Run the chosen cutflows
     if (args.baseline_sel) {
         cout << "\n\n Creating baseline cutflow \n\n";
-        superflows.push_back(get_cutflow(m_chain, BASELINE));
-    } else if (args.baseline_den) {
-        cout << "\n\n Creating baseline denominator cutflow \n\n";
-        superflows.push_back(get_cutflow(m_chain, BASE_DEN));
-    } else if (args.fake_den) {
-        cout << "\n\n Creating Z+jets denominator cutflow \n\n";
-        superflows.push_back(get_cutflow(m_chain, FAKE_DEN));
-    } else if (args.fake_num) {
-        cout << "\n\n Creating Z+jets numerator cutflow \n\n";
-        superflows.push_back(get_cutflow(m_chain, FAKE_NUM));
-    } else {
-        cout << "ERROR :: No configuration for that region yet\n";
-        //TODO: ttbar, zll, W+jets, Diboson, Ztautau
-    }
-
-    // Run the chosen cutflows
-    for (uint ii = 0; ii < superflows.size(); ii++) {
-        printf("\n\n [%u/%lu] Running cutflow \n\n",ii+1, superflows.size());
-        Superflow *sf = superflows.at(ii);
+        Superflow* sf = get_cutflow(m_chain, BASELINE);
         m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
-        delete sf;
+        delete sf; sf = 0;
     }
+    if (args.baseline_den) {
+        cout << "\n\n Creating baseline denominator cutflow \n\n";
+        Superflow* sf = get_cutflow(m_chain, BASE_DEN);
+        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
+        delete sf; sf = 0;
+    }
+    if (args.fake_den) {
+        cout << "\n\n Creating Z+jets denominator cutflow \n\n";
+        Superflow* sf = get_cutflow(m_chain, FAKE_DEN);
+        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
+        delete sf; sf = 0;
+    }
+    if (args.fake_num) {
+        cout << "\n\n Creating Z+jets numerator cutflow \n\n";
+        Superflow* sf = get_cutflow(m_chain, FAKE_NUM);
+        m_chain->Process(sf, args.input_name.c_str(), args.n_events, args.n_skipped);
+        delete sf; sf = 0;
+    }
+    
+    //TODO: ttbar, zll, W+jets, Diboson, Ztautau Regions
+
     delete m_chain;
-    superflows.clear();
     cout << "\n====== SUCCESSFULLY RAN " << argv[0] << " ====== \n";
     return 0;
 }
@@ -367,7 +370,7 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
 
         ////////////////////////////////////////////////////////////////////////
         // Fake shortcuts
-        add_fake_shortcut_variables();
+        add_fake_shortcut_variables(sl);
 
         // Pick the right set and ordingering of leptons for the given selection
         // type. Affects trigger matching, dilepton requirements, etc...
@@ -378,40 +381,52 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         // usually probe lepton.
         if (sel_type == FAKE_DEN || sel_type == FAKE_NUM) {
             m_selectLeptons = m_Zlep;
-            m_triggerLeptons.push_back(m_Zlep.at(0))
-            m_triggerLeptons.push_back(m_Zlep.at(1))
-        } else {
+            m_triggerLeptons.push_back(m_Zlep.at(0));
+            m_triggerLeptons.push_back(m_Zlep.at(1));
+        } else if (sel_type == BASELINE ) {
             m_selectLeptons = *sl->leptons;
-            m_triggerLeptons.push_back(sl->leptons->at(0))
-        } // TODO: Add case of baseline denominator
+            if (sl->leptons->size() > 0) m_triggerLeptons.push_back(sl->leptons->at(0));
+        } else if (sel_type == BASE_DEN){
+            // TODO: add function to return vector of leptons for this selection
+            cout << "ERROR :: Not configured for this region yet\n";
+        } else {
+            cout << "ERROR :: Region configuration not yet defined\n";
+        }
+            
+            
+            // TODO: Add case of baseline denominator
 
-        int n_selectLeps = 0;
+        int n_selectleps = 0;
         for (Susy::Lepton* lep : m_selectLeptons) {
-            if (!lep) continue
+            if (!lep) continue;
             n_selectleps++;
 
             // For dilepton trigger matching
             if (lep->isEle()) {
-                if (!m_el0) m_el0 = lep;
-                else if (!m_el1) m_el1 = lep;
+                if (!m_el0) m_el0 = dynamic_cast<Susy::Electron*>(lep);
+                else if (!m_el1) m_el1 = dynamic_cast<Susy::Electron*>(lep);
             }
             else if (lep->isMu()) {
-                if (!m_mu0) m_mu0 = lep;
-                else if (!m_mu1) m_mu1 = lep;
+                if (!m_mu0) m_mu0 = dynamic_cast<Susy::Muon*>(lep);
+                else if (!m_mu1) m_mu1 = dynamic_cast<Susy::Muon*>(lep);
             }
         }
 
-        if (n_selectleps >= 1) m_lepton0 = m_selectLeptons.at(0);
-        if (n_selectleps >= 2) m_lepton1 = m_selectLeptons.at(1);
+        if (m_selectLeptons.size() > 0 and m_selectLeptons.at(0)) {
+            m_lepton0 = *m_selectLeptons[0];
+        }
+        if (m_selectLeptons.size() > 1 and m_selectLeptons.at(1)) {
+            m_lepton1 = *m_selectLeptons[1];
+        }
         m_dileptonP4 = m_lepton0 + m_lepton1;
 
         ////////////////////////////////////////////////////////////////////////
         // Jet shortcuts
         if (sl->baseJets->size() > 0) {
-            m_Jet0 = *sl->baseJets->at(0);
+            m_Jet0_TLV = *sl->baseJets->at(0);
             if (sl->baseJets->size() > 1) {
-               m_Jet1 = *sl->baseJets->at(1);
-               m_Jet_TLV = m_Jet0 + m_Jet1;
+               m_Jet1_TLV = *sl->baseJets->at(1);
+               m_Dijet_TLV = m_Jet0_TLV + m_Jet1_TLV;
             }
         }
         // TODO: replace auto with explicit class
@@ -552,10 +567,6 @@ void add_trigger_variables(Superflow* superflow) {
 
     ////////////////////////////////////////////////////////////////////////////
     // 2015
-    std::vector<Susy::Electron> electrons = {m_el0, m_el1};
-    std::vector<Susy::Muons> muons = {m_mu0, m_mu1};
-
-    // Dilepton Triggers
     ADD_2LEP_TRIGGER_VAR(HLT_e17_lhloose_mu14, m_el0, m_mu0)
     ADD_2LEP_TRIGGER_VAR(HLT_e24_lhmedium_L1EM20VHI_mu8noL1, m_el0, m_mu0)
     ADD_2LEP_TRIGGER_VAR(HLT_e7_lhmedium_mu24, m_mu0, m_el0)
@@ -570,6 +581,7 @@ void add_trigger_variables(Superflow* superflow) {
     // Single Muon Triggers
     ADD_1LEP_TRIGGER_VAR(HLT_mu20_iloose_L1MU15, m_mu0)
     ADD_1LEP_TRIGGER_VAR(HLT_mu40, m_mu0)
+    
 
     ////////////////////////////////////////////////////////////////////////////
     // 2016
@@ -1029,9 +1041,10 @@ void add_signallepton_variables(Superflow* superflow) {
     // Signal Leptons
     *superflow << NewVar("Lepton Iso (non-inclusive)"); {
       *superflow << HFTname("Lep_Iso");
-      *superflow << [=](Superlink* sl, var_int_array*) -> vector<int> {
+      *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
         for (auto& lep :  m_selectLeptons) {
+          if (!lep) continue;
           bool flag = false;
           out.push_back(-1);  // for tracking all entries and normalizing bins
           if (lep->isoGradient) {flag=true, out.push_back(0);}
@@ -1641,7 +1654,7 @@ void add_jet_variables(Superflow* superflow) {
       *superflow << HFTname("Mjj");
       *superflow << [](Superlink* sl, var_double*) -> double {
           if (sl->baseJets->size() < 2) return -DBL_MAX;
-          return m_Jet_TLV.M();
+          return m_Dijet_TLV.M();
       };
       *superflow << SaveVar();
     }
@@ -1649,7 +1662,7 @@ void add_jet_variables(Superflow* superflow) {
       *superflow << HFTname("DEtaJJ");
       *superflow << [](Superlink* sl, var_double*) -> double {
           if (sl->baseJets->size() < 2) return -DBL_MAX;
-          return fabs(m_Jet0.Eta() - m_Jet1.Eta());
+          return fabs(m_Jet0_TLV.Eta() - m_Jet1_TLV.Eta());
       };
       *superflow << SaveVar();
     }
@@ -1996,26 +2009,29 @@ void add_fake_variables(Superflow* superflow) {
     }
 }
 void add_shortcut_variables_reset(Superflow* superflow) {
-  *superflow << [=](Superlink* sl, var_void*) {
+  *superflow << [=](Superlink* /*sl*/, var_void*) {
     m_cutflags = 0;
     m_MET = {};
-    m_dileptonP4 = m_lepton0 = m_lepton1 = {};
-    m_lightJets.clear(); m_BJets.clear(); m_forwardJets.clear();
-    m_Jet_TLV = m_Jet1 = m_Jet0 = {};
     m_lepID_n = m_lepAntiID_n = 0;
     m_antiID_lep0_TLV = m_antiID_lep1_TLV = {};
     std::fill(m_Zlep.begin(), m_Zlep.end(), nullptr);
+    m_selectLeptons.clear(); m_triggerLeptons.clear();
+    m_dileptonP4 = m_lepton0 = m_lepton1 = {};
+    m_el0 = m_el1 = 0;
+    m_mu0 = m_mu1 = 0;
+    m_lightJets.clear(); m_BJets.clear(); m_forwardJets.clear();
+    m_Dijet_TLV = m_Jet1_TLV = m_Jet0_TLV = {};
   };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Useful functions
-void add_fake_shortcut_variables() {
+void add_fake_shortcut_variables(Superlink* sl) {
 
     vector<int> lepID_vec, lepAntiID_vec;
     // ID Leptons - same as signal leptons
     for (Susy::Lepton* lepton : *sl->baseLeptons) {
-        bool lepID_bool = is_ID_lepton(lepton);
+        bool lepID_bool = is_ID_lepton(sl, lepton);
         lepID_vec.push_back(lepID_bool);
         if (lepID_bool) m_lepID_n++;
     }
@@ -2032,7 +2048,7 @@ void add_fake_shortcut_variables() {
     int antiID_idx1 = -1;
     if (m_lepAntiID_n >= 1) {
       antiID_idx0 = std::find(begin, end, true) - begin;
-      m_antiID_lep0 = sl->baseLeptons->at(antiID_idx0)
+      m_antiID_lep0 = sl->baseLeptons->at(antiID_idx0);
       m_antiID_lep0_TLV = *m_antiID_lep0;
     }
     if (m_lepAntiID_n >= 2) {
@@ -2080,7 +2096,7 @@ void add_fake_shortcut_variables() {
         }
     }
 }
-bool is_ID_lepton(Susy::Lepton* lepton) {
+bool is_ID_lepton(Superlink* sl, Susy::Lepton* lepton) {
     for (Susy::Lepton* sig_lepton : *sl->leptons) {
         if (lepton == sig_lepton) {
             return true;
@@ -2120,8 +2136,7 @@ bool is_1lep_trig_matched(Superlink* sl, string trig_name, LeptonVector leptons)
         bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, trig_name);
         if (!trig_fired) continue;
         bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, trig_name);
-        if (trig_matched) return true
-
+        if (trig_matched) return true;
     }
     return false;
 }
