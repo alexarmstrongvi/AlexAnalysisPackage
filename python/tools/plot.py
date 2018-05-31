@@ -41,19 +41,21 @@ class Types(Enum):
 class Plot1D(object) :
 
     # Class defaults for axis range depending on log and normalization settings
-    xmin = 0.0
+    xmin = 0
     xmax = 50.0
     ymin = 0
-    ymax = 1e6
+    ymax =1e4
 
     logy_min = 1e-1
-    logy_max = 1e6
+    logy_max = 1e10
 
-    norm_ymin = 0
-    norm_ymax = 1
+    norm_ymin = -0.1
+    norm_ymax = 1.5
 
-    logy_norm_min = 1e-4
-    logy_norm_max = 1
+    logy_norm_min = 1e-8
+    logy_norm_max = 1e3
+
+    auto_set_ylimits = True
 
     def __init__(self,
         region = "",
@@ -66,6 +68,16 @@ class Plot1D(object) :
         bin_range = [], # [x0, x1, y0, y1]
         bin_width = None, # Can specify to override nbins
         nbins = 20,
+        xmin = None,
+        xmax = None,
+        ymin = None,
+        ymax = None,
+        logy_min = None,
+        logy_max = None,
+        norm_ymin = None,
+        norm_ymax = None,
+        logy_norm_min = None,
+        logy_norm_max = None,
         is2D = False,
         doLogY = True, # change to do_logy
         doNorm = False,
@@ -102,6 +114,17 @@ class Plot1D(object) :
         self.ptype = ptype
 
         # Properties
+        if xmin: self.xmin = xmin
+        if xmax: self.xmax = xmax
+        if ymin: self.ymin = ymin
+        if ymax: self.ymax = ymax
+        if logy_min: self.logy_min = logy_min
+        if logy_max: self.logy_max = logy_max
+        if norm_ymin: self.norm_ymin = norm_ymin
+        if norm_ymax: self.norm_ymax = norm_ymax
+        if logy_norm_min: self.logy_norm_min = logy_norm_min
+        if logy_norm_max: self.logy_norm_max = logy_norm_max
+
         self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
 
         self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
@@ -127,6 +150,16 @@ class Plot1D(object) :
         bin_range = None,
         bin_width = None,
         nbins = None,
+        xmin = None,
+        xmax = None,
+        ymin = None,
+        ymax = None,
+        logy_min = None,
+        logy_max = None,
+        norm_ymin = None,
+        norm_ymax = None,
+        logy_norm_min = None,
+        logy_norm_max = None,
         doLogY = None,
         doNorm = None,
         add_overflow = None,
@@ -152,8 +185,18 @@ class Plot1D(object) :
         if add_underflow: self.add_underflow = add_underflow
 
         # Properties
-        if bin_range:
-            self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
+        if xmin: self.xmin = xmin
+        if xmax: self.xmax = xmax
+        if ymin: self.ymin = ymin
+        if ymax: self.ymax = ymax
+        if logy_min: self.logy_min = logy_min
+        if logy_max: self.logy_max = logy_max
+        if norm_ymin: self.norm_ymin = norm_ymin
+        if norm_ymax: self.norm_ymax = norm_ymax
+        if logy_norm_min: self.logy_norm_min = logy_norm_min
+        if logy_norm_max: self.logy_norm_max = logy_norm_max
+        
+        self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
         if nbins or bin_width:
             self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
 
@@ -222,7 +265,7 @@ class Plot1D(object) :
         '''
         # default values
 
-        assert len(bin_range) in [0,2,4],(
+        assert not bin_range or len(bin_range) in [2,4],(
             'ERROR :: Unrecognized bin range format:', bin_range)
 
 
@@ -242,7 +285,7 @@ class Plot1D(object) :
         xmin = self.xmin
         xmax = self.xmax
 
-        if not len(bin_range):
+        if not bin_range:
             return  xmin, xmax, ymin, ymax
         elif len(bin_range) == 2:
             return bin_range[0], bin_range[1], ymin, ymax

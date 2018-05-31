@@ -7,17 +7,17 @@ import re
 import global_variables as g
 
 # Configuration settings
-ana_name      = "makeFlatNtuple" #"makeMiniNtuple_HIGGS"
+ana_name      = "makeFlatNtuples" #"makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax
 submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
 dry_run       = False
-file_name_suffix = 'test'
+file_name_suffix = ''
 
 # Run analysis with selections
-do_baseline        = False
+do_baseline        = True
 do_baseline_den    = False
-do_zjets_num_fakes = False
-do_zjets_den_fakes = False
+do_zjets_num_fakes = True
+do_zjets_den_fakes = True
 do_zll_cr          = True
 apply_ff           = False  # apply fake factor to denom events
 only_fakes         = False  # only output fake ntuples
@@ -89,12 +89,6 @@ def main() :
             dataset = "." + dataset[dataset.find(in_job_filelist_dir):]
             print "    >> %s"%dataset
 
-            suffix = []
-            if "mc15_13TeV" in did and "_" in did.split(".")[3]:
-                new_name = did.split(".")[3].split("_")[-1]
-                print "TESTING :: Does this ever happen? %s -> %s"%(did, new_name)
-                suffix.append(new_name)
-
             if not (str(os.path.abspath(out_dir)) == str(os.environ['PWD'])) :
                 print "You must call this script from the output directory where the ntuples will be stored!"
                 print " >>> Expected submission directory : %s"%os.path.abspath(out_dir)
@@ -119,23 +113,16 @@ def main() :
                 lname = dataset.split("/")[-1].replace(".txt", "")
                 ops = ""
 
-do_baseline
-do_baseline_den
-do_zjets_num_fakes
-do_zjets_den_fakes
-do_zll_cr
                 if do_baseline and region=='baseline':
                     ops += ' --baseline_sel'
-                elif do_baseline_den:
+                if do_baseline_den:
                     sys.exit()
-                elif do_zll_cr and region=='zll_cr':
+                if do_zll_cr and region=='zll_cr':
                     ops += ' --zll_cr'
-                elif do_zjets_num_fakes and region=='zjets_num':
+                if do_zjets_num_fakes and region=='fake_num':
                     ops += ' --fake_num'
-                elif do_zjets_den_fakes and region=='zjets_den':
+                if do_zjets_den_fakes and region=='fake_den':
                     ops += ' --fake_den'
-                else:
-                    sys.exit()
 
                 if submit_fakes and region != 'zjets_num':
                     ops += ' --apply_ff'
@@ -143,7 +130,7 @@ do_zll_cr
                 if file_name_suffix:
                     ops += ' -s %s'%file_name_suffix
 
-                lname = '_'.join([lname] + suffix)
+                lname = '_'.join([lname] + file_name_suffix)
 
                 run_cmd += ' %s '%(ops) # any extra cmd line optino for Superflow executable
                 run_cmd += '"'
@@ -157,11 +144,13 @@ do_zll_cr
             for submit_fakes in [False, True]:
                 if submit_fakes and not (apply_ff and isData): continue
                 if not submit_fakes and apply_ff and only_fakes: continue
-                for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
+                #for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
+                for region in ['fake_num', 'fake_den','zll_cr']:
                     if region == 'zjets_num' and submit_fakes: continue
                     if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue
 
                     run_cmd = create_run_cmd(submit_fakes, region)
+                    print "Trimmed command output\n>>",
                     print run_cmd.replace(g.analysis_path, "")
                     if not dry_run:
                         subprocess.call(run_cmd, shell=True)

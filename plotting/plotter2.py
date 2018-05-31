@@ -151,7 +151,8 @@ def make_plotsStack(plot, reg):
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     if plot.doNorm:
         normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
-    reformat_axis(plot, legend, mc_stack, data, axis, signals)
+    if plot.auto_set_ylimits:
+        reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
     # Checks - Move on to next plot in case of failure
     if not mc_stack:
@@ -195,7 +196,8 @@ def make_plotsRatio(plot, reg) :
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     if plot.doNorm:
         normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
-    reformat_axis(plot, legend, mc_stack, data, axis, signals)
+    if plot.auto_set_ylimits:
+        reformat_axis(plot, legend, mc_stack, data, axis, signals)
     
     # Checks - Move on to next plot in case of failure
     if not mc_stack and data:
@@ -215,7 +217,7 @@ def make_plotsRatio(plot, reg) :
     # Bottom ratio plot
     rcan.lower_pad.cd()
 
-    ratio_axis = get_ratio_axis(mc_stack, rcan.ylabel, rcan.ymax)
+    ratio_axis = get_ratio_axis(plot, mc_stack, rcan.ylabel, rcan.ymax)
     ratio_errors = get_ratio_errors(mc_errors)
     ratio = get_ratio_graph(data_hist, mc_errors)
 
@@ -492,39 +494,26 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
     else:
         maxy = stack.GetMaximum()
         miny = stack.GetMinimum()
+    assert maxy > 0
 
     # Get default y-axis max and min limits
     logy = plot.doLogY
     norm = plot.doNorm
-    if logy and norm:
-        ymax = plot.logy_norm_max
-        ymin = plot.logy_norm_min
-    elif logy:
-        ymax = plot.logy_max
-        ymin = plot.logy_min
-    elif norm:
-        ymax = plot.norm_max
-        ymin = plot.norm_min
+    if logy:
+        ymax = 10**(pu.get_order_of_mag(maxy)) 
+        if miny >= 0:
+            ymin = 10**(pu.get_order_of_mag(miny))
+        else:
+            ymin = 10**(pu.get_order_of_mag(maxy) - 7)
     else:
-        ymax = plot.ymax
-        ymin = plot.ymin
-    
-    # Adjust y-axis limits if necessary
-    assert maxy > 0
-    if maxy > ymax:
-        ymax = maxy if not logy else 10**(pu.get_order_of_mag(maxy) + 1)
-    
-    if miny < ymin: 
-        if miny < 0 and not logy:
-            ymin = 1.5*miny
-        elif miny >= 0:
-            ymin = 0.5*miny if not logy else 10**(pu.get_order_of_mag(miny) - 1)
+        ymax = maxy
+        ymin = 0
     
     # Get y-axis max multiplier to fit labels
     if logy:
-        max_mult = 1e4 if signals else 1e3
+        max_mult = 1e5 if signals else 1e4
     else:
-        max_mult = 2.0 if signals else 1.66
+        max_mult = 2.0 if signals else 1.8
 
     # reformat the axis
     stack.SetMaximum(max_mult*maxy)
@@ -545,7 +534,7 @@ def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_n
 ################################################################################
 #Stack Plot Functions
 ################################################################################
-def get_ratio_axis(stack, ylabel, ymax):
+def get_ratio_axis(plot, stack, ylabel, ymax):
     # yaxis
     h_sm = stack.GetStack().Last().Clone("h_sm")
     yax = h_sm.GetYaxis()
@@ -569,6 +558,9 @@ def get_ratio_axis(stack, ylabel, ymax):
     xax.SetTitleFont(42)
 
     h_sm.SetTickLength(0.06)
+
+    if plot.bin_labels and plot.ptype == Types.ratio:
+        plot.set_bin_labels(h_sm)
 
     return h_sm
 

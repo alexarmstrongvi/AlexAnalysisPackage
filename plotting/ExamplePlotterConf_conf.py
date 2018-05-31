@@ -43,12 +43,13 @@ fake_ntuple_dir   = g.data_ntuples
 # Luminosity options
 # Description | 2015-16 (ipb) |  2015-16 (ifb) | 2015 (ipb) | 2016 (ipb) | dummy
 # Value       |     36180     |      36.01     |    320     |    32971   |   1
-lumi_ = 36180
+lumi = 36180
 
 # Strings for plotting
 MCsample.weight_str = 'eventweight'
-MCsample.scale_factor = lumi_
+MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
+Plot1D.auto_set_ylimits = False
 
 ################################################################################
 # Samples
@@ -76,7 +77,7 @@ signal_SF = 1
 signal_label = "Higgs LFV" if signal_SF == 1 else "Higgs LFV (%dX)"%signal_SF
 
 signal = Signal("higgs_lfv", signal_label)
-signal.scale_factor = lumi_ * signal_branching_ratio * signal_SF
+signal.scale_factor = lumi * signal_branching_ratio * signal_SF
 signal.color = ROOT.kGreen
 SAMPLES.append(signal)
 
@@ -176,6 +177,12 @@ ee = 'dilep_flav == 2'
 mumu = 'dilep_flav == 3'
 DF_OS = 'dilep_flav <= 1 && l_q[0]*l_q[1]<0'
 SF_OS = 'dilep_flav > 1 && l_q[0]*l_q[1]<0'
+Z_emu = 'Z_dilep_flav == 0'
+Z_mue = 'Z_dilep_flav == 1'
+Z_ee = 'Z_dilep_flav == 2'
+Z_mumu = 'Z_dilep_flav == 3'
+Z_DF_OS = 'Z_dilep_flav <= 1 && l_q[0]*l_q[1]<0'
+Z_SF_OS = 'Z_dilep_flav > 1 && l_q[0]*l_q[1]<0'
 
 # Same flavor lepton triggers
 ee15_trig   = 'HLT_2e12_lhloose_L12EM10VH'
@@ -204,12 +211,16 @@ e16_trig_mue_pT   = '(%s && dilep_flav == 1 && Lep1Pt >= 27)'%e16_trig
 mu16_trig_mue_pT  = '(%s && dilep_flav == 1 && Lep1Pt < 27 && Lep0Pt >= 28)'%mu16_trig
 emu15_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= Lep1Pt && Lep1Pt < 25 && 15 <= Lep0Pt && Lep0Pt < 21)'%emu15_trig
 emu16_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= Lep1Pt && Lep1Pt < 27 && 15 <= Lep0Pt && Lep0Pt < 28)'%emu16_trig
+e15_trig_ee_pT   = '(%s && Z_dilep_flav == 2 && l_pt[0] >= 25)'%e15_trig
+e16_trig_ee_pT   = '(%s && Z_dilep_flav == 2 && l_pt[0] >= 27)'%e16_trig
+mu15_trig_mumu_pT  = '(%s && Z_dilep_flav == 3 && l_pt[0] >= 21)'%mu15_trig
+mu16_trig_mumu_pT  = '(%s && Z_dilep_flav == 3 && l_pt[0] >= 27)'%mu16_trig
 
 # Combined triggers
-e15_trig_pT = '(%s || %s)'%(e15_trig_emu_pT, e15_trig_mue_pT)
-mu15_trig_pT = '(%s || %s)'%(mu15_trig_emu_pT, mu15_trig_mue_pT)
-e16_trig_pT = '(%s || %s)'%(e16_trig_emu_pT, e16_trig_mue_pT)
-mu16_trig_pT = '(%s || %s)'%(mu16_trig_emu_pT, mu16_trig_mue_pT)
+e15_trig_pT = '(%s || %s || %s)'%(e15_trig_emu_pT, e15_trig_mue_pT, e15_trig_ee_pT)
+mu15_trig_pT = '(%s || %s || %s)'%(mu15_trig_emu_pT, mu15_trig_mue_pT,mu15_trig_mumu_pT)
+e16_trig_pT = '(%s || %s || %s)'%(e16_trig_emu_pT, e16_trig_mue_pT, e16_trig_ee_pT)
+mu16_trig_pT = '(%s || %s || %s)'%(mu16_trig_emu_pT, mu16_trig_mue_pT, mu16_trig_mumu_pT)
 emu15_trig_pT = '(%s || %s)'%(emu15_trig_emu_pT, emu15_trig_mue_pT)
 emu16_trig_pT = '(%s || %s)'%(emu16_trig_emu_pT, emu16_trig_mue_pT)
 
@@ -253,11 +264,20 @@ REGIONS[-1].tcut = lepton_trig_pT + "&&" + DF_OS
 REGIONS.append(Region("topCR", "Top CR"))
 REGIONS[-1].tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
 
+zll_cr_base = "75 < Z_MLL && Z_MLL < 105 && " + Z_SF_OS 
+zll_cr_add  = singlelep_trig_pT
+#zll_cr_add += " && nLepID == 2"
+#zll_cr_add += " && nLepAntiID >= 1"
+zll_cr_add += " && nLepID == 3"
+#zll_cr_add += " && Z_Lep2_flav==1" # electron
+zll_cr_add += " && Z_Lep2_flav==0" # muon
+#zll_cr_add += " && Z_dilep_flav==2" # el-el
+#zll_cr_add += " && Z_dilep_flav==3" # mu-mu
 REGIONS.append(Region("zCR_ee", "Z CR (Channel: El-El)"))
-REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + ee + " && " + lepton_trig_pT
+REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_ee 
 
 REGIONS.append(Region("zCR_mumu", "Z CR (Channel: Mu-Mu)"))
-REGIONS[-1].tcut = "75 < MLL && MLL < 105 && " + SF_OS + " && " + mumu + " && " + lepton_trig_pT
+REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_mumu 
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& (30 < MLL && MLL < 150) '
@@ -270,18 +290,16 @@ REGIONS[-1].tcut = ZTauTau_CR
 # Z+Jets fake regions
 zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
 zjets_FF_CRnum_base = 'nLepID == 3'
-zjets_FF_CR_add =  singlelep_trig
-zjets_FF_CR_add += '&& (70 < Z_MLL && Z_MLL < 110)'
+zjets_FF_CR_add = singlelep_trig_pT
+zjets_FF_CR_add += '&& (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR_add += ' && MET < 50'
-#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
-#zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
+zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
+zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
 #zjets_FF_CR_add += ' && (!isMC || (0 < l_truthClass[2] && l_truthClass[2] <= 2))' #Prompt Probe Lepton
-#zjets_FF_CR_add += ' && (!isMC || (l_truthClass[2] <= 0 && 2 < l_truthClass[2]))' #Fake Probe Lepton
-#zjets_FF_CR_add += ' && (!isMC || (2 < l_truthClass[2] && l_truthClass[2] <= 8))' #Non-Prompt Probe Lepton
-#zjets_FF_CR_add += ' && (!isMC || (-2 < l_truthClass[2] && l_truthClass[2] <= 0))' #Unknown Probe Lepton
+zjets_FF_CR_add += ' && (!isMC || (l_truthClass[2] <= 0 || 2 < l_truthClass[2]))' #Fake Probe Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
 chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
@@ -409,8 +427,10 @@ plot_defaults = {
     'l_type'               : Plot1D( bin_range=[-1.5, 39.5],  bin_width=1, ptype=Types.stack, xlabel='Lepton type'),
     'l_origin'             : Plot1D( bin_range=[-1.5, 46.5],  bin_width=1, ptype=Types.stack, xlabel='Lepton origin'),
     'l_BkgMotherPdgId'     : Plot1D( bin_range=[-20.5, 20.5], bin_width=1, add_underflow=True, ptype=Types.stack, xlabel='Lepton Mother PdgID'),
-    'l_truthClass'         : Plot1D( bin_range=[-1.5, 10.5],  bin_width=1, doNorm=True, ptype=Types.stack, xlabel='Lepton Truth Classification'),
-    'l_truthClass[2]'      : Plot1D( bin_range=[-2.5, 9.5],   bin_width=1, doNorm=True, ptype=Types.stack, xlabel='Fake Candidate Lepton Truth Classification'),
+    'l_truthClass'         : Plot1D( bin_range=[-1.5, 11.5],  bin_width=1, doNorm=True, doLogY=False, ptype=Types.stack, xlabel='Lepton truth classification'),
+    'l_truthClass[0]'      : Plot1D( bin_range=[-1.5, 11.5],  bin_width=1, doNorm=True, doLogY=False, ptype=Types.stack, xlabel='Leading lepton truth classification'),
+    'l_truthClass[1]'      : Plot1D( bin_range=[-1.5, 11.5],  bin_width=1, doNorm=True, doLogY=False, ptype=Types.stack, xlabel='Subleading lepton truth classification'),
+    'l_truthClass[2]'      : Plot1D( bin_range=[-1.5, 11.5],  bin_width=1, doNorm=True, doLogY=False, ptype=Types.stack, xlabel='Fake candidate lepton Truth Classification'),
     'l_type[0]'            : Plot1D( bin_range=[-1.5, 39.5],  bin_width=1, ptype=Types.stack, xlabel='Leading Z Lepton type'),
     'l_origin[0]'          : Plot1D( bin_range=[-1.5, 46.5],  bin_width=1, ptype=Types.stack, xlabel='Leading Z Lepton origin'),
     'l_type[1]'            : Plot1D( bin_range=[-1.5, 39.5],  bin_width=1, ptype=Types.stack, xlabel='Subleading Z Lepton type'),
@@ -421,10 +441,10 @@ plot_defaults = {
     'Lep_Iso'              : Plot1D( bin_range=[-1.5, 7.5],   bin_width=1, xlabel='Lepton Isolation (non-inclusive)'),
     'l_q'                  : Plot1D( bin_range=[-1.5, 1.5],   bin_width=1, xlabel='Lepton charge'),
     'LepLepSign'           : Plot1D( bin_range=[-1.5, 1.5],   bin_width=1, xlabel='Leptons sign product'),
+    'l_pt[0]'              : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep}'),
+    'l_pt[1]'              : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
     'Lep0Pt'               : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep}'),
     'Lep1Pt'               : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
-    #'Lep0Pt'              : Plot1D( bin_range=[0.0, 50.0],   nbins=50, add_overflow=False, xunits='GeV', xlabel='p_{T}^{leading lep}'),
-    #'Lep1Pt'              : Plot1D( bin_range=[0.0, 50.0],   nbins=50, add_overflow=False, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
     'Lep0Eta'              : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='#eta^{leading lep}'),
     'Lep1Eta'              : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='#eta^{subleading lep}'),
     'Lep0Phi'              : Plot1D( bin_range=[0.0, 3.15],   nbins=30, xlabel='#phi^{leading lep}'),
@@ -446,7 +466,7 @@ plot_defaults = {
     'MLL'                  : Plot1D( bin_range=[0.0, 300.0],  nbins=100, xunits='GeV', xlabel='M_{ll}'),
     'ptll'                 : Plot1D( bin_range=[0.0, 500.0],  nbins=50, xunits='GeV', xlabel='pT_{ll}'),
     # MET + leptons
-    'MET'                  : Plot1D( bin_range=[0.0, 200.0],  nbins=50, xunits='GeV', xlabel='E_{T}^{miss}'),
+    'MET'                  : Plot1D( bin_range=[0.0, 200.0],  bin_width=4, xunits='GeV', xlabel='E_{T}^{miss}'),
     'METPhi'               : Plot1D( bin_range=[0.0, 3.15],   nbins=30, xlabel='MET_{#phi}'),
     'MCollASym'            : Plot1D( bin_range=[0.0, 250.0],  nbins=25, xunits='GeV', xlabel='LFV Collinear Mass m_{coll}'),
     'dpt_ll'               : Plot1D( bin_range=[0.0, 150.0],  nbins=20, xunits='GeV', xlabel='#Deltap_{T}^{ll}'),
@@ -464,11 +484,11 @@ plot_defaults = {
     'jet_N2p4Eta25Pt'      : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{jet} (p_{T}>25GeV, |#eta|<2.5)'),
     'signalJetN'           : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{sig jets}'),
     'jetN_g30'             : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{jet} (p_{T}>30GeV)'),
-    'nLJets'               : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{CL jet}'),
-    'nBJets'               : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{CB jet}'),
+    'nLJets'               : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{light jet}'),
+    'nBJets'               : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{Bjet}'),
     'btag'                 : Plot1D( bin_range=[-1.5, 3.5],   bin_width=1, xlabel='B-tagged jet'),
     'nForwardJets'         : Plot1D( bin_range=[-0.5, 7.5],   bin_width=1, xlabel='N_{F jet}'),
-    'j_pt[0]'              : Plot1D( bin_range=[0.0, 500.0],  nbins=20, xunits='GeV', xlabel='p_{T}^{leading jet}'),
+    'j_pt[0]'              : Plot1D( bin_range=[0.0, 500.0],  bin_width=20, xunits='GeV', xlabel='p_{T}^{leading jet}'),
     'j_pt[1]'              : Plot1D( bin_range=[0.0, 500.0],  nbins=20, xunits='GeV', xlabel='p_{T}^{subleading jet}'),
     'j_pt[2]'              : Plot1D( bin_range=[0.0, 500.0],  nbins=20, xunits='GeV', xlabel='p_{T}^{3rd leading jet}'),
     'j_pt[3]'              : Plot1D( bin_range=[0.0, 500.0],  nbins=20, xunits='GeV', xlabel='p_{T}^{4th leading jet}'),
@@ -500,25 +520,30 @@ plot_defaults = {
     'aID_Lep1Flav'         : Plot1D( bin_range=[-1.5, 5.5],   bin_width=1, xlabel='Subleading antiID flavor'),
     'aID_Lep0Q'            : Plot1D( bin_range=[-1.5, 1.5],   bin_width=1, xlabel='Leading anti-ID charge'),
     'aID_Lep1Q'            : Plot1D( bin_range=[-1.5, 1.5],   bin_width=1, xlabel='Subleading anti-ID charge'),
-    'Z_MLL'                : Plot1D( bin_range=[65, 115.0],   nbins=50, xunits='GeV', xlabel='M_{ll} (best lep pair)'),
-    'Z2_MLL'               : Plot1D( bin_range=[0, 200.0],    nbins=50, xunits='GeV', xlabel='M_{ll} (2nd best lep pair)'),
+    'Z_MLL'                : Plot1D( bin_range=[65, 115.0],   bin_width=1, xunits='GeV', xlabel='M_{ll} (Z pair)'),
+    'Z2_MLL'               : Plot1D( bin_range=[0, 200.0],    bin_width=5, logy_max=1e6, xunits='GeV', xlabel='M_{ll} (2nd Z pair)'),
     'aID_dpt_ll'           : Plot1D( bin_range=[0.0, 150.0],  nbins=20, xunits='GeV', xlabel='#Deltap_{T}^{ll}(ID, anti-ID)'),
     'aID_drll'             : Plot1D( bin_range=[0.0, 6.0],    nbins=60, xlabel='#DeltaR_{ll}(ID, anti-ID)'),
     'dR_Zl'                : Plot1D( bin_range=[0.0, 6.0],    nbins=60, xlabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'         : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='Z dilepton flavor'),
     'Z2_dilep_flav'        : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='2nd Z dilepton flavor'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='3rd leading lepton p_{T}'),
-    #'Z_Lep2_pT'           : Plot1D( bin_range=[0.0, 50.0],   nbins=50, doLogY=False, xunits='GeV', xlabel='3rd leading lepton p_{T}'),
-    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='3rd leading lepton #eta'),
+    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
+    'Z_Lep2_flav'          : Plot1D( bin_range=[-1.5, 2.5],   bin_width=1, xlabel='Fake candidate flavor'),
     'Z_dilep_sign'         : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='Z Dilepton Sign : OS(-1) SS(1)'),
     'Z2_dilep_sign'        : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='2nd Z Dilepton Sign : OS(-1) SS(1)'),
     'Z_Lep2_dPhi_MET'      : Plot1D( bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{3},MET)'),
-    'Z_Lep2_mT'            : Plot1D( bin_range=[0.0, 200.0],  nbins=50, doLogY=False, xunits='GeV', xlabel='3rd leading lepton m_{T}'),
+    'Z_Lep2_mT'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=4, xunits='GeV', xlabel='3rd leading lepton m_{T}'),
 }
 
-# Add any
-plot_defaults['l_truthClass[2]'].bin_labels = [ '', 'Unkown Conv','Undefined','prompt El','prompt Mu', 'prompt Pho', 'hadron','Mu as e','HF tau','HF B','HF C',' ']
+# Add any labels to the plots
+l_truthClass_labels = [ 'Undefined',' ','prompt El','prompt Mu', 'prompt Pho', 'Bkg El from conv','prompt El from FSR','hadron','Mu as e','HF tau','HF B','HF C',' ']
+plot_defaults['l_truthClass[0]'].bin_labels = l_truthClass_labels 
+plot_defaults['l_truthClass[1]'].bin_labels = l_truthClass_labels
+plot_defaults['l_truthClass[2]'].bin_labels = l_truthClass_labels
 plot_defaults['isMC'].bin_labels = [' ', 'Data', 'MC', ' ']
+plot_defaults['Z_Lep2_flav'].bin_labels = [' ', 'Muon', 'Electron', ' ']
+
 
 # To alter the plot properties for a specific region
 # Deep copy the default plot into new plot dictionary
@@ -570,24 +595,31 @@ YIELD_TBL = YieldTable()
 # Add formulas to yield table
 # Key values will be the labels on the table
 # Formulas should use sample names and these symbols: +, -, *, /, (, ), [0-9]
-YIELD_TBL.formulas['WZ+ZZ'] = "wz + zz"
-YIELD_TBL.formulas['Zee+Zmm'] = "zee + zmumu"
+YIELD_TBL.formulas['(WZ+ZZ)/Data'] = "(wz + zz)/data"
+YIELD_TBL.formulas['Zll/Data'] = "(zee + zmumu)/data"
 
 #######################################
 # What regions to plot
 region_ops = []
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 #region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRden_m']
+#region_ops += ['zjets_FF_CRden_eem']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
+#region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
 #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
-region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRden_e']
+#region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
+#region_ops += ['zCR_ee', 'zCR_mumu']
 
 #######################################
 # What variables to plot
 vars_to_plot = []
-#vars_to_plot += ['Lep0Pt', 'Lep1Pt', 'Z_Lep2_pT']
-vars_to_plot += ['Lep0Pt']
+#vars_to_plot += ['nLepID']
+#vars_to_plot += ['nLepAntiID']
+#vars_to_plot += ['Z_Lep2_flav']
+#vars_to_plot += ['Z_MLL']
+#vars_to_plot += ['Z_MLL','nBJets','Z_Lep2_mT','Z2_MLL','MET']
+vars_to_plot += ['l_pt[0]','l_pt[1]','Z_Lep2_pT']
+vars_to_plot += ['l_truthClass[0]','l_truthClass[1]','l_truthClass[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

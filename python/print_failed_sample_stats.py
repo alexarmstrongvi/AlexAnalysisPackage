@@ -40,6 +40,7 @@ def main():
 
     for dsid in dsid_list: 
         dsid = dsid.strip()
+        if not dsid or dsid.startswith('#'): continue
         found_dsid = False
         for err_file in err_files:
             if dsid not in err_file: continue

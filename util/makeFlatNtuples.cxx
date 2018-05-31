@@ -159,7 +159,7 @@ struct Args {
             } else if (arg == "-k" || arg == "--nskipped") {
                 n_skipped = atoi(arg_value.c_str());
             } else if (arg == "-s" || arg == "--suffix") {
-                name_suffix = true;
+                name_suffix = arg_value;
             } else if (arg == "--baseline_sel") {baseline_sel = true;
             } else if (arg == "--baseline_den") {baseline_den = true;
             } else if (arg == "--fake_num") {fake_num = true;
@@ -280,9 +280,9 @@ void run_superflow(Sel sel_type) {
 }
 
 Superflow* get_cutflow(TChain* chain, Sel sel_type) {
-    args.name_suffix = determine_suffix(args.name_suffix, sel_type, args.apply_ff);
+    string name_suffix = determine_suffix(args.name_suffix, sel_type, args.apply_ff);
 
-    Superflow* superflow = initialize_superflow(chain, args.name_suffix);
+    Superflow* superflow = initialize_superflow(chain, name_suffix);
 
     // How to add cutflow entry:
     // Create lambda function that returns bool value of cut.
@@ -521,7 +521,7 @@ void add_fake_den_lepton_cuts(Superflow* superflow) {
 }
 void add_zll_cr_lepton_cuts(Superflow* superflow) {
     *superflow << CutName("2-ID Leptons") << [=](Superlink* sl) -> bool {
-        return (sl->leptons->size() == 2);
+        return (sl->leptons->size() >= 2);
     };
     add_SFOS_lepton_cut(superflow);
 }
@@ -1196,6 +1196,7 @@ void add_signallepton_variables(Superflow* superflow) {
         *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
             vector<int> out;
             for(auto& lepton : m_selectLeptons) {
+                //if (!lepton) continue; //TODO: Add this line
                 out.push_back(get_lepton_truth_class(lepton));
             }
             return out;
@@ -2260,7 +2261,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
     if      (promptEl)           return 1;
     else if (promptMuon)         return 2;
     else if (promptPho)          return 3;
-    else if (bkgEl_from_phoConv) return 4;
+    else if (bkgEl_from_phoConv) return 4; // TODO: Make the last else if 
     else if (promptEl_from_FSR)  return 5;
     else if (hadDecay)           return 6;
     else if (Mu_as_e)            return 7;
@@ -2276,7 +2277,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
              << "MO = " << MO << ", "
              << "M_ID = " << M_ID << endl;
     }
-    return -1;
+    return -1; // TODO: Change to 0
 }
 
 
