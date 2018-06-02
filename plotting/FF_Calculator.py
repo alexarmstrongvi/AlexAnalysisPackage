@@ -28,7 +28,6 @@ r.gStyle.SetOptStat(False)
 
 import tools.plot_utils as pu
 import tools.utils as utils
-import tools.signal as signal
 import tools.sample as sample
 import tools.region as region
 import tools.plot as plot
@@ -77,35 +76,15 @@ def check_input_args():
         print "ERROR :: configuration file not found: %s"%(args.config)
         sys.exit()
 
-def set_eventlists(data, backgrounds, reg):
+def set_eventlists(reg):
     """
     Set/create the event lists for the input samples and their region cuts
 
     """
-    cut = r.TCut(reg.tcut)
-    sel = r.TCut("1")
-    samples = backgrounds+[data]
-
-    for sample in samples:
-        list_name = "list_" + reg.name + "_" + sample.treename
-        save_name = g.event_list_dir + list_name + ".root"
-        save_name = os.path.normpath(save_name)
-
-        # Reset event list
-        sample.tree.SetEventList(0)
-
-        # check if the list already exists
-        if os.path.isfile(save_name) :
-            rfile = r.TFile.Open(save_name)
-            elist = rfile.Get(list_name)
-            print "%10s : EventList found at %s"%(sample.name, save_name)
-            sample.tree.SetEventList(elist)
-        else :
-            draw_list = ">> " + list_name
-            sample.tree.Draw(draw_list, sel*cut)
-            elist = r.gROOT.FindObject(list_name)
-            sample.tree.SetEventList(elist)
-            elist.SaveAs(save_name)
+        cut = r.TCut(reg.tcut)
+        for sample in SAMPLES :
+            list_name = "list_" + reg.name + "_" + sample.name
+            sample.set_event_list(cut, list_name, event_list_dir)
 
 def get_FF_hists(data, backgrounds, regions, plots):
     hists = {}

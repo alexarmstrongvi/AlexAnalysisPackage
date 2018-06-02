@@ -63,7 +63,7 @@ class Plot1D(object) :
         variable = "",
         xlabel = "x-Label",
         xunits = "",
-        ylabel = "Events",
+        ylabel = "",
         yunits = "",
         bin_range = [], # [x0, x1, y0, y1]
         bin_width = None, # Can specify to override nbins
@@ -105,6 +105,7 @@ class Plot1D(object) :
         self.is2D = is2D
         self.doLogY = doLogY
         self.doNorm = doNorm
+
         self.add_overflow = add_overflow
         self.add_underflow = add_underflow
         self.using_labels = False
@@ -142,7 +143,7 @@ class Plot1D(object) :
     def bin_labels(self, labels):
         self.using_labels = True if labels else False
         self._bin_labels = labels
-    
+
     def update(self,
         region = None,
         variable = None,
@@ -195,7 +196,7 @@ class Plot1D(object) :
         if norm_ymax: self.norm_ymax = norm_ymax
         if logy_norm_min: self.logy_norm_min = logy_norm_min
         if logy_norm_max: self.logy_norm_max = logy_norm_max
-        
+
         self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
         if nbins or bin_width:
             self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
@@ -297,6 +298,14 @@ class Plot1D(object) :
         # Set x-axis label
         if self.xunits:
             xlabel = "%s [%s]"%(xlabel, self.xunits)
+
+        # set y-axis label defaults
+        if ylabel:
+            pass
+        elif self.doNorm:
+            ylabel = "a.u."
+        else:
+            ylabel = "Events"
 
         # set y-axis label
         width_label = str(round(self.bin_width(), 2))
@@ -454,7 +463,6 @@ class Plot2D :
 
     def Print(self) :
         print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(self.name, self.region, self.xVariable, self.yVariable)
-
 
 ################################################################################
 # TPad handler classes

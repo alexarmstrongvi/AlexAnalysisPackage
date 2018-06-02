@@ -206,8 +206,8 @@ class Sample :
 # Data class
 ################################################################################
 class Data(Sample):
-    def __init__(self) :
-        Sample.__init__(self, "data", "Data")
+    def __init__(self, name = 'data', displayname='Data') :
+        Sample.__init__(self, name, displayname)
         self.color = r.kBlack
         self.isMC = False
 

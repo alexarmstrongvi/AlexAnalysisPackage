@@ -264,7 +264,7 @@ REGIONS[-1].tcut = lepton_trig_pT + "&&" + DF_OS
 REGIONS.append(Region("topCR", "Top CR"))
 REGIONS[-1].tcut = "nBJets >= 1 && MET > 40 &&" + DF_OS + " &&" + lepton_trig_pT
 
-zll_cr_base = "75 < Z_MLL && Z_MLL < 105 && " + Z_SF_OS 
+zll_cr_base = "75 < Z_MLL && Z_MLL < 105 && " + Z_SF_OS
 zll_cr_add  = singlelep_trig_pT
 #zll_cr_add += " && nLepID == 2"
 #zll_cr_add += " && nLepAntiID >= 1"
@@ -274,10 +274,10 @@ zll_cr_add += " && Z_Lep2_flav==0" # muon
 #zll_cr_add += " && Z_dilep_flav==2" # el-el
 #zll_cr_add += " && Z_dilep_flav==3" # mu-mu
 REGIONS.append(Region("zCR_ee", "Z CR (Channel: El-El)"))
-REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_ee 
+REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_ee
 
 REGIONS.append(Region("zCR_mumu", "Z CR (Channel: Mu-Mu)"))
-REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_mumu 
+REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add + " && " + Z_mumu
 
 ZTauTau_CR =  ('Lep0Pt >= 30 && Lep0Pt < 45 && Lep1Pt >= 15 '
               + '&& (30 < MLL && MLL < 150) '
@@ -538,7 +538,7 @@ plot_defaults = {
 
 # Add any labels to the plots
 l_truthClass_labels = [ 'Undefined',' ','prompt El','prompt Mu', 'prompt Pho', 'Bkg El from conv','prompt El from FSR','hadron','Mu as e','HF tau','HF B','HF C',' ']
-plot_defaults['l_truthClass[0]'].bin_labels = l_truthClass_labels 
+plot_defaults['l_truthClass[0]'].bin_labels = l_truthClass_labels
 plot_defaults['l_truthClass[1]'].bin_labels = l_truthClass_labels
 plot_defaults['l_truthClass[2]'].bin_labels = l_truthClass_labels
 plot_defaults['isMC'].bin_labels = [' ', 'Data', 'MC', ' ']
@@ -677,4 +677,3 @@ for var in vars_to_plot:
         PLOTS.append(p)
 
 print "Configuration File End"
-

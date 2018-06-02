@@ -7,8 +7,9 @@ class Region :
     def __init__(self, name="", displayname="") :
         self.name = name
         self.displayname = displayname
-        self.tcut = ""
-
+        self.tcut = None
+        self.truth_fake_sel = None
+        self.truth_nonfake_sel = None
 
         self.is_cutflow = False
         self.cutDict = collections.OrderedDict()
