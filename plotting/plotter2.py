@@ -341,6 +341,7 @@ def add_stack_backgrounds(plot, reg):
 
         # Draw final histogram (i.e. selections and weights applied)
         cut = "(%s) * %s * %s"%(reg.tcut, mc_sample.weight_str, str(mc_sample.scale_factor))
+        print "REGION %s:\n\n", cut
         cut = r.TCut(cut)
         sel = r.TCut("1")
         draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())

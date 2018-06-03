@@ -50,6 +50,7 @@ MCsample.weight_str = 'eventweight'
 MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
 Plot1D.auto_set_ylimits = False
+Plot1D.ymax = 1e5
 
 ################################################################################
 # Samples
@@ -288,10 +289,8 @@ REGIONS.append(Region("ztautauCR", "Ztautau CR"))
 REGIONS[-1].tcut = ZTauTau_CR
 
 # Z+Jets fake regions
-zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
-zjets_FF_CRnum_base = 'nLepID == 3'
-zjets_FF_CR_add = singlelep_trig_pT
-zjets_FF_CR_add += '&& (75 < Z_MLL && Z_MLL < 105)'
+zjets_FF_CR_add = '1'
+zjets_FF_CR_add += ' && (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
@@ -317,7 +316,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
         displayname = 'Z+jets FF CR (%s)'%(chan_name)
         REGIONS.append(Region(name, displayname))
-        REGIONS[-1].tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
+        REGIONS[-1].tcut = ' && '.join([num_den_sel, ops[2], singlelep_trig, zjets_FF_CR_add])
 
 # Wjet fake regions
 wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1'
@@ -527,7 +526,7 @@ plot_defaults = {
     'dR_Zl'                : Plot1D( bin_range=[0.0, 6.0],    nbins=60, xlabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'         : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='Z dilepton flavor'),
     'Z2_dilep_flav'        : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='2nd Z dilepton flavor'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, doLogY = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
     'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
     'Z_Lep2_flav'          : Plot1D( bin_range=[-1.5, 2.5],   bin_width=1, xlabel='Fake candidate flavor'),
     'Z_dilep_sign'         : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='Z Dilepton Sign : OS(-1) SS(1)'),
@@ -568,6 +567,9 @@ region_plots = {}
 # To remove sample from plot, comment out the line setting its TChain
 # Samples with empty TChains get removed below
 data_dsids = g.groups['data15']+g.groups['data16']
+data_ntuple_dir = data_ntuple_dir[:-1] + "_den/"
+bkg_ntuple_dir = bkg_ntuple_dir[:-1] + "_den/"
+
 data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir, exclude_strs=['FFest'])
 #fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir, search_strs=['FFest'])
 ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
@@ -601,9 +603,11 @@ YIELD_TBL.formulas['Zll/Data'] = "(zee + zmumu)/data"
 #######################################
 # What regions to plot
 region_ops = []
-#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
-#region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-#region_ops += ['zjets_FF_CRden_eem']
+#region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRden_e']
+#region_ops += ['zjets_FF_CRnum_m', 'zjets_FF_CRnum_e']
+region_ops += ['zjets_FF_CRden_m']
+#region_ops += ['zjets_FF_CRnum_m']
+#region_ops += ['zjets_FF_CRnum_eem']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
 #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
@@ -618,8 +622,9 @@ vars_to_plot = []
 #vars_to_plot += ['Z_Lep2_flav']
 #vars_to_plot += ['Z_MLL']
 #vars_to_plot += ['Z_MLL','nBJets','Z_Lep2_mT','Z2_MLL','MET']
-vars_to_plot += ['l_pt[0]','l_pt[1]','Z_Lep2_pT']
-vars_to_plot += ['l_truthClass[0]','l_truthClass[1]','l_truthClass[2]']
+#vars_to_plot += ['l_pt[0]','l_pt[1]','Z_Lep2_pT']
+#vars_to_plot += ['l_truthClass[0]','l_truthClass[1]','l_truthClass[2]']
+vars_to_plot += ['Z_Lep2_pT']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

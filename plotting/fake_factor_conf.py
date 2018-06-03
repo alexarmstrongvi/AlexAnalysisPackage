@@ -49,7 +49,8 @@ lumi = 36180
 MCsample.weight_str = 'eventweight'
 MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
-Plot1D.auto_set_ylimits = True
+Plot1D.auto_set_ylimits = False
+Plot1D.ymax = 2e4
 NUM_STR = "num"
 DEN_STR = "den"
 
@@ -148,8 +149,8 @@ for num_den in [NUM_STR, DEN_STR]:
     # Samples with empty TChains get removed below
 
     data_dsids = g.groups['data15']+g.groups['data16']
-    data_ntuple_dir2 = data_ntuple_dir + '_' + num_den
-    bkg_ntuple_dir2 = bkg_ntuple_dir + '_' + num_den
+    data_ntuple_dir2 = data_ntuple_dir[:-1] + '_' + num_den + "/"
+    bkg_ntuple_dir2 = bkg_ntuple_dir[:-1] + '_' + num_den + "/"
 
     data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir2)
     ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir2)
@@ -252,20 +253,17 @@ lepton_trig_pT = '(%s || %s)'%(singlelep_trig_pT, dilep_trig_pT)
 # Create regions
 REGIONS = []
 
-zjets_FF_CRden_base = 'nLepID == 2 && nLepAntiID >= 1'
-zjets_FF_CRnum_base = 'nLepID == 3'
-zjets_FF_CR_add = singlelep_trig_pT
-zjets_FF_CR_add += '&& (75 < Z_MLL && Z_MLL < 105)'
+zjets_FF_CR_add = '1'
+zjets_FF_CR_add += ' && (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR_add += ' && MET < 50'
-
-zjets_FF_truth_base = ' && (!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
+zjets_FF_truth_base = '(!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
 zjets_FF_truth_base += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
-zjets_FF_truth_num = zjets_FF_truth_base
+zjets_FF_truth_num = zjets_FF_truth_base\
                    +' && (!isMC || (0 < l_truthClass[2] && l_truthClass[2] <= 2))' #Prompt Probe Lepton
-zjets_FF_truth_den = zjets_FF_truth_base
+zjets_FF_truth_den = zjets_FF_truth_base\
                    + ' && (!isMC || (l_truthClass[2] <= 0 || 2 < l_truthClass[2]))' #Fake Probe Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
@@ -284,9 +282,9 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
         displayname = 'Z+jets FF CR (%s)'%(chan_name)
         REGIONS.append(Region(name, displayname))
-        REGIONS[-1].tcut = ' && '.join([num_den_sel, zjets_FF_CR_add, ops[2], singlelep_trig])
+        REGIONS[-1].tcut = ' && '.join([num_den_sel, ops[2], singlelep_trig, zjets_FF_CR_add])
         REGIONS[-1].truth_fake_sel = zjets_FF_truth_den
-        REGIONS[-1].truth_nonfake_sel = zjets_FF_truth_num
+        REGIONS[-1].truth_bkg_sel = zjets_FF_truth_num
 
 
 # Wjet fake regions
@@ -332,12 +330,13 @@ REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_C
 # Improved plot defining setup
 # These plots will be copied into new plots for each region being run
 plot_defaults = {
-    'l_pt[2]'              : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, add_overflow = False, xunits='GeV', xlabel='p_{T}^{fake candidate lep}'),
-    'l_eta[2]'             : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
+    'l_pt[2]'              : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, add_overflow = False, xunits='GeV', xlabel='p_{T}^{fake candidate lep}'),
+    'l_eta[2]'             : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
 
+region_plots = {}
 ################################################################################
 # Toggle options for execution
 # - Options expected to change often between different plottings
@@ -357,8 +356,7 @@ YIELD_TBL.formulas['Zll/Data'] = "(zee + zmumu)/data"
 # What regions to plot
 region_ops = []
 #region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
-#region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-region_ops += ['zjets_FF_CRden_m']
+region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
 #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
@@ -405,7 +403,6 @@ for var in vars_to_plot:
             n_bkgds = len([s for s in SAMPLES if s.isMC and not s.isSignal])
             n_signal = len([s for s in SAMPLES if s.isMC and s.isSignal])
             n_data = len([s for s in SAMPLES if not s.isMC])
-            assert n_data <= 1, "ERROR :: More than one data sample setup"
 
             if n_bkgds and n_data:
                 p.ptype = Types.ratio
