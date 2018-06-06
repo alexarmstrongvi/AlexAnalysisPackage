@@ -55,6 +55,7 @@ class Sample :
         '''
         # Get list of flat ntuples file names from sample directory
         self.file_path = os.path.realpath(flat_ntuple_dir)
+        print "Getting ntuples from", self.file_path
 
         flat_ntuples = glob.glob(flat_ntuple_dir + "*.root")
         assert len(flat_ntuples), "No root files found at %s"%flat_ntuple_dir

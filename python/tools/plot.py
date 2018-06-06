@@ -52,8 +52,8 @@ class Plot1D(object) :
     norm_ymin = -0.1
     norm_ymax = 1.5
 
-    logy_norm_min = 1e-8
-    logy_norm_max = 1e3
+    logy_norm_min = 1e-7
+    logy_norm_max = 1e4
 
     auto_set_ylimits = True
 
@@ -108,7 +108,6 @@ class Plot1D(object) :
 
         self.add_overflow = add_overflow
         self.add_underflow = add_underflow
-        self.using_labels = False
         self.leg_is_left = leg_is_left
         self.leg_is_bottom_right = leg_is_bottom_right
         self.leg_is_bottom_left = leg_is_bottom_left
@@ -134,15 +133,8 @@ class Plot1D(object) :
         self.yunits = yunits
         self.xlabel, self.ylabel = self.determine_labels(xlabel, ylabel)
 
-        self._bin_labels = []
-
-    @property
-    def bin_labels(self):
-        return self._bin_labels
-    @bin_labels.setter
-    def bin_labels(self, labels):
-        self.using_labels = True if labels else False
-        self._bin_labels = labels
+        self.bin_labels = []
+        self.rebin_bins = []
 
     def update(self,
         region = None,
@@ -348,14 +340,12 @@ class Plot1D(object) :
         x_axis.SetLabelOffset(0.005)
         x_axis.SetLabelSize(1.5*x_axis.GetLabelSize())
 
-    #TODO: Function to add bin quantity labels to histogram
-
     def setDefaultPads(self, name) :
         self.pads = Pads(name)
         self.ptype = Types.default
 
     def setStackPads(self, name):
-        self.pads = StackPads(name, self.using_labels)
+        self.pads = StackPads(name)
         self.ptype = Types.stack
 
     def setRatioPads(self, name) :
@@ -468,18 +458,17 @@ class Plot2D :
 # TPad handler classes
 ################################################################################
 class Pads :
-    def __init__(self, name, using_labels=False):
+    def __init__(self, name):
         self.name = "c_" + name
         self.canvas = r.TCanvas(self.name, self.name, 800, 600)
-        self.using_labels = using_labels
         self.set_pad_dimensions()
 
     def set_pad_dimensions(self):
         pass
 
 class StackPads(Pads):
-    def __init__(self, name, using_labels=False):
-        Pads.__init__(self, name, using_labels)
+    def __init__(self, name):
+        Pads.__init__(self, name)
 
     def set_pad_dimensions(self):
         can = self.canvas

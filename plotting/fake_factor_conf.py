@@ -50,7 +50,7 @@ MCsample.weight_str = 'eventweight'
 MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
 Plot1D.auto_set_ylimits = False
-Plot1D.ymax = 2e4
+Plot1D.ymax = 4e3
 NUM_STR = "num"
 DEN_STR = "den"
 
@@ -282,7 +282,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
         displayname = 'Z+jets FF CR (%s)'%(chan_name)
         REGIONS.append(Region(name, displayname))
-        REGIONS[-1].tcut = ' && '.join([num_den_sel, ops[2], singlelep_trig, zjets_FF_CR_add])
+        REGIONS[-1].tcut = ' && '.join([num_den_sel, ops[2], singlelep_trig_pT, zjets_FF_CR_add])
         REGIONS[-1].truth_fake_sel = zjets_FF_truth_den
         REGIONS[-1].truth_bkg_sel = zjets_FF_truth_num
 
@@ -333,8 +333,9 @@ plot_defaults = {
     'l_pt[2]'              : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, add_overflow = False, xunits='GeV', xlabel='p_{T}^{fake candidate lep}'),
     'l_eta[2]'             : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, add_underflow = True, xlabel='Fake candidate lepton #eta'),
     'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
+plot_defaults['Z_Lep2_pT'].rebin_bins = [0,5,10,15,20,25,30,100]  
 
 region_plots = {}
 ################################################################################
@@ -355,7 +356,7 @@ YIELD_TBL.formulas['Zll/Data'] = "(zee + zmumu)/data"
 #######################################
 # What regions to plot
 region_ops = []
-#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
+region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
 #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
@@ -365,8 +366,8 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['Z_Lep2_pT']
-#vars_to_plot += ['Z_Lep2_eta']
+#vars_to_plot += ['Z_Lep2_pT']
+vars_to_plot += ['Z_Lep2_eta']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

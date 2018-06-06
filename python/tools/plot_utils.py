@@ -1,5 +1,5 @@
 import ROOT
-from math import sqrt, log10
+from math import sqrt, log10, isnan
 ROOT.gROOT.SetBatch(True)
 import array
 
@@ -313,7 +313,7 @@ def add_overflow_to_lastbin(hist) :
     hist.SetBinContent(ilast, lastBinValue+overFlowValue)
     hist.SetBinError(ilast, sqrt(lastBinError*lastBinError + overFlowError*overFlowError))
 
-def add_underflow_to_lastbin(hist) :
+def add_underflow_to_firstbin(hist) :
     '''
     Given an input histogram, add the underflow
     to the last visible bin
@@ -445,6 +445,7 @@ def scale_thstack(stack, scale_factor):
     
 def scale_tgraph(tgraph, scale_factor):
     for ii in range(tgraph.GetN()):
+        if isnan(tgraph.GetY()[ii]): continue
         tgraph.GetY()[ii] *= scale_factor
         if isinstance(tgraph, ROOT.TGraphErrors):
             tgraph.GetEY()[ii] *= scale_factor

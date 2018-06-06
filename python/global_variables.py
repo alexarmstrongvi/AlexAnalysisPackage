@@ -31,7 +31,12 @@ event_list_dir      = analysis_run_dir+"lists/"
 plots_dir           = analysis_run_dir+"plots/"
 
 mc_ntuples = analysis_run_dir+"ntuples/mc/"
+mc_num_ntuples = analysis_run_dir+"ntuples/mc_num/"
+mc_den_ntuples = analysis_run_dir+"ntuples/mc_den/"
 data_ntuples = analysis_run_dir+"ntuples/data/"
+data_num_ntuples = analysis_run_dir+"ntuples/data_num/"
+data_den_ntuples = analysis_run_dir+"ntuples/data_den/"
+fake_ntuples = analysis_run_dir+"ntuples/fakes/"
 
 # Set input files as local or fax
 input_files = local_input_files
@@ -105,9 +110,7 @@ groups['zz'] = [
     361604,
     361610,
 ]
-#groups['vv'] = [
-#    361077,
-#]
+
 ##groups['zll'] = [
 ##    364100, 364101, 364102, 364103, 364104, 364105, 364106, 364107, 364108,
 ##    364109, 364110, 364111, 364112, 364113,

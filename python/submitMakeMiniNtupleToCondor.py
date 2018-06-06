@@ -11,16 +11,16 @@ ana_name      = "makeFlatNtuples" #"makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax
 submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
 dry_run       = False
-file_name_suffix = ''
+file_name_suffix = 'ptbin'
 
 # Run analysis with selections
-do_baseline        = True
+do_baseline        = False
 do_baseline_den    = False
-do_zjets_num_fakes = True
+do_zjets_num_fakes = False
 do_zjets_den_fakes = True
-do_zll_cr          = True
-apply_ff           = False  # apply fake factor to denom events
-only_fakes         = False  # only output fake ntuples
+do_zll_cr          = False
+apply_ff           = True  # apply fake factor to denom events
+only_fakes         = True  # only output fake ntuples
 assert not (only_fakes and do_zjets_num_fakes)
 
 # Where to submit condor jobs
@@ -110,7 +110,7 @@ def main() :
                 #run_cmd += ' %s '%(tar_location + "area.tgz")
                 run_cmd += ' %s '%tarred_dir
                 run_cmd += ' %s '%dataset
-                lname = dataset.split("/")[-1].replace(".txt", "")
+                lname = region + "_" + dataset.split("/")[-1].replace(".txt", "")
                 ops = ""
 
                 if do_baseline and region=='baseline':
@@ -129,8 +129,8 @@ def main() :
 
                 if file_name_suffix:
                     ops += ' -s %s'%file_name_suffix
+                    lname += "_" + file_name_suffix
 
-                lname = '_'.join([lname] + file_name_suffix)
 
                 run_cmd += ' %s '%(ops) # any extra cmd line optino for Superflow executable
                 run_cmd += '"'
@@ -145,7 +145,7 @@ def main() :
                 if submit_fakes and not (apply_ff and isData): continue
                 if not submit_fakes and apply_ff and only_fakes: continue
                 #for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
-                for region in ['fake_num', 'fake_den','zll_cr']:
+                for region in ['fake_den']:
                     if region == 'zjets_num' and submit_fakes: continue
                     if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue
 

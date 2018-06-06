@@ -27,7 +27,6 @@ using namespace sflow;
 // Declarations
 ////////////////////////////////////////////////////////////////////////////////
 // Useful macros
-// TODO: Run over a vector of leptons
 #define ADD_1LEP_TRIGGER_VAR(trig_name, leptons) { \
     *superflow << NewVar(#trig_name" trigger bit"); { \
         *superflow << HFTname(#trig_name); \
@@ -38,18 +37,6 @@ using namespace sflow;
     } \
 }
 
-//#define ADD_1LEP_TRIGGER_VAR(trig_name, lep) { \
-//    *superflow << NewVar(#trig_name" trigger bit"); { \
-//        *superflow << HFTname(#trig_name); \
-//        *superflow << [=](Superlink* sl, var_bool*) -> bool { \
-//            if(!lep) return false;\
-//            bool trig_fired = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, #trig_name); \
-//            if (!trig_fired) return false;\
-//            bool trig_matched = sl->tools->triggerTool().lepton_trigger_match(lep, #trig_name);\
-//            return trig_matched; }; \
-//        *superflow << SaveVar(); \
-//    } \
-//}
 // Trig Matching for dilep triggers is buggy
 // so currently not trigger matching
 #define ADD_2LEP_TRIGGER_VAR(trig_name, lep0, lep1) { \
@@ -1196,7 +1183,6 @@ void add_signallepton_variables(Superflow* superflow) {
         *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
             vector<int> out;
             for(auto& lepton : m_selectLeptons) {
-                //if (!lepton) continue; //TODO: Add this line
                 out.push_back(get_lepton_truth_class(lepton));
             }
             return out;
@@ -2256,18 +2242,20 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
     bool HF_C5 = T==NonIsoMuon && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
     bool HF_C6 = (T==IsoMuon || T==BkgMuon) && (O==CCbarMeson || MO==CCbarMeson);
     bool HF_C =  HF_C1 || HF_C2 || HF_C3 || HF_C4 || HF_C5 || HF_C6;
-
-
+    
     if      (promptEl)           return 1;
     else if (promptMuon)         return 2;
     else if (promptPho)          return 3;
-    else if (bkgEl_from_phoConv) return 4; // TODO: Make the last else if 
-    else if (promptEl_from_FSR)  return 5;
-    else if (hadDecay)           return 6;
-    else if (Mu_as_e)            return 7;
-    else if (HF_tau)             return 8;
-    else if (HF_B)               return 9;
-    else if (HF_C)               return 10;
+    else if (promptEl_from_FSR)  return 4;
+    else if (hadDecay)           return 5;
+    else if (Mu_as_e)            return 6;
+    else if (HF_tau)             return 7;
+    else if (HF_B)               return 8;
+    else if (HF_C)               return 9;
+    else if (bkgEl_from_phoConv) return 10; 
+    else if (!(T || O || MT || MO || M_ID)) return -1;
+    else if (T && O && !(MT || MO || M_ID)) return -2;
+    else if (T && !O) return -3;
     // else if (promptChargeFlipEl) return 2;
     else if (T && O && M_ID) {
         cout << "Unexpected Truth Class: "
@@ -2277,7 +2265,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
              << "MO = " << MO << ", "
              << "M_ID = " << M_ID << endl;
     }
-    return -1; // TODO: Change to 0
+    return 0;
 }
 
 

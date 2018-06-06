@@ -111,6 +111,7 @@ class YieldTable :
 
     def all_yields(self):
         all_yields = self.mc.copy()
+        all_yields['MC'] = sum([v for _, v in self.mc.iteritems()])
         all_yields.update(self.data)
         all_yields.update(self.signals)
         return all_yields
@@ -191,7 +192,7 @@ class YieldTable :
 
     def apply_formula(self, formula, no_uncertainty=True):
         # Get samples from formula
-        samples = re.sub("(\+|\-|\)|\(|\*|\/)"," ", formula)
+        samples = re.sub("(\+|\-|\)|\(|\*|[0-9]|\/)"," ", formula)
         samples = [s.strip() for s in samples.split()]
         assert all(s.replace("_","").isalpha() for s in samples), (
             "ERROR :: Unacceptable formula format", formula)
@@ -199,7 +200,7 @@ class YieldTable :
 
         # Replace names in formula with values
         all_yields = self.all_yields()
-        assert len(all_yields) == len(self.mc) + len(self.data) + len(self.signals), (
+        assert len(all_yields) == len(self.mc) + len(self.data) + len(self.signals) + 1, (
             "ERROR (YieldTable) :: Overlapping key values")
         samples.sort(key=len, reverse=True)
 

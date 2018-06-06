@@ -17,6 +17,7 @@ Licence:
 import sys, os, traceback, argparse
 import time
 from re import sub
+from array import array
 from copy import copy
 from collections import defaultdict
 from importlib import import_module
@@ -382,10 +383,10 @@ def get_fake_factor_hists(hists):
     return ff_hists
 
 def save_and_write_hists(ff_hists_dict, hists):
-# Writing fake factor hists to root file
-#with open_root(args.ofile_name,"RECREATE") as ofile:
-#    for channel_name, ff_hists in ff_hists_dict.iteritems():
-#        ff_hists[KEYS.data_corr_fake_factor].Write()
+    # Writing fake factor hists to root file
+    with open_root(args.ofile_name,"RECREATE") as ofile:
+        for channel_name, ff_hists in ff_hists_dict.iteritems():
+            ff_hists[KEYS.data_corr_fake_factor].Write()
 
 # Saving plots of fake factor hists
     for channel_name, ff_hists in ff_hists_dict.iteritems():
@@ -520,7 +521,7 @@ def save_hist(title, plot, reg_name, hist_list):
     can.Update()
 
     # Save
-    outname = title + ".eps"
+    outname = reg_name + '_' + title + ".eps"
     outname = outname.replace(" ","_")
     outname = sub(r'[:\-(){}[\]]+','', outname)
     save_path = os.path.join(plots_dir, args.dir_name, outname)
@@ -540,11 +541,17 @@ def build_hist(h_name, plot, sample, cut):
     cut = r.TCut(cut)
     draw_cmd = "%s>>+%s"%(plot.variable, hist.GetName())
     sample.tree.Draw(draw_cmd, cut, "goff")
-    print "%s: Yield -> %.2f"%(sample.name, hist.Integral())
-    if plot.add_overflow:
-        pu.add_overflow_to_lastbin(hist)
-    if plot.add_underflow:
-        pu.add_underflow_to_firstbin(hist)
+    
+    if plot.rebin_bins:
+        new_bins = array('d', plot.rebin_bins)
+        hist = hist.Rebin(len(new_bins)-1, h_name, new_bins)
+
+    #if plot.add_overflow:
+    #    pu.add_overflow_to_lastbin(hist)
+    #if plot.add_underflow:
+    #    pu.add_underflow_to_firstbin(hist)
+
+
     return hist
 
 def remove_num_den(name):

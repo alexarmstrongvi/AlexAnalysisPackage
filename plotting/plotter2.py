@@ -150,7 +150,7 @@ def make_plotsStack(plot, reg):
     data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     if plot.doNorm:
-        normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
+        normalize_stack(mc_total, signals, data_hist, data, mc_stack, mc_errors)
     if plot.auto_set_ylimits:
         reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
@@ -195,7 +195,7 @@ def make_plotsRatio(plot, reg) :
     data, data_hist = add_stack_data(plot, legend, reg)
     error_leg, mc_errors = add_stack_mc_errors(plot, legend, hists, mc_stack)
     if plot.doNorm:
-        normalize_stack(mc_total, signals, data, mc_stack, mc_errors)
+        normalize_stack(mc_total, signals, data_hist, data, mc_stack, mc_errors)
     if plot.auto_set_ylimits:
         reformat_axis(plot, legend, mc_stack, data, axis, signals)
 
@@ -302,7 +302,10 @@ def make_stack_axis(plot):
 
     if plot.bin_labels and plot.ptype == Types.stack:
         plot.set_bin_labels(hax)
-
+    #if plot.rebin_bins:
+    #    print "WARNING :: rebinning not yet implemented"
+    #    #TODO: Implement rebinning
+    
     return hax
 
 def add_stack_backgrounds(plot, reg):
@@ -340,8 +343,11 @@ def add_stack_backgrounds(plot, reg):
         h.Sumw2
 
         # Draw final histogram (i.e. selections and weights applied)
-        cut = "(%s) * %s * %s"%(reg.tcut, mc_sample.weight_str, str(mc_sample.scale_factor))
-        print "REGION %s:\n\n", cut
+        if plot.variable != mc_sample.weight_str:
+            weight_str = "%s * %s"%(mc_sample.weight_str, str(mc_sample.scale_factor))
+        else:
+            weight_str = 1
+        cut = "(%s) * %s"%(reg.tcut, weight_str)
         cut = r.TCut(cut)
         sel = r.TCut("1")
         draw_cmd = "%s>>+%s"%(plot.variable, h.GetName())
@@ -476,16 +482,16 @@ def add_stack_mc_errors(plot, leg, hists, stack):
 
     return mcError, nominalAsymErrors
 
-def normalize_stack(mc_total, signals, data, mc_stack, mc_errors):
+def normalize_stack(mc_total, signals, data_hist, data_graph, mc_stack, mc_errors):
     mc_norm_factor = 1.0/mc_total.Integral()
     sig_norm_factors = [1.0/s.Integral() for s in signals]
-    data_norm_factor = 1.0/data.Integral()
+    data_norm_factor = 1.0/data_hist.Integral()
 
     pu.scale_thstack(mc_stack, mc_norm_factor)
     mc_total.Scale(mc_norm_factor)
     pu.scale_tgraph(mc_errors, mc_norm_factor)
     signals = [s.Scale(f) for s,f in zip(signals, sig_norm_factors)]
-    pu.scale_tgraph(data, data_norm_factor)
+    pu.scale_tgraph(data_graph, data_norm_factor)
 
 def reformat_axis(plot, leg, stack, data, hax, signals):
     ''' Reformat axis to fit content and labels'''
@@ -500,10 +506,9 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
 
     # Get default y-axis max and min limits
     logy = plot.doLogY
-    norm = plot.doNorm
     if logy:
         ymax = 10**(pu.get_order_of_mag(maxy))
-        if miny >= 0:
+        if miny > 0:
             ymin = 10**(pu.get_order_of_mag(miny))
         else:
             ymin = 10**(pu.get_order_of_mag(maxy) - 7)
@@ -563,6 +568,10 @@ def get_ratio_axis(plot, stack, ylabel, ymax):
 
     if plot.bin_labels and plot.ptype == Types.ratio:
         plot.set_bin_labels(h_sm)
+    
+    #if plot.rebin_bins:
+    #    print "WARNING :: rebinning not yet implemented"
+    #    #TODO: Implement rebinning
 
     return h_sm
 
