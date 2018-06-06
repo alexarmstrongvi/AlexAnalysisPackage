@@ -256,7 +256,7 @@ REGIONS = []
 zjets_FF_CR_add = '1'
 zjets_FF_CR_add += ' && (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR_add += ' && nBJets == 0'
-zjets_FF_CR_add += ' && Z_Lep2_mT < 50'
+zjets_FF_CR_add += ' && l_mT[2] < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR_add += ' && MET < 50'
 zjets_FF_truth_base = '(!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
@@ -267,12 +267,12 @@ zjets_FF_truth_den = zjets_FF_truth_base\
                    + ' && (!isMC || (l_truthClass[2] <= 0 || 2 < l_truthClass[2]))' #Fake Probe Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
-chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
-             'mme' : ['mumu','e','Z_dilep_flav==3 && Z_Lep2_flav==1'],
-             'eem' : ['ee','m','Z_dilep_flav==2 && Z_Lep2_flav==0'],
-             'mmm' : ['mumu','m','Z_dilep_flav==3 && Z_Lep2_flav==0'],
-             'm' : ['ll','m','Z_Lep2_flav==0'],
-             'e' : ['ll','e','Z_Lep2_flav==1'],
+chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && l_flav[2]==1'],
+             'mme' : ['mumu','e','Z_dilep_flav==3 && l_flav[2]==1'],
+             'eem' : ['ee','m','Z_dilep_flav==2 && l_flav[2]==0'],
+             'mmm' : ['mumu','m','Z_dilep_flav==3 && l_flav[2]==0'],
+             'm' : ['ll','m','l_flav[2]==0'],
+             'e' : ['ll','e','l_flav[2]==1'],
         }
 for num_den, num_den_sel in num_den_dict.iteritems():
     for chan, ops in chan_dict.iteritems():
@@ -330,12 +330,10 @@ REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_C
 # Improved plot defining setup
 # These plots will be copied into new plots for each region being run
 plot_defaults = {
-    'l_pt[2]'              : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, add_overflow = False, xunits='GeV', xlabel='p_{T}^{fake candidate lep}'),
-    'l_eta[2]'             : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, add_underflow = True, xlabel='Fake candidate lepton #eta'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
-plot_defaults['Z_Lep2_pT'].rebin_bins = [0,5,10,15,20,25,30,100]  
+plot_defaults['l_pt[2]'].rebin_bins = [0,5,10,15,20,25,30,100]
 
 region_plots = {}
 ################################################################################
@@ -366,8 +364,8 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-#vars_to_plot += ['Z_Lep2_pT']
-vars_to_plot += ['Z_Lep2_eta']
+#vars_to_plot += ['l_pt[2]']
+vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

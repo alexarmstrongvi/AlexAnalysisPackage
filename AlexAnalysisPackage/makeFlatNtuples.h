@@ -14,6 +14,7 @@
 #include <string>
 #include <cmath>
 #include <limits.h>
+#include <algorithm>
 
 // analysis include(s)
 #include "Superflow/Superflow.h"
@@ -75,6 +76,14 @@ bool is_1lep_trig_matched(Superlink* sl, string trig_name, LeptonVector leptons)
 void add_SFOS_lepton_cut(Superflow* superflow);
 void add_DFOS_lepton_cut(Superflow* superflow);
 int get_lepton_truth_class(Susy::Lepton* lepton);
+template<class T>
+bool isIn(T element, vector<T> container) {
+    if (find(container.begin(), container.end(), element) == container.end()) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 // Important globals
 TChain* m_chain = new TChain("susyNt");

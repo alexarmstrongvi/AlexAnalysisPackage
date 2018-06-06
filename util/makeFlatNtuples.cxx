@@ -19,6 +19,7 @@ using std::string;
 using std::cout;
 using std::cerr;
 using std::vector;
+using std::find;
 
 // Various superflow classes
 using namespace sflow;
@@ -306,7 +307,7 @@ Superflow* get_cutflow(TChain* chain, Sel sel_type) {
     add_event_variables(superflow);
     add_trigger_variables(superflow);
     add_met_variables(superflow);
-    add_prelepton_variables(superflow);
+    //add_prelepton_variables(superflow);
     add_baselepton_variables(superflow);
     add_signallepton_variables(superflow);
     add_xtau_lepton_variables(superflow);
@@ -355,6 +356,7 @@ Superflow* initialize_superflow(TChain *chain, string name_suffix) {
     return superflow;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Add lambda expression to superflow
 void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
@@ -375,6 +377,11 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         // TODO: Add grabbing of lepton to its own function for each selection type
         if (sel_type == FAKE_DEN || sel_type == FAKE_NUM) {
             m_selectLeptons = m_Zlep;
+            for (Susy::Lepton* lep : sl->leptons) {
+                if (!isIn(lep, m_Zlep)) {
+                    m_selectLeptons.push_back(lep);
+                }
+            }
             m_triggerLeptons.push_back(m_Zlep.at(0));
             m_triggerLeptons.push_back(m_Zlep.at(1));
         } else if (sel_type == BASELINE ) {
@@ -877,67 +884,6 @@ void add_signallepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    *superflow << NewVar("dRy(sigEl, preMu)"); {
-      *superflow << HFTname("dRy_sEl_pMu");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& el : *sl->electrons) {
-          for (auto& mu : *sl->preMuons) {
-            out.push_back(el->DeltaRy(*mu));
-          }
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("dRy(sigEl, preMu_shrdTrk)"); {
-      *superflow << HFTname("dRy_sEl_pMu_shrdtrk");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& el : *sl->electrons) {
-          for (auto& mu : *sl->preMuons) {
-            if(!(el->sharedMuTrk.size()>0)) continue;
-            if(mu->idx > ((int)el->sharedMuTrk.size()-1)) continue;
-            if(el->sharedMuTrk[mu->idx]!=1) continue;
-            out.push_back(el->DeltaRy(*mu));
-          }
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("dRy(sigEl, baseMu not Calo)"); {
-      *superflow << HFTname("dRy_sEl_bMu_noCalo");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& el : *sl->electrons) {
-          for (auto& mu : *sl->preMuons) {
-            if (!sl->tools->muonSelector().isBaseline(mu)) continue;
-            if (sl->tools->muonSelector().isSignal(mu)) continue;
-            if (mu->isCaloTagged) continue;
-            out.push_back(el->DeltaRy(*mu));
-          }
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("dRy(sigEl, baseMu CaloTag)"); {
-      *superflow << HFTname("dRy_sEl_bMu_Calo");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
-        vector<double> out;
-        for (auto& el : *sl->electrons) {
-          for (auto& mu : *sl->preMuons) {
-            if (!sl->tools->muonSelector().isBaseline(mu)) continue;
-            if (sl->tools->muonSelector().isSignal(mu)) continue;
-            if (!mu->isCaloTagged) continue;
-            out.push_back(el->DeltaRy(*mu));
-          }
-        }
-        return out;
-      };
-      *superflow << SaveVar();
-    }
     *superflow << NewVar("Electron d0sigBSCorr"); {
       *superflow << HFTname("el_d0sigBSCorr");
       *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
@@ -1097,6 +1043,24 @@ void add_signallepton_variables(Superflow* superflow) {
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->Phi());
         }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton d0sigBSCorr"); {
+      *superflow << HFTname("lep_d0sigBSCorr");
+      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& lep : m_selectLeptons) {out.push_back(lep->d0sigBSCorr); }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton z0SinTheta"); {
+      *superflow << HFTname("lep_z0SinTheta");
+      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
+        vector<double> out;
+        for (auto& lep : m_selectLeptons) {out.push_back(lep->z0SinTheta()); }
         return out;
       };
       *superflow << SaveVar();
@@ -1263,6 +1227,22 @@ void add_xtau_lepton_variables(Superflow* superflow) {
         return m_lepton1.M(); };
       *superflow << SaveVar();
     }
+    *superflow << NewVar("dilepton flavor is e mu"); {
+      *superflow << HFTname("isEM");
+      *superflow << [=](Superlink* sl, var_int*) -> int {
+          if(sl->leptons->size()<2) return -INT_MAX;
+        return sl->leptons->at(0)->isEle() && sl->leptons->at(1)->isMu();  // e mu  case
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dilepton flavor is mu e"); {
+      *superflow << HFTname("isME");
+      *superflow << [=](Superlink* sl, var_int*) -> int {
+          if(sl->leptons->size()<2) return -INT_MAX;
+          return sl->leptons->at(0)->isMu() && sl->leptons->at(1)->isEle();  // mu e  case
+      };
+      *superflow << SaveVar();
+    }
 }
 void add_tau_variables(Superflow* superflow) {
     ADD_MULTIPLICITY_VAR(preTaus)
@@ -1369,22 +1349,6 @@ void add_other_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    *superflow << NewVar("dilepton flavor is e mu"); {
-      *superflow << HFTname("isEM");
-      *superflow << [=](Superlink* sl, var_int*) -> int {
-          if(sl->leptons->size()<2) return -INT_MAX;
-        return sl->leptons->at(0)->isEle() && sl->leptons->at(1)->isMu();  // e mu  case
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("dilepton flavor is mu e"); {
-      *superflow << HFTname("isME");
-      *superflow << [=](Superlink* sl, var_int*) -> int {
-          if(sl->leptons->size()<2) return -INT_MAX;
-          return sl->leptons->at(0)->isMu() && sl->leptons->at(1)->isEle();  // mu e  case
-      };
-      *superflow << SaveVar();
-    }
     *superflow << NewVar("collinear mass, M_coll"); {
       *superflow << HFTname("MCollASym");
       *superflow << [=](Superlink* sl, var_double*) -> double {
@@ -1422,6 +1386,21 @@ void add_other_lepton_variables(Superflow* superflow) {
       *superflow << [=](Superlink* sl, var_double*) -> double {
           if (sl->leptons->size() < 1) return -DBL_MAX;
           return m_lepton0.DeltaPhi(m_MET);
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("lepton mT"); {
+      *superflow << HFTname("l_mT");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+        vector<int> out;
+        for(Susy::Lepton* lepton : m_selectLeptons) {
+          if (!lepton) continue;
+          double dphi = lepton->DeltaPhi(m_MET);
+          double pT2 = lepton->Pt()*m_MET.Pt();
+          double lep_mT = sqrt(2 * pT2 * ( 1 - cos(dphi) ));
+          out.push_back(lep_mT);
+        }
+        return out;
       };
       *superflow << SaveVar();
     }
@@ -1736,6 +1715,7 @@ void add_fake_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
+    ////////////////////////////////////////////////////////////////////////////
     // Z + jets variables
     *superflow << NewVar("Z leptons' flavor"); {
       *superflow << HFTname("Z_dilep_flav");
@@ -1796,39 +1776,7 @@ void add_fake_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    *superflow << NewVar("Non-Z lepton pT"); {
-      *superflow << HFTname("Z_Lep2_pT");
-      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->Pt();
-        return -DBL_MAX;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Non-Z lepton eta"); {
-      *superflow << HFTname("Z_Lep2_eta");
-      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->Eta();
-        return -DBL_MAX;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Non-Z lepton flavor"); {
-      *superflow << HFTname("Z_Lep2_flav");
-      *superflow << [=](Superlink* /*sl*/, var_int*) -> int {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->isEle();
-        return -INT_MAX;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("Non-Z lepton charge"); {
-      *superflow << HFTname("Z_Lep2_q");
-      *superflow << [=](Superlink* /*sl*/, var_int*) -> int {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->q;
-        return -INT_MAX;
-      };
-      *superflow << SaveVar();
-    }
-    *superflow << NewVar("DeltaPhi of Non-Z lep and MET"); {
+    *superflow << NewVar("DeltaPhi of Fake lep and MET"); {
       *superflow << HFTname("Z_Lep2_dPhi_MET");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_Zlep.at(2)) return m_Zlep.at(2)->DeltaPhi(m_MET);
@@ -1836,24 +1784,37 @@ void add_fake_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
-    *superflow << NewVar("Non-Z lepton mT"); {
-      *superflow << HFTname("Z_Lep2_mT");
+    *superflow << NewVar("DeltaR of Fake lep and Zlep0"); {
+      *superflow << HFTname("dR_ZLep0_Fake");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
-        if (m_Zlep.at(2)) {
-            return sqrt( 2*m_Zlep.at(2)->Pt()*m_MET.Pt()*(1-cos (m_Zlep.at(2)->DeltaPhi(m_MET)) ) );
+        if (m_Zlep.at(0) && m_Zlep.at(2)) {
+            return m_Zlep.at(2)->DeltaR(m_Zlep.at(0));
         }
         return -DBL_MAX;
       };
       *superflow << SaveVar();
     }
-    *superflow << NewVar("delta R of Z and aID-Lepton"); {
-      *superflow << HFTname("dR_Zl");
+    *superflow << NewVar("DeltaR of Fake lep and Zlep1"); {
+      *superflow << HFTname("dR_ZLep1_Fake");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
-        if (m_Zlep.at(2)) return m_Zlep.at(2)->DeltaR(*m_Zlep.at(0)+*m_Zlep.at(1));
+        if (m_Zlep.at(1) && m_Zlep.at(2)) {
+            return m_Zlep.at(2)->DeltaR(m_Zlep.at(1));
+        }
         return -DBL_MAX;
       };
       *superflow << SaveVar();
     }
+    *superflow << NewVar("DeltaR of Fake lep and Z"); {
+      *superflow << HFTname("dR_Z_Fake");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+        if (m_Zlep.at(0) && m_Zlep.at(1) && m_Zlep.at(2)) {
+            return m_dileptonP4.DeltaR(m_Zlep.at(2));
+        }
+        return -DBL_MAX;
+      };
+      *superflow << SaveVar();
+    }
+
     // W + jets variables
     *superflow << NewVar("aID-ID dilepton flavor"); {
       *superflow << HFTname("aID_dilep_flav");
@@ -2242,7 +2203,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
     bool HF_C5 = T==NonIsoMuon && (O==CharmedMeson || O==CharmedBaryon || O==CCbarMeson);
     bool HF_C6 = (T==IsoMuon || T==BkgMuon) && (O==CCbarMeson || MO==CCbarMeson);
     bool HF_C =  HF_C1 || HF_C2 || HF_C3 || HF_C4 || HF_C5 || HF_C6;
-    
+
     if      (promptEl)           return 1;
     else if (promptMuon)         return 2;
     else if (promptPho)          return 3;
@@ -2252,7 +2213,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
     else if (HF_tau)             return 7;
     else if (HF_B)               return 8;
     else if (HF_C)               return 9;
-    else if (bkgEl_from_phoConv) return 10; 
+    else if (bkgEl_from_phoConv) return 10;
     else if (!(T || O || MT || MO || M_ID)) return -1;
     else if (T && O && !(MT || MO || M_ID)) return -2;
     else if (T && !O) return -3;

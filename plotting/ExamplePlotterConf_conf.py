@@ -38,7 +38,7 @@ import global_variables as g
 run_fakes = False
 add_truth_den = False
 add_truth_num = False
-run_den = True 
+run_den = True
 run_num = False
 
 assert not run_fakes or (add_truth_num and run_num)
@@ -295,8 +295,8 @@ zll_cr_add  = '1'
 #zll_cr_add += " && nLepID == 2"
 #zll_cr_add += " && nLepAntiID >= 1"
 #zll_cr_add += " && nLepID == 3"
-#zll_cr_add += " && Z_Lep2_flav==1" # electron
-zll_cr_add += " && Z_Lep2_flav==0" # muon
+#zll_cr_add += " && l_flav[2]==1" # electron
+zll_cr_add += " && l_flav[2]==0" # muon
 
 REGIONS.append(Region("zCR", "Z CR (anti-ID m)"))
 REGIONS[-1].tcut = zll_cr_base + " && " + zll_cr_add
@@ -320,7 +320,7 @@ zjets_FF_CR = '1'
 zjets_FF_CR += ' && %s'%singlelep_trig_pT
 zjets_FF_CR += ' && (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR += ' && nBJets == 0'
-zjets_FF_CR += ' && Z_Lep2_mT < 50'
+zjets_FF_CR += ' && l_mT[2] < 50'
 #zjets_FF_CR += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 #zjets_FF_CR += ' && MET < 50'
 zjets_FF_CR += ' && isMC && (l_truthClass[2] == -1)' #Prompt Leading Lepton
@@ -337,7 +337,7 @@ if add_truth_den or add_truth_num:
         zjets_FF_CR += ' && (!isMC || (l_truthClass[2] <= 0 || 2 < l_truthClass[2]))' #Fake Probe Lepton
 
 # Test for negative events weights
-#zjets_FF_CR += ' && ((116 < Z_Lep2_mT  && Z_Lep2_mT < 128) || (160 < Z_Lep2_mT  && Z_Lep2_mT < 172))'
+#zjets_FF_CR += ' && ((116 < l_mT[2]  && l_mT[2] < 128) || (160 < l_mT[2]  && l_mT[2] < 172))'
 #zjets_FF_CR += ' && (64 < MET  && MET < 80)'
 #zjets_FF_CR += ' && eventweight >= 0'
 
@@ -348,12 +348,12 @@ REGIONS.append(Region('zjets_FF_CR', 'Z+jets FF CR'))
 REGIONS[-1].tcut = zjets_FF_CR
 
 num_den_list = ['num', 'den']
-chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && Z_Lep2_flav==1'],
-             'mme' : ['mumu','e','Z_dilep_flav==3 && Z_Lep2_flav==1'],
-             'eem' : ['ee','m','Z_dilep_flav==2 && Z_Lep2_flav==0'],
-             'mmm' : ['mumu','m','Z_dilep_flav==3 && Z_Lep2_flav==0'],
-             'm' : ['ll','m','Z_Lep2_flav==0'],
-             'e' : ['ll','e','Z_Lep2_flav==1'],
+chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && l_flav[2]==1'],
+             'mme' : ['mumu','e','Z_dilep_flav==3 && l_flav[2]==1'],
+             'eem' : ['ee','m','Z_dilep_flav==2 && l_flav[2]==0'],
+             'mmm' : ['mumu','m','Z_dilep_flav==3 && l_flav[2]==0'],
+             'm' : ['ll','m','l_flav[2]==0'],
+             'e' : ['ll','e','l_flav[2]==1'],
         }
 for num_den in num_den_list:
     for chan, ops in chan_dict.iteritems():
@@ -574,14 +574,14 @@ plot_defaults = {
     'dR_Zl'                : Plot1D( bin_range=[0.0, 6.0],    nbins=60, xlabel='#DeltaR(Z, lep)'),
     'Z_dilep_flav'         : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='Z dilepton flavor'),
     'Z2_dilep_flav'        : Plot1D( bin_range=[-1.5, 5.5],   nbins=7, xlabel='2nd Z dilepton flavor'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 50],  bin_width=1, doLogY = True, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'Z_Lep2_pT'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, doLogY = True, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    #'Z_Lep2_eta'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
-    'Z_Lep2_flav'          : Plot1D( bin_range=[-1.5, 2.5],   bin_width=1, xlabel='Fake candidate flavor'),
+    #'l_pt[2]'            : Plot1D( bin_range=[0.0, 50],  bin_width=1, doLogY = True, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_pt[2]'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, doLogY = True, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    #'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='Fake candidate lepton #eta'),
+    'l_flav[2]'          : Plot1D( bin_range=[-1.5, 2.5],   bin_width=1, xlabel='Fake candidate flavor'),
     'Z_dilep_sign'         : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='Z Dilepton Sign : OS(-1) SS(1)'),
     'Z2_dilep_sign'        : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='2nd Z Dilepton Sign : OS(-1) SS(1)'),
     'Z_Lep2_dPhi_MET'      : Plot1D( bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{3},MET)'),
-    'Z_Lep2_mT'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=4, xunits='GeV', xlabel='3rd leading lepton m_{T}'),
+    'l_mT[2]'            : Plot1D( bin_range=[0.0, 200.0],  bin_width=4, xunits='GeV', xlabel='3rd leading lepton m_{T}'),
 }
 
 # Add any labels to the plots
@@ -590,7 +590,7 @@ plot_defaults['l_truthClass[0]'].bin_labels = l_truthClass_labels
 plot_defaults['l_truthClass[1]'].bin_labels = l_truthClass_labels
 plot_defaults['l_truthClass[2]'].bin_labels = l_truthClass_labels
 plot_defaults['isMC'].bin_labels = [' ', 'Data', 'MC', ' ']
-plot_defaults['Z_Lep2_flav'].bin_labels = [' ', 'Muon', 'Electron', ' ']
+plot_defaults['l_flav[2]'].bin_labels = [' ', 'Muon', 'Electron', ' ']
 plot_defaults['Lep_Iso'].bin_labels = ['isoGrad', 'isoGradLoose', 'isoLoose','isoLooseTrackOnly','isoFixedCutTightTrackOnly']
 
 
@@ -674,11 +674,11 @@ elif run_num:
 vars_to_plot = []
 #vars_to_plot += ['nLepID']
 #vars_to_plot += ['nLepAntiID']
-#vars_to_plot += ['Z_Lep2_flav']
+#vars_to_plot += ['l_flav[2]']
 #vars_to_plot += ['Z_MLL']
-#vars_to_plot += ['Z_Lep2_pT']
-#vars_to_plot += ['Z_MLL','nBJets','Z_Lep2_mT','Z2_MLL','MET']
-#vars_to_plot += ['l_pt[0]','l_pt[1]','Z_Lep2_pT']
+#vars_to_plot += ['l_pt[2]']
+#vars_to_plot += ['Z_MLL','nBJets','l_mT[2]','Z2_MLL','MET']
+#vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]']
 vars_to_plot += ['el_d0sigBSCorr','el_z0SinTheta','mu_d0sigBSCorr','mu_z0SinTheta','l_pt', 'Lep_Iso']
 #vars_to_plot += ['l_BkgMotherPdgId[2]','l_type[2]','l_origin[2]', 'l_truthClass[2]']
 
