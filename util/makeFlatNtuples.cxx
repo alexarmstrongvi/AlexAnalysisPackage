@@ -377,7 +377,7 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
         // TODO: Add grabbing of lepton to its own function for each selection type
         if (sel_type == FAKE_DEN || sel_type == FAKE_NUM) {
             m_selectLeptons = m_Zlep;
-            for (Susy::Lepton* lep : sl->leptons) {
+            for (Susy::Lepton* lep : *sl->leptons) {
                 if (!isIn(lep, m_Zlep)) {
                     m_selectLeptons.push_back(lep);
                 }
@@ -781,8 +781,8 @@ void add_baselepton_variables(Superflow* superflow) {
         for (auto& el : *sl->baseElectrons) {
           if (el->tightLLH) out.push_back(0);
           else if (el->mediumLLH) out.push_back(1);
-          else if (el->looseLLHBLayer) out.push_back(3);
-          else if (el->looseLLH) out.push_back(2);
+          else if (el->looseLLHBLayer) out.push_back(2);
+          else if (el->looseLLH) out.push_back(3);
           else if (el->veryLooseLLH) out.push_back(4);
           else out.push_back(5);
         }
@@ -875,8 +875,8 @@ void add_signallepton_variables(Superflow* superflow) {
         for (auto& el : *sl->electrons) {
           if (el->tightLLH) out.push_back(0);
           else if (el->mediumLLH) out.push_back(1);
-          else if (el->looseLLHBLayer) out.push_back(3);
-          else if (el->looseLLH) out.push_back(2);
+          else if (el->looseLLHBLayer) out.push_back(2);
+          else if (el->looseLLH) out.push_back(3);
           else if (el->veryLooseLLH) out.push_back(4);
           else out.push_back(5);
         }
@@ -947,11 +947,11 @@ void add_signallepton_variables(Superflow* superflow) {
       *superflow << [](Superlink* sl, var_int_array*) -> vector<int> {
         vector<int> out;
         for (auto& mu : *sl->muons) {
-          if (!mu->veryLoose) out.push_back(4);
-          else if (mu->veryLoose && !mu->loose) out.push_back(3);
-          else if (mu->loose && !mu->medium) out.push_back(2);
-          else if (mu->medium && !mu->tight) out.push_back(1);
-          else if (mu->tight) out.push_back(0);
+          if (mu->tight) out.push_back(0);
+          else if (mu->medium) out.push_back(1);
+          else if (mu->loose) out.push_back(2);
+          else if (mu->veryLoose) out.push_back(3);
+          else if (!mu->veryLoose) out.push_back(4);
         }
         return out;
       };
@@ -995,7 +995,7 @@ void add_signallepton_variables(Superflow* superflow) {
     }
     //////////////////////////////////////////////////////////////////////////////
     // Signal Leptons
-    *superflow << NewVar("Lepton Iso (non-inclusive)"); {
+    *superflow << NewVar("Lepton Iso)"); {
       *superflow << HFTname("Lep_Iso");
       *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
@@ -1003,12 +1003,58 @@ void add_signallepton_variables(Superflow* superflow) {
           if (!lep) continue;
           bool flag = false;
           out.push_back(-1);  // for tracking all entries and normalizing bins
-          if (lep->isoGradient) {flag=true, out.push_back(0);}
-          if (lep->isoGradientLoose) {flag=true, out.push_back(1);}
-          if (lep->isoLoose) {flag=true, out.push_back(2);}
-          if (lep->isoLooseTrackOnly) {flag=true, out.push_back(3);}
-          if (lep->isoFixedCutTightTrackOnly) {flag=true; out.push_back(4);}
+          if (lep->isoGradient)               { flag=true; out.push_back(0);}
+          if (lep->isoGradientLoose)          { flag=true; out.push_back(1);}
+          if (lep->isoLoose)                  { flag=true; out.push_back(2);}
+          if (lep->isoLooseTrackOnly)         { flag=true; out.push_back(3);}
+          if (lep->isoFixedCutTightTrackOnly) { flag=true; out.push_back(4);}
           if (!flag) out.push_back(5);
+        }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton ID (non-inclusive)"); {
+      *superflow << HFTname("l_ID");
+      *superflow << [](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& lep : m_selectLeptons) {
+            if (!lep) {
+                out.push_back(-1);
+            } else if (lep->isMu()) {
+                const Susy::Muon* mu = dynamic_cast<const Susy::Muon*>(lep);
+                if (mu->tight) out.push_back(0);
+                else if (mu->medium) out.push_back(1);
+                else if (mu->loose) out.push_back(2);
+                else if (mu->veryLoose) out.push_back(3);
+                else out.push_back(4);
+            } else if (lep->isEle()) {
+                const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(lep);
+                if (ele->tightLLH) out.push_back(0);
+                else if (ele->mediumLLH) out.push_back(1);
+                else if (ele->looseLLHBLayer) out.push_back(2);
+                else if (ele->looseLLH) out.push_back(3);
+                else if (ele->veryLooseLLH) out.push_back(4);
+                else out.push_back(5);
+            }
+        }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton Author"); {
+      *superflow << HFTname("l_author");
+      *superflow << [](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        for (auto& lep : m_selectLeptons) {
+            if (!lep) {
+                out.push_back(-1);
+            } else if (lep->isMu()) {
+                out.push_back(-2);
+            } else if (lep->isEle()) {
+                const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(lep);
+                out.push_back(ele->author);
+            }
         }
         return out;
       };
@@ -1020,6 +1066,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<double> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->Pt());
+          else out.push_back(-DBL_MAX);
         }
         return out;
       };
@@ -1031,6 +1078,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<double> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->Eta());
+          else out.push_back(-DBL_MAX);
         }
         return out;
       };
@@ -1042,6 +1090,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<double> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->Phi());
+          else out.push_back(-DBL_MAX);
         }
         return out;
       };
@@ -1049,18 +1098,24 @@ void add_signallepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("Lepton d0sigBSCorr"); {
       *superflow << HFTname("lep_d0sigBSCorr");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
+      *superflow << [](Superlink* /*sl*/, var_float_array*) -> vector<double> {
         vector<double> out;
-        for (auto& lep : m_selectLeptons) {out.push_back(lep->d0sigBSCorr); }
+        for (auto& lep : m_selectLeptons) {
+            if (lep) out.push_back(lep->d0sigBSCorr); 
+            else out.push_back(-DBL_MAX);
+        }
         return out;
       };
       *superflow << SaveVar();
     }
     *superflow << NewVar("Lepton z0SinTheta"); {
       *superflow << HFTname("lep_z0SinTheta");
-      *superflow << [](Superlink* sl, var_float_array*) -> vector<double> {
+      *superflow << [](Superlink* /*sl*/, var_float_array*) -> vector<double> {
         vector<double> out;
-        for (auto& lep : m_selectLeptons) {out.push_back(lep->z0SinTheta()); }
+        for (auto& lep : m_selectLeptons) {
+            if (lep) out.push_back(lep->z0SinTheta()); 
+            else out.push_back(-DBL_MAX);
+        }
         return out;
       };
       *superflow << SaveVar();
@@ -1071,6 +1126,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->isEle() ? 0 : 1);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1082,6 +1138,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->mcType);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1093,6 +1150,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->mcOrigin);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1104,6 +1162,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->q);
+          else out.push_back(-INT_MAX);
         }
         return out;
         };
@@ -1115,6 +1174,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->mcBkgMotherPdgId);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1126,6 +1186,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->mcBkgTruthOrigin);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1137,6 +1198,7 @@ void add_signallepton_variables(Superflow* superflow) {
         vector<int> out;
         for(auto& lepton : m_selectLeptons) {
           if (lepton) out.push_back(lepton->matched2TruthLepton);
+          else out.push_back(-INT_MAX);
         }
         return out;
       };
@@ -1147,7 +1209,8 @@ void add_signallepton_variables(Superflow* superflow) {
         *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
             vector<int> out;
             for(auto& lepton : m_selectLeptons) {
-                out.push_back(get_lepton_truth_class(lepton));
+                if(lepton) out.push_back(get_lepton_truth_class(lepton));
+                else out.push_back(-INT_MAX);
             }
             return out;
         };
@@ -1391,8 +1454,8 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("lepton mT"); {
       *superflow << HFTname("l_mT");
-      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
-        vector<int> out;
+      *superflow << [=](Superlink* /*sl*/, var_float_array*) -> vector<double> {
+        vector<double> out;
         for(Susy::Lepton* lepton : m_selectLeptons) {
           if (!lepton) continue;
           double dphi = lepton->DeltaPhi(m_MET);
@@ -1788,7 +1851,7 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("dR_ZLep0_Fake");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_Zlep.at(0) && m_Zlep.at(2)) {
-            return m_Zlep.at(2)->DeltaR(m_Zlep.at(0));
+            return (*m_Zlep.at(2)).DeltaR(*m_Zlep.at(0));
         }
         return -DBL_MAX;
       };
@@ -1798,7 +1861,7 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("dR_ZLep1_Fake");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_Zlep.at(1) && m_Zlep.at(2)) {
-            return m_Zlep.at(2)->DeltaR(m_Zlep.at(1));
+            return (*m_Zlep.at(2)).DeltaR(*m_Zlep.at(1));
         }
         return -DBL_MAX;
       };
@@ -1808,7 +1871,7 @@ void add_fake_variables(Superflow* superflow) {
       *superflow << HFTname("dR_Z_Fake");
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_Zlep.at(0) && m_Zlep.at(1) && m_Zlep.at(2)) {
-            return m_dileptonP4.DeltaR(m_Zlep.at(2));
+            return m_dileptonP4.DeltaR(*m_Zlep.at(2));
         }
         return -DBL_MAX;
       };
@@ -2083,20 +2146,23 @@ bool is_antiID_lepton(Susy::Lepton* lepton) {
         const Susy::Electron* ele = dynamic_cast<const Susy::Electron*>(lepton);
         float absEtaBE = fabs(ele->clusEtaBE);
         pt_pass  = ele->pt > 15;
-        eta_pass = absEtaBE < 1.37 || 1.52 < absEtaBE;
+        eta_pass = (absEtaBE < 1.37 || 1.52 < absEtaBE) && fabs(ele->eta) < 2.47;
+        //ip_pass = fabs(ele->d0sigBSCorr) < 5 && fabs(ele->z0SinTheta) < 0.5;
+        // Is isoFixedCutTightTrackOnly == FixedCutTrackCone40?
+        //iso_pass = (ele->pt >= 25 || ele->isoFixedCutTightTrackOnly) && (ele->pt < 25 || ele->isoGradient);
         iso_pass = ele->isoGradient;
         id_pass  = ele->mediumLLH;
         passID_cuts = iso_pass && id_pass;
         passAntiID_cuts = ele->veryLooseLLH;
     } else if (lepton->isMu()) {
         const Susy::Muon* mu = dynamic_cast<const Susy::Muon*>(lepton);
-        pt_pass  = mu->pt > 10;
+        pt_pass  = mu->pt > 10;  //15
         eta_pass = fabs(mu->eta) < 2.47;
+        //ip_pass = fabs(mu->d0sigBSCorr) < 15 && fabs(ele->z0SinTheta) < 0.5;
         iso_pass = mu->isoGradient;
         id_pass  = mu->medium;
-        //TODO: Study effect of removing id_pass so muons only fail iso requirements
         passID_cuts = iso_pass && id_pass;
-        passAntiID_cuts = 1;
+        passAntiID_cuts = mu->medium;
     }
     return pt_pass && eta_pass && passAntiID_cuts && !passID_cuts;
 }
