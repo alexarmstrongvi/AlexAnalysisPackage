@@ -458,16 +458,16 @@ void add_shortcut_variables(Superflow* superflow, Sel sel_type) {
     };
 }
 // TODO: Replace [=] with only the needed variables to see if it improves performance
-void add_pre_cuts(Superflow* superflow, Sel sel_type) {
+void add_pre_cuts(Superflow* /*superflow*/, Sel /*sel_type*/) {
   // xTauFW Cut
-  if (sel_type == BASELINE || sel_type == BASE_DEN) {
-    *superflow << CutName("xTau: 2+ Loose Leptons") << [](Superlink* sl) -> bool {
-        uint nLooseLeptons = 0;
-        for (const auto* mu : *sl->preMuons) {if (mu->loose) nLooseLeptons++;}
-        for (const auto* ele : *sl->preElectrons) {if (ele->looseLLH) nLooseLeptons++;}
-        return nLooseLeptons >= 2;
-    };
-  }
+  //if (sel_type == BASELINE || sel_type == BASE_DEN) {
+  //  *superflow << CutName("xTau: 2+ Loose Leptons") << [](Superlink* sl) -> bool {
+  //      uint nLooseLeptons = 0;
+  //      for (const auto* mu : *sl->preMuons) {if (mu->loose) nLooseLeptons++;}
+  //      for (const auto* ele : *sl->preElectrons) {if (ele->looseLLH) nLooseLeptons++;}
+  //      return nLooseLeptons >= 2;
+  //  };
+  //}
 }
 void add_cleaing_cuts(Superflow* superflow) {
   *superflow << CutName("Pass GRL") << [=](Superlink* sl) -> bool {
@@ -995,21 +995,70 @@ void add_signallepton_variables(Superflow* superflow) {
     }
     //////////////////////////////////////////////////////////////////////////////
     // Signal Leptons
-    *superflow << NewVar("Lepton Iso)"); {
-      *superflow << HFTname("Lep_Iso");
+    *superflow << NewVar("Lepton is IsoGrad"); {
+      *superflow << HFTname("l_IsoGrad");
       *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
-        for (auto& lep :  m_selectLeptons) {
-          if (!lep) continue;
-          bool flag = false;
-          out.push_back(-1);  // for tracking all entries and normalizing bins
-          if (lep->isoGradient)               { flag=true; out.push_back(0);}
-          if (lep->isoGradientLoose)          { flag=true; out.push_back(1);}
-          if (lep->isoLoose)                  { flag=true; out.push_back(2);}
-          if (lep->isoLooseTrackOnly)         { flag=true; out.push_back(3);}
-          if (lep->isoFixedCutTightTrackOnly) { flag=true; out.push_back(4);}
-          if (!flag) out.push_back(5);
+        for (auto& lep : m_selectLeptons) {
+            if (!lep) continue;
+            if (lep->isoGradient) out.push_back(0);
+            else if (lep->isoGradientLoose) out.push_back(1);
+            else out.push_back(2);
         }
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton0 Iso"); {
+      *superflow << HFTname("l_iso0");
+      *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        Susy::Lepton* lep = m_selectLeptons.at(0);
+        if (!lep) return out;
+        out.push_back(-1);  // for tracking all entries and normalizing bins
+        bool flag = false;
+        if (lep->isoGradient)               { flag=true; out.push_back(0);}
+        if (lep->isoGradientLoose)          { flag=true; out.push_back(1);}
+        if (lep->isoLoose)                  { flag=true; out.push_back(2);}
+        if (lep->isoLooseTrackOnly)         { flag=true; out.push_back(3);}
+        if (lep->isoFixedCutTightTrackOnly) { flag=true; out.push_back(4);}
+        if (!flag) out.push_back(5);
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton1 Iso"); {
+      *superflow << HFTname("l_iso1");
+      *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        Susy::Lepton* lep = m_selectLeptons.at(1);
+        if (!lep) return out;
+        out.push_back(-1);  // for tracking all entries and normalizing bins
+        bool flag = false;
+        if (lep->isoGradient)               { flag=true; out.push_back(0);}
+        if (lep->isoGradientLoose)          { flag=true; out.push_back(1);}
+        if (lep->isoLoose)                  { flag=true; out.push_back(2);}
+        if (lep->isoLooseTrackOnly)         { flag=true; out.push_back(3);}
+        if (lep->isoFixedCutTightTrackOnly) { flag=true; out.push_back(4);}
+        if (!flag) out.push_back(5);
+        return out;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Lepton2 Iso"); {
+      *superflow << HFTname("l_iso2");
+      *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
+        vector<int> out;
+        Susy::Lepton* lep = m_selectLeptons.at(2);
+        if (!lep) return out;
+        out.push_back(-1);  // for tracking all entries and normalizing bins
+        bool flag = false;
+        if (lep->isoGradient)               { flag=true; out.push_back(0);}
+        if (lep->isoGradientLoose)          { flag=true; out.push_back(1);}
+        if (lep->isoLoose)                  { flag=true; out.push_back(2);}
+        if (lep->isoLooseTrackOnly)         { flag=true; out.push_back(3);}
+        if (lep->isoFixedCutTightTrackOnly) { flag=true; out.push_back(4);}
+        if (!flag) out.push_back(5);
         return out;
       };
       *superflow << SaveVar();
