@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import pdb
 """
 ================================================================================
 Make fake factor files and plots
@@ -18,7 +17,7 @@ import sys, os, traceback, argparse
 import time
 from re import sub
 from array import array
-from copy import copy
+from copy import copy, deepcopy
 from collections import defaultdict
 from importlib import import_module
 import subprocess
@@ -56,18 +55,17 @@ def open_root(f_name, f_mode):
         ofile.Close()
 
 class KeyManager(object) :
-    bkg_mc_str = 'truth_mc_3ID_lep'
-    fake_mc_str = 'truth_mc_2ID_1aID_lep'
+    bkg_mc_str = 'MC_probe_lep_prompt'
+    fake_mc_str = 'MC_probe_lep_fake'
 
     def __init__(self):
-        # TODO: move globals into class
-        self._mc_stack = None
+        self.mc_stack = None
         self.mc_stack_hists = {}
         self.mc_hist = None
-        self._mc_truth_bkg_stack = None
+        self.mc_truth_bkg_stack = None
         self.mc_truth_bkg_stack_hists = {}
         self.mc_truth_bkg_hist = None
-        self._mc_truth_fake_stack = None
+        self.mc_truth_fake_stack = None
         self.mc_truth_fake_stack_hists = {}
         self.mc_truth_fake_hist = None
         self.data_hist = None
@@ -86,37 +84,6 @@ class KeyManager(object) :
     @property
     def mc_fake_factor(self):
         return self.fake_factor_keys[self.mc_truth_fake_hist]
-
-    # TODO: Remove property after testing that there is no error
-    @property
-    def mc_stack(self):
-        return self._mc_stack
-    @mc_stack.setter
-    def mc_stack(self, new_key_name):
-        old_key_name = self._mc_stack
-        assert not old_key_name or old_key_name == new_key_name, (
-            "ERROR :: stack name generator not consistent", old_key_name, new_key_name)
-        self._mc_stack = new_key_name
-
-    @property
-    def mc_truth_bkg_stack(self):
-        return self._mc_truth_bkg_stack
-    @mc_truth_bkg_stack.setter
-    def mc_truth_bkg_stack(self, new_key_name):
-        old_key_name = self._mc_truth_bkg_stack
-        assert not old_key_name or old_key_name == new_key_name, (
-            "ERROR :: stack name generator not consistent", old_key_name, new_key_name)
-        self._mc_truth_bkg_stack = new_key_name
-
-    @property
-    def mc_truth_fake_stack(self):
-        return self._mc_truth_fake_stack
-    @mc_truth_fake_stack.setter
-    def mc_truth_fake_stack(self, new_key_name):
-        old_key_name = self._mc_truth_fake_stack
-        assert not old_key_name or old_key_name == new_key_name, (
-            "ERROR :: stack name generator not consistent", old_key_name, new_key_name)
-        self._mc_truth_fake_stack = new_key_name
 
     ############################################################################
     def generate_hist_key(self, sample, region, cut):
@@ -149,13 +116,13 @@ class KeyManager(object) :
 
     def generate_mc_hist_key(self, hist_key):
         if self.is_bkg_mc(hist_key):
-            hist_key = "total_%s_hist"%self.bkg_mc_str
+            hist_key = "%s_hist"%self.bkg_mc_str
             self.mc_truth_bkg_hist = hist_key
         elif self.is_fake_mc(hist_key):
-            hist_key = "total_%s_hist"%self.fake_mc_str
+            hist_key = "%s_hist"%self.fake_mc_str
             self.mc_truth_fake_hist = hist_key
         else:
-            hist_key = "total_mc_hist"
+            hist_key = "mc_hist"
             self.mc_hist = hist_key
         return hist_key
 
@@ -184,6 +151,12 @@ class KeyManager(object) :
         keys = [self.mc_hist, self.mc_truth_bkg_hist, self.mc_truth_fake_hist]
         keys = [k for k in keys if k]
         return keys
+    
+    def get_raw_mc_keys(self):
+        keys = self.mc_stack_hists.values()
+        keys += [self.mc_stack, self.mc_hist]
+        keys = [k for k in keys if k]
+        return keys
 
     def get_truth_bkg_keys(self):
         keys = self.mc_truth_bkg_stack_hists.values()
@@ -210,12 +183,20 @@ class KeyManager(object) :
     def is_stack(self, hist_key):
         return hist_key in self.get_stack_keys()
 
+    def is_raw_mc(self, hist_key):
+        return hist_key in self.ger_raw_mc_keys()
+
     def is_fake_mc(self, hist_key):
         return hist_key in self.get_truth_fake_keys()
 
     def is_bkg_mc(self, hist_key):
         return hist_key in self.get_truth_bkg_keys()
 
+    def is_mc(self, hist_key):
+        return (self.is_raw_mc(hist_key)
+             or self.is_fake_mc(hist_key)
+             or self.is_bkg_mc(hist_key))
+        
     def is_fake_factor(self, hist_key):
         return hist_key in self.fake_factor_keys
 
@@ -255,6 +236,12 @@ def main ():
     ff_hists = get_fake_factor_hists(hists)
     print "Making plots"
     save_and_write_hists(ff_hists, hists)
+
+    print "Yields found during plotting...\n"
+    for yld_tbl in YIELD_TABLES:
+        yld_tbl.Print()
+        print '\n'
+
     print 30*'-', 'PLOTS COMPLETED', 30*'-','\n'
 ################################################################################
 # Fake factor functions
@@ -263,6 +250,7 @@ def add_ff_hist_primitives(plot, hists, reg):
     num_or_den = get_fake_channel(reg.name)
     samples = [s for s in SAMPLES if num_or_den in s.name]
 
+    yld_tbls = defaultdict(lambda: deepcopy(YIELD_TBL))
     for sample in samples:
         # Get histogram(s) for each plot-sample pair
         # For MC samples, make additional hists for truth matched selections
@@ -270,8 +258,7 @@ def add_ff_hist_primitives(plot, hists, reg):
         # Get cuts
         cuts = []
         if sample.isMC:
-            base_cut = "((%s) * %s * %f)"%(reg.tcut, sample.weight_str, sample.scale_factor)
-            weight = "%s * %f"%(sample.weight_str, sample.scale_factor)
+            weight = "%s * %s"%(sample.weight_str, sample.scale_factor)
             cuts.append("(%s) * %s"%(reg.tcut, weight))
             cuts.append("(%s && %s) * %s"%(reg.tcut, reg.truth_fake_sel, weight))
             cuts.append("(%s && %s) * %s"%(reg.tcut, reg.truth_bkg_sel, weight))
@@ -284,12 +271,40 @@ def add_ff_hist_primitives(plot, hists, reg):
             # histogram name must be unique relative to all hists made by script
             h_name = "h_"+reg.name+'_'+hist_key+"_"+plot.variable
             hist = build_hist(h_name, plot, sample, cut)
-            print "Base histograms (Sample: %s): %s created"%(sample.name, h_name)
             hist.displayname = sample.displayname
             hist.plot = plot
             hist.color = sample.color
             hists[channel_name][num_or_den][hist_key] = hist
+            
+            if KEYS.is_fake_mc(hist_key):
+                yld_region = "(2 Prompt + 1 Fake)"
+                num_or_den_sel = 'den_sel'
+            elif KEYS.is_bkg_mc(hist_key):
+                yld_region = "(3 Prompt)"
+                num_or_den_sel = 'num_sel'
+            else:
+                yld_region = reg.displayname 
+                num_or_den_sel = 'base_sel'
 
+            yld_tbls[num_or_den_sel].region = yld_region
+            yld_tbls[num_or_den_sel].variable = plot.variable
+            stat_err = r.Double(0.0)
+            integral = hist.IntegralAndError(0,-1,stat_err)
+            print "Base histograms (Sample: %s, Yield: %.2f): %s created"%(
+                    sample.name, integral, h_name)
+            if sample.isMC:
+                yld_tbls[num_or_den_sel].mc[sample.name] = UncFloat(integral, stat_err) 
+            else: 
+                yld_tbls['den_sel'].data[sample.name] = UncFloat(0, 0) 
+                yld_tbls['num_sel'].data[sample.name] = UncFloat(0, 0) 
+                yld_tbls['base_sel'].data[sample.name] = UncFloat(integral, stat_err)
+
+    yld_tbls['base_sel'].partitions.append(yld_tbls['den_sel'])
+    yld_tbls['base_sel'].partitions.append(yld_tbls['num_sel'])
+    YIELD_TABLES.append(yld_tbls['base_sel'])
+    
+    
+            
 def format_and_combine_hists(hists):
     '''
     Make all the combined histograms.
@@ -330,12 +345,11 @@ def format_and_combine_hists(hists):
                 mc_total_hist = hist.GetStack().Last().Clone(hist_name)
                 mc_total_hist.plot = hist.plot
                 if KEYS.is_bkg_mc(hist_key):
-                    mc_total_hist.displayname = KEYS.bkg_mc_str.replace("_"," ").title()
+                    mc_total_hist.displayname = KEYS.bkg_mc_str.replace("_"," ")
                 elif KEYS.is_fake_mc(hist_key):
-                    mc_total_hist.displayname = KEYS.fake_mc_str.replace("_"," ").title()
+                    mc_total_hist.displayname = KEYS.fake_mc_str.replace("_"," ")
                 else:
                     mc_total_hist.displayname = 'Total MC'
-                mc_total_hist.SetLineColor(r.kBlack)
                 mc_total_hist.SetLineWidth(3)
                 mc_total_hist.SetLineStyle(1)
                 mc_total_hist.SetFillStyle(0)
@@ -377,22 +391,26 @@ def get_fake_factor_hists(hists):
             ff_hist.plot = copy(num_hist.plot)
 
             # Format the hists
-            ff_hist.plot.update(doLogY = False, doNorm = True)
+            ff_hist.plot.update(doLogY = False, doNorm = True) #doNorm only affects axis
 
             ff_hists[channel_name][fake_factor_key] = ff_hist
     return ff_hists
 
 def save_and_write_hists(ff_hists_dict, hists):
     # Writing fake factor hists to root file
-    with open_root(args.ofile_name,"RECREATE") as ofile:
-        for channel_name, ff_hists in ff_hists_dict.iteritems():
-            ff_hists[KEYS.data_corr_fake_factor].Write()
+    if args.ofile_name:
+        with open_root(args.ofile_name,"RECREATE") as ofile:
+            for channel_name, ff_hists in ff_hists_dict.iteritems():
+                ff_hists[KEYS.data_corr_fake_factor].Write()
 
 # Saving plots of fake factor hists
     for channel_name, ff_hists in ff_hists_dict.iteritems():
         data_corr_ff_hist = ff_hists[KEYS.data_corr_fake_factor]
         data_ff_hist = ff_hists[KEYS.data_fake_factor]
         mc_ff_hist = ff_hists[KEYS.mc_fake_factor]
+        mc_ff_hist.color = r.kBlue+2
+        data_ff_hist.color = r.kBlack
+        data_corr_ff_hist.color = r.kRed
         plot_title = 'Fake Factor (Ch: %s)'%channel_name
         hists_to_plot = [mc_ff_hist, data_ff_hist, data_corr_ff_hist]
         plot = data_corr_ff_hist.plot
@@ -402,34 +420,43 @@ def save_and_write_hists(ff_hists_dict, hists):
     for channel_name, ch_dict in hists.iteritems():
         for num_or_den, sample_dict in ch_dict.iteritems():
             # Save MC Stacks
+            data_hist = sample_dict[KEYS.data_hist]
             mc_stack = sample_dict[KEYS.mc_stack]
             mc_hist = sample_dict[KEYS.mc_hist]
+            data_hist.color = r.kBlack
+            mc_hist.color = r.kBlack
             plot_title = 'MC Backgrounds'
             plot_title += ' (%s)'%num_or_den
-            hists_to_plot = [mc_stack, mc_hist]
+            hists_to_plot = [mc_stack, mc_hist, data_hist]
             plot = mc_stack.plot
             save_hist(plot_title, plot, channel_name, hists_to_plot)
 
             mc_truth_bkg_stack = sample_dict[KEYS.mc_truth_bkg_stack]
             mc_truth_bkg_hist = sample_dict[KEYS.mc_truth_bkg_hist]
+            data_hist.color = r.kBlack
+            mc_truth_bkg_hist.color = r.kBlack
             plot_title = 'MC Backgrounds with 3 ID truth-matched prompt leptons'
             plot_title += ' (%s)'%num_or_den
-            hists_to_plot = [mc_truth_bkg_stack, mc_truth_bkg_hist]
+            hists_to_plot = [mc_truth_bkg_stack, mc_truth_bkg_hist, data_hist]
             plot = mc_truth_bkg_stack.plot
             save_hist(plot_title, plot, channel_name, hists_to_plot)
 
             mc_truth_fake_stack = sample_dict[KEYS.mc_truth_fake_stack]
             mc_truth_fake_hist = sample_dict[KEYS.mc_truth_fake_hist]
+            data_hist.color = r.kBlack
+            mc_truth_fake_hist.color = r.kBlack
             plot_title = 'MC Backgrounds with anti-ID truth-matched fake lepton'
             plot_title += ' (%s)'%num_or_den
-            hists_to_plot = [mc_truth_fake_stack, mc_truth_fake_hist]
+            hists_to_plot = [mc_truth_fake_stack, mc_truth_fake_hist, data_hist]
             plot = mc_truth_fake_stack.plot
             save_hist(plot_title, plot, channel_name, hists_to_plot)
 
             # Overlay of data before and after correction with MC truth
             # background stack
-            data_hist = sample_dict[KEYS.data_hist]
             data_corr_hist = sample_dict[KEYS.data_corr_hist]
+            data_hist.color = r.kBlack
+            data_corr_hist.color = r.kRed
+            mc_truth_bkg_hist.color = r.kBlue - 1
             plot_title = 'Data before and after background substraction'
             plot_title += ' (%s)'%num_or_den
             hists_to_plot = [mc_truth_bkg_hist, data_hist, data_corr_hist]
@@ -440,6 +467,7 @@ def save_and_write_hists(ff_hists_dict, hists):
             # subtractio
             plot_title = 'Resulting fake estimates in Data and MC'
             plot_title += ' (%s)'%num_or_den
+            data_corr_hist.color = r.kBlack
             hists_to_plot = [mc_truth_fake_stack, data_corr_hist]
             plot = mc_truth_fake_stack.plot
             save_hist(plot_title, plot, channel_name, hists_to_plot)
@@ -447,6 +475,9 @@ def save_and_write_hists(ff_hists_dict, hists):
             # Overlay of data with stack of total MC truth background and total
             # MC truth fake
             stack = r.THStack("bkg_and_fake_mc","")
+            mc_truth_bkg_hist.color = r.kBlue - 1
+            mc_truth_fake_hist.color = r.kGray
+            data_hist.color = r.kBlack
             stack.Add(mc_truth_bkg_hist)
             stack.Add(mc_truth_fake_hist)
             plot_title = 'MC breakdown of fake and non-fake backgrounds'
@@ -455,11 +486,6 @@ def save_and_write_hists(ff_hists_dict, hists):
             plot = data_hist.plot
             save_hist(plot_title, plot, channel_name, hists_to_plot)
 
-MARKER_COLORS = [r.kBlack, r.kBlue, r.kGreen+3, r.kRed]
-
-def get_marker_color():
-    for color in MARKER_COLORS:
-        yield color
 
 def save_hist(title, plot, reg_name, hist_list):
     can = plot.pads.canvas
@@ -469,6 +495,8 @@ def save_hist(title, plot, reg_name, hist_list):
 
     # Make Axis
     axis = make_stack_axis(plot)
+    if plot.auto_set_ylimits:
+        reformat_axis(plot, axis, hist_list)
 
     # Format Primitives
     # TODO: Sort THStack by integral
@@ -477,29 +505,35 @@ def save_hist(title, plot, reg_name, hist_list):
     legend = pu.default_legend(xl=0.55,yl=0.71,xh=0.93,yh=0.90)
     legend.SetNColumns(2)
    
-    color_counter = 0
+    stack_flag = False
     for hist in hist_list:
         if isinstance(hist, r.THStack):
+            stack_flag = True
             for stack_hist in hist.GetHists():
-                if hasattr(stack_hist, 'color'):
-                    color = stack_hist.color
-                else:
-                    color = MARKER_COLORS[color_counter]
-                    color_counter = (color_counter + 1)%len(MARKER_COLORS)
-                stack_hist.SetFillColor(color)
-                stack_hist.SetLineColor(color)
+                stack_hist.SetFillColor(stack_hist.color)
+                stack_hist.SetLineColor(stack_hist.color)
                 stack_hist.SetFillStyle(1001)
                 legend.AddEntry(stack_hist, stack_hist.displayname, "f")
             hist.Modified()
         else:
-            hist.SetLineWidth(1)
-            hist.SetLineColor(r.kBlack)
-            hist.SetFillStyle(0)
-            hist.SetMarkerStyle(r.kFullCircle)
-            hist.SetMarkerSize(1.5)
-            hist.SetMarkerColor(MARKER_COLORS[color_counter])
-            color_counter = (color_counter + 1)%len(MARKER_COLORS)
-            legend.AddEntry(hist, hist.displayname, "p")
+            hist.SetLineWidth(3)
+            if hasattr(hist, 'is_total') and not stack_flag:
+                hist.SetFillStyle(1001)
+                hist.SetFillColor(hist.color)
+                hist.SetLineColor(hist.color)
+                leg_type = 'f'
+            elif hasattr(hist, 'is_total') and stack_flag:
+                hist.SetFillStyle(0)
+                hist.SetLineColor(hist.color)
+                leg_type = 'f'
+            else:
+                hist.SetFillStyle(0)
+                hist.SetMarkerStyle(r.kFullCircle)
+                hist.SetMarkerSize(1.5)
+                hist.SetMarkerColor(hist.color)
+                hist.SetLineColor(r.kBlack)
+                leg_type = 'p'
+            legend.AddEntry(hist, hist.displayname, leg_type)
 
     # Draw primitives to canvas
     axis.Draw()
@@ -521,13 +555,51 @@ def save_hist(title, plot, reg_name, hist_list):
     can.Update()
 
     # Save
-    outname = reg_name + '_' + title + ".eps"
+    outname = reg_name+ '_' + plot.variable + '_' + title + ".eps"
     outname = outname.replace(" ","_")
     outname = sub(r'[:\-(){}[\]]+','', outname)
     save_path = os.path.join(plots_dir, args.dir_name, outname)
     save_path = os.path.normpath(save_path)
     can.SaveAs(save_path)
     axis.Delete()
+
+def reformat_axis(plot, axis, hist_list):
+    ''' Reformat axis to fit content and labels'''
+    # Get maximum histogram y-value
+    maxs = []
+    mins = []
+    for hist in hist_list:
+        if isinstance(hist, r.TGraph):
+            maxs.append(pu.get_tgraph_max(hist))
+            mins.append(pu.get_tgraph_min(hist))
+        else:
+            maxs.append(hist.GetMaximum())
+            mins.append(hist.GetMinimum())
+    maxy, miny = max(maxs), min(mins)
+    assert maxy >= 0
+
+    # Get default y-axis max and min limits
+    logy = plot.doLogY
+    if logy:
+        ymax = 10**(pu.get_order_of_mag(maxy))
+        if miny > 0:
+            ymin = 10**(pu.get_order_of_mag(miny))
+        else:
+            ymin = 10**(pu.get_order_of_mag(maxy) - 7)
+    else:
+        ymax = maxy
+        ymin = 0
+
+    # Get y-axis max multiplier to fit labels
+    max_mult = 1e4 if logy else 1.8
+
+    # reformat the axis
+    #stack.SetMaximum(maxy)
+    #stack.SetMinimum(ymin)
+    #stack.Modified()
+
+    axis.SetMaximum(max_mult*maxy)
+    axis.SetMinimum(ymin)
 
 
 ################################################################################
@@ -539,17 +611,18 @@ def build_hist(h_name, plot, sample, cut):
     hist.Sumw2
     hist.SetLineColor(sample.color)
     cut = r.TCut(cut)
+    sel = r.TCut("1")
     draw_cmd = "%s>>+%s"%(plot.variable, hist.GetName())
-    sample.tree.Draw(draw_cmd, cut, "goff")
+    sample.tree.Draw(draw_cmd, cut * sel, "goff")
     
     if plot.rebin_bins:
         new_bins = array('d', plot.rebin_bins)
         hist = hist.Rebin(len(new_bins)-1, h_name, new_bins)
 
-    #if plot.add_overflow:
-    #    pu.add_overflow_to_lastbin(hist)
-    #if plot.add_underflow:
-    #    pu.add_underflow_to_firstbin(hist)
+    if plot.add_overflow:
+        pu.add_overflow_to_lastbin(hist)
+    if plot.add_underflow:
+        pu.add_underflow_to_firstbin(hist)
 
 
     return hist
@@ -587,16 +660,17 @@ def check_input_args():
         print "ERROR :: output directory not found: %s"%(args.dir_name)
         sys.exit()
 
-    of = os.path.join(args.dir_name, args.ofile_name)
-    if os.path.exists(of):
-        if not os.path.exists("%s.bu"%of):
-            print "Renaming old output file %s -> %s.bu"%(of, of)
-            mv_cmd = 'mv %s %s.bu'%(of, of)
-            subprocess.call(mv_cmd, shell=True)
-        else:
-            print "WARNING :: Output file already exists: %s"%of
-            print "\tConsider deleting it or its backup (%s.bu)"%of
-            sys.exit()
+    if args.ofile_name:
+        of = os.path.join(args.dir_name, args.ofile_name)
+        if os.path.exists(of):
+            if not os.path.exists("%s.bu"%of):
+                print "Renaming old output file %s -> %s.bu"%(of, of)
+                mv_cmd = 'mv %s %s.bu'%(of, of)
+                subprocess.call(mv_cmd, shell=True)
+            else:
+                print "WARNING :: Output file already exists: %s"%of
+                print "\tConsider deleting it or its backup (%s.bu)"%of
+                sys.exit()
 
 def check_for_consistency() :
     '''
@@ -685,8 +759,7 @@ if __name__ == '__main__':
                             default="",
                             help='path to config file')
         parser.add_argument('-o', '--ofile_name',
-                            default="FF_hists.root",
-                            help="Output file name")
+                            help="Create fake factor root files")
         parser.add_argument('-d', '--dir_name',
                             default="./",
                             help="Output directory")

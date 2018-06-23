@@ -20,6 +20,7 @@ import subprocess
 ################################################################################
 def main ():
     """ Main Function """
+    # Get list of sample names 
     local_files = g.get_local_files()
     condor_lists_made = False
 
@@ -27,6 +28,8 @@ def main ():
     local_files = [x[:-3] for x in local_files if x.endswith("_nt")]
 
     missing_dsids = dict( (key, []) for key in g.groups)
+    # Loop over all the desired DSIDs and grab the most up to date sample name
+    # available in the input file list. Record all DSIDs that are not found
     for group, dsids in g.groups.iteritems():
         for dsid in dsids:
             matched_files = []
@@ -133,6 +136,9 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(
                 description=__doc__,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser.add_argument('--fax', 
+                            action='store_true', default=False, 
+                            help='make fax list for inputs')
         parser.add_argument('-v', '--verbose', 
                             action='store_true', default=False, 
                             help='verbose output')

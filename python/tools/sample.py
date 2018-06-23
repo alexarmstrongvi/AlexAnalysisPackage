@@ -27,6 +27,7 @@ class Sample :
     # Static variables for when all inputs have the same property.
     # Can be updated for specific samples if needed
     input_file_treename = 'Unset'
+    check_for_duplicates_flag = False
 
     def __init__(self, name = "", displayname = ""):
         self.name = name
@@ -85,6 +86,16 @@ class Sample :
         chain = r.TChain(self.input_file_treename)
         for n_files, fname in enumerate(files):
             chain.Add(fname)
+
+            # Optional check for duplicates
+            if self.check_for_duplicates_flag:
+                f = r.TFile(fname)
+                dup_events = self.check_for_duplicates(f)
+                if dup_events:
+                    print "Duplicate events found in", fname
+                    print dup_events
+                f.Close()
+
         print "%10s : ADDED %d FILES"%(self.name, n_files+1)
         self.tree = chain
 
@@ -191,17 +202,20 @@ class Sample :
     def is_setup(self):
         return self.tree and self.isMC != None
 
-    def check_for_duplicates(self):
-        if not self.tree:
-            print "ERROR (sample.CheckForDuplicates) :: tree not yet defined"
-            return
-        print "Checking for duplicate events in", self.name
-        events = [x.event_number for x in self.tree]
-        n_events = len(events)
-        n_events_no_dup = len(set(events))
-        if n_events_no_dup != n_events:
-            dup_evts = n_events - n_events_no_dup
-            print "There are %d/%d duplicate events"%(dup_evts, n_events)
+    def check_for_duplicates(self, ifile):
+        tree = ifile.Get(self.input_file_treename)
+        events = [x.event_number for x in tree]
+        
+        # Get duplicates events
+        seen = set()
+        dup_evts = set()
+        for x in events:
+            if x not in seen: seen.add(x)
+            else: dup_evts.add(x)
+
+        if dup_evts:
+            print "There are %d/%d duplicate events"%(len(dup_evts), len(events))
+        return dup_evts
 
 ################################################################################
 # Data class

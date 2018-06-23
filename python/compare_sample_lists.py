@@ -68,7 +68,7 @@ def main():
 
     for file_name in [args.file0, args.file1]:
         txt_file = open(file_name,'r')
-        sample_list = [x.strip() for x in txt_file.readlines()]
+        sample_list = [x.strip() for x in txt_file.readlines() if x and not x.startswith('#')]
         sample_list = [x for x in sample_list if tools.get_dsid_from_sample(x)]
         if args.trim:
             sample_list = [tools.trim_sample_name(x) for x in sample_list]

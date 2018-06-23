@@ -15,11 +15,15 @@ function usage()
     echo "./store_output_ntuples.sh"
     echo -e "\t-h --help"
     echo -e "\t-a : Add to name of output directories [mc_date -> mc_<input>_data]\n"
+    echo -e "\t-n : numerator samples\n"
+    echo -e "\t-d : denominator samples\n"
     echo -e "\t--update : move flat ntuples into current directory instead of new directory\n"
 }
 
 update=false
 name_mod=""
+num=false
+den=false
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
     VALUE=`echo $1 | awk -F= '{print $2}'`
@@ -34,6 +38,12 @@ while [ "$1" != "" ]; do
             ;;
         --update)
             update=true
+            ;;
+        -n)
+            num=true
+            ;;
+        -d)
+            den=true
             ;;
         *)
             echo "ERROR: unknown parameter \"$PARAM\""
@@ -57,8 +67,14 @@ if [ "$update" = false ]; then
             return 1
         fi
         mkdir -p $DIR
-        unlink $group
-        ln -s $DIR $group 
+        link_name="${group}"
+        if [ "$num" = true ]; then
+            link_name="${link_name}_num"
+        elif [ "$den" = true ]; then
+            link_name="${link_name}_den"
+        fi
+        unlink $link_name
+        ln -s $DIR $link_name 
     done
     echo "Moving output files"
 else
@@ -66,9 +82,16 @@ else
 fi
 cd $ANALYSIS_DIR/analysis_run
 # Order is important
-mv outputs/CENTRAL_physics_Main_*.root ntuples/data/
+if [ "$num" = true ]; then
+    suffix="_num"
+elif [ "$den" = true ]; then
+    suffix="_den"
+else
+    suffix=""
+fi
+mv outputs/CENTRAL_physics_Main_*.root ntuples/data${suffix}/
 
-mv outputs/CENTRAL_*.root ntuples/mc/
+mv outputs/CENTRAL_*.root ntuples/mc${suffix}/
 rm outputs/RunCondorSF.sh outputs/submitFile_TEMPLATE.condor
 
 cd $dir

@@ -15,7 +15,7 @@ import sys, os
 import re
 from numbers import Number
 from math import sqrt
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 class UncFloat :
     precision = 2
@@ -104,14 +104,19 @@ class YieldTable :
         self.mc = OrderedDict()
         self.data = {}
         self.signals = {}
-        self.data_mc_ratio = True
         self.formulas = {}
         self.region = ""
         self.variable = ""
+        self.partitions = [] 
+    #TODO: replace data, signals, and mc with a single yields. Turn data, mc, and signals into properties
+    # that add the value to yields and flags the type of sample as data, mc, or signal
 
+    def get_mc_yields(self):
+        return sum([v for _, v in self.mc.iteritems()])
+    
     def all_yields(self):
         all_yields = self.mc.copy()
-        all_yields['MC'] = sum([v for _, v in self.mc.iteritems()])
+        all_yields['MC'] = self.get_mc_yields()
         all_yields.update(self.data)
         all_yields.update(self.signals)
         return all_yields
@@ -124,6 +129,13 @@ class YieldTable :
         all_names += [k for k in self.formulas]
         return all_names
 
+    def get_max_mc_yield(self):
+        yields = [v for _, v in self.mc.iteritems()]  
+        vals = [v.value for v in yields]
+        idx = vals.index(max(vals))
+        return yields[idx]
+         
+
     def __eq__(self, other):
         ''' Check if all yields, both value and uncertainty, are identical'''
         if not isinstance(other, self.__class__): return false
@@ -134,23 +146,64 @@ class YieldTable :
             if name1 != name2 or str(yld1) != str(yld2):
                 return False
         return True
+    
+    def __add__(self, other):
+        for key in data: self.data[key] += other.data[key]
+        for key in mc: self.mc[key] += other.mc[key]
+        for key in signals: self.signals[key] += other.signals[key]
+            
+
+        value = self.value + other.value
+        uncertainty = sqrt(self.uncertainty**2 + other.uncertainty**2)
+        return UncFloat(value, uncertainty)
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        else:
+            return self.__add__(other)
 
     def is_empty(self):
         return not (self.mc or self.data or self.signals)
 
-    def Print(self, no_uncertainty = False):
-        if no_uncertainty:
-            bkg_strings = [str(v.value) for _, v in self.mc.iteritems()]
-            sig_strings = [str(v.value) for _, v in self.signals.iteritems()]
-            data_string = [str(v.value) for _, v in self.data.iteritems()]
-            mc_total = sum([v.value for _, v in self.mc.iteritems()])
-            data_total = sum([v.value for _, v in self.data.iteritems()])
-        else:
-            bkg_strings = [str(v) for _, v in self.mc.iteritems()]
-            sig_strings = [str(v) for _, v in self.signals.iteritems()]
-            data_string = [str(v) for _, v in self.data.iteritems()]
-            mc_total = sum([v for _, v in self.mc.iteritems()])
-            data_total = sum([v for _, v in self.data.iteritems()])
+    def partition_string(self, name = None, yld = None,
+            data = False, mc = False, signals = False, 
+            total_mc = False, formulas = False, region = False):
+        assert sum([data, mc, signals, total_mc, formulas, region]) == 1, (
+                "ERROR :: Must set one and only one boolean")
+        assert (yld != None) or (region or formulas)
+        assert name or total_mc or region
+        partition_str = ""
+        remainder = yld
+        for ii, part in enumerate(self.partitions):
+            if mc and part.mc: 
+                val = part.mc[name].value
+            elif data and part.data: 
+                val = part.data[name].value
+            elif signals and part.signals: 
+                val = part.signals[name].value
+            elif total_mc and part.mc:
+                val = part.get_mc_yields().value
+            elif region and part.region:
+                val = part.region
+            elif formulas and part.formulas:
+                formula = self.formulas[name]
+                val = part.apply_formula(formula)
+            else:
+                return ""
+            op = "+" if ii else "  ="
+            if isinstance(val, str):
+                partition_str += "%s  %s  "%(op, val)
+            else:
+                partition_str += "%s  %.*f  "%(op, self.precision, val)
+                remainder -= val
+        if yld and remainder != 0:
+            partition_str += "%s  %.*f  "%(op, self.precision, remainder)
+        if self.partitions and region:
+            partition_str += "%s  %s  "%(op, 'Other')
+        return partition_str
+    
+    def Print(self):
+        mc_total = self.get_mc_yields() 
 
         formula_values = {}
         for key, formula in self.formulas.iteritems():
@@ -159,54 +212,62 @@ class YieldTable :
         # Get formatting settings
         longest_name = max(self.all_names(), key=len)
         space = len(longest_name) + 2
+        longest_mc_yield = self.get_max_mc_yield()
+        space2 = len(str(longest_mc_yield)) 
 
         # Print Table
         print "==============  Yield Table =============="
         print " Variable(s): ", self.variable
-        print " Region: ", self.region
-        print "=========================================="
+        print " Region: ", self.region,
+        print self.partition_string(region=True) if self.partitions else ""
         if len(self.mc):
             print "------------------------------------------"
             print "Backgrounds:"
-            for name, yield_value in zip(self.mc.keys(), bkg_strings):
-                print "%*s : %s"%(space, name, yield_value)
+            for name, yield_value in self.mc.iteritems():
+                print "%*s : %*s"%(space, name, space2, yield_value),
+                print self.partition_string(name=name, yld=yield_value.value, mc=True) if self.partitions else ""
         if len(self.data):
             print "------------------------------------------"
-            print "%*s : %s"%(space, "MC", mc_total)
-            print "%*s : %.*f"%(space, "Data", self.precision, data_total.value)
-
+            print "%*s : %*s"%(space, "MC", space2, mc_total),
+            print self.partition_string(yld=mc_total.value, total_mc=True) if self.partitions else ""
+            for name, yield_value in self.data.iteritems():
+                print "%*s : %*s"%(space, name, space2, yield_value.value),
+                print self.partition_string(name=name, yld=yield_value.value, data=True) if self.partitions else ""
         if len(self.signals):
             print "------------------------------------------"
             print "Signal:"
-            for name, yield_value in zip(self.signals.keys(), bkg_strings):
-                print "%*s : %s"%(space, name, yield_value)
-        if self.data_mc_ratio or len(self.formulas):
-            print "------------------------------------------"
-        if self.data_mc_ratio:
-            ratio = (data_total/mc_total).value
-            print "%*s : %.*f"%(space, "Data/MC", self.precision, ratio)
+            for name, yield_value in self.signals.iteritems():
+                print "%*s : %*s"%(space, name, space2, yield_value),
+                print self.partition_string(name=name, yld=yield_value.value, signals=True) if self.partitions else ""
         if len(self.formulas):
+            print "------------------------------------------"
             for name, value in formula_values.iteritems():
-                print "%*s : %.*f"%(space, name, self.precision, value)
+                print "%*s : %*.*f"%(space, name, space2, self.precision, value)
+                # TODO: Fix - sampel names are different in different partitions
+                #print self.partition_string(name=name, formulas=True) if self.partitions else ""
+
+
         print "=========================================="
 
     def apply_formula(self, formula, no_uncertainty=True):
         # Get samples from formula
-        samples = re.sub("(\+|\-|\)|\(|\*|[0-9]|\/)"," ", formula)
+        samples = re.sub("(\+|\-|\)|\(|\*|\.|[0-9]|\/)"," ", formula)
         samples = [s.strip() for s in samples.split()]
         assert all(s.replace("_","").isalpha() for s in samples), (
-            "ERROR :: Unacceptable formula format", formula)
+            "ERROR :: Unacceptable formula format %s -> %s" % (formula, samples))
 
 
         # Replace names in formula with values
         all_yields = self.all_yields()
         assert len(all_yields) == len(self.mc) + len(self.data) + len(self.signals) + 1, (
             "ERROR (YieldTable) :: Overlapping key values")
+        samples = list(set(samples))
         samples.sort(key=len, reverse=True)
 
         for sample_name in samples:
-            assert sample_name in all_yields, (
-                "ERROR :: Formula sample not stored:", sample_name)
+            if sample_name not in all_yields:
+                print "WARNING :: Formula sample not stored:", sample_name
+                return float("NaN")
             if no_uncertainty:
                 replace_str = "all_yields['%s'].value"%sample_name
             else:
@@ -214,7 +275,12 @@ class YieldTable :
             formula = re.sub(r"\b%s\b"%sample_name, replace_str, formula)
 
         # Evaluate formula
-        return eval(formula)
+        try:
+            result = eval(formula)
+        except ZeroDivisionError:
+            result = float('inf')
+        finally:
+            return result
 
     def reset(self):
         self.mc.clear()

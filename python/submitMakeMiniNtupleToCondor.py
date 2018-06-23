@@ -9,19 +9,25 @@ import global_variables as g
 # Configuration settings
 ana_name      = "makeFlatNtuples" #"makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax
-submitMissing = False  # submit only DSIDs stored in outputs/missing.txt
-dry_run       = False
-file_name_suffix = 'ptbin'
+submitMissing = False # submit only DSIDs stored in outputs/missing.txt
+dry_run       = False 
+file_name_suffix = 'diffSigJet'
 
 # Run analysis with selections
 do_baseline        = False
 do_baseline_den    = False
-do_zjets_num_fakes = False
-do_zjets_den_fakes = True
+do_zjets_num_fakes = True
+do_zjets_den_fakes = False
 do_zll_cr          = False
-apply_ff           = True  # apply fake factor to denom events
-only_fakes         = True  # only output fake ntuples
+apply_ff           = False  # apply fake factor to denom events
+only_fakes         = False  # only output fake ntuples
 assert not (only_fakes and do_zjets_num_fakes)
+regions = []
+if do_zjets_num_fakes: regions.append('fake_num')
+if do_zjets_den_fakes: regions.append('fake_den')
+if do_zll_cr: regions.append('zll_cr')
+if do_baseline: regions.append('baseline_sel')
+if do_baseline_den: regions.append('baseline_den')
 
 # Where to submit condor jobs
 doBrick       = True
@@ -63,6 +69,7 @@ def main() :
     look_for_condor_script(brick_ = doBrick, local_ = doLocal, sdsc_ = doSDSC, uc_ = doUC)
     look_for_condor_executable()
 
+    submitted_datasets = set()
     for s in samples :
         if s.startswith('#') : continue
         print "Submitting sample : %s"%s
@@ -76,7 +83,10 @@ def main() :
         for dataset in sample_lists :
             fullname = str(os.path.abspath(dataset))
             did = dataset.split("/")[-1]
-
+            if did in submitted_datasets:
+                continue
+            else:
+                submitted_datasets.add(did)
             # Only submit datasets indicated in global_variables or missing_dsids
             if submitMissing:
                 if not any(dsid in dataset for dsid in missing_dsids):
@@ -104,49 +114,49 @@ def main() :
             def create_run_cmd(do_fakes, region):
                 run_cmd = "ARGS="
                 run_cmd += '"'
-                run_cmd += ' %s '%out_dir
-                run_cmd += ' %s '%log_dir
-                run_cmd += ' %s '%ana_name
-                #run_cmd += ' %s '%(tar_location + "area.tgz")
-                run_cmd += ' %s '%tarred_dir
-                run_cmd += ' %s '%dataset
+                run_cmd += '%s '%out_dir
+                run_cmd += '%s '%log_dir
+                run_cmd += '%s '%ana_name
+                #run_cmd += '%s '%(tar_location + "area.tgz")
+                run_cmd += '%s '%tarred_dir
+                run_cmd += '%s '%dataset
                 lname = region + "_" + dataset.split("/")[-1].replace(".txt", "")
                 ops = ""
 
                 if do_baseline and region=='baseline':
-                    ops += ' --baseline_sel'
+                    ops += '--baseline_sel '
                 if do_baseline_den:
                     sys.exit()
                 if do_zll_cr and region=='zll_cr':
-                    ops += ' --zll_cr'
+                    ops += '--zll_cr '
                 if do_zjets_num_fakes and region=='fake_num':
-                    ops += ' --fake_num'
+                    ops += '--fake_num '
                 if do_zjets_den_fakes and region=='fake_den':
-                    ops += ' --fake_den'
+                    ops += '--fake_den '
 
                 if submit_fakes and region != 'zjets_num':
-                    ops += ' --apply_ff'
+                    ops += '--apply_ff '
 
                 if file_name_suffix:
-                    ops += ' -s %s'%file_name_suffix
+                    ops += '-s %s '%file_name_suffix
                     lname += "_" + file_name_suffix
 
 
-                run_cmd += ' %s '%(ops) # any extra cmd line optino for Superflow executable
-                run_cmd += '"'
-                run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
-                run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
-                run_cmd += ' -append "output = %s%s" '%(log_dir, lname + ".out")
-                run_cmd += ' -append "log = %s%s" '%(log_dir, lname + ".log")
-                run_cmd += ' -append "error = %s%s" '%(log_dir, lname + ".err")
+                run_cmd += '%s '%(ops) # any extra cmd line optino for Superflow executable
+                run_cmd += '" '
+                run_cmd += 'condor_submit submitFile_TEMPLATE.condor '
+                run_cmd += '-append "transfer_input_files = %s" '%(tar_location + "area.tgz")
+                run_cmd += '-append "output = %s%s" '%(log_dir, lname + ".out")
+                run_cmd += '-append "log = %s%s" '%(log_dir, lname + ".log")
+                run_cmd += '-append "error = %s%s" '%(log_dir, lname + ".err")
                 return run_cmd
 
             for submit_fakes in [False, True]:
                 if submit_fakes and not (apply_ff and isData): continue
                 if not submit_fakes and apply_ff and only_fakes: continue
                 #for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
-                for region in ['fake_den']:
-                    if region == 'zjets_num' and submit_fakes: continue
+                for region in regions:
+                    if region == 'fake_num' and submit_fakes: continue
                     if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue
 
                     run_cmd = create_run_cmd(submit_fakes, region)

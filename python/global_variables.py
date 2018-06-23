@@ -94,6 +94,7 @@ groups['Wt'] = [
 groups['ttbar_lep'] = [
     410081, 407321, 410560, 410155
 ]
+groups['top'] = groups['ttbar'] + groups['singletop'] + groups['Wt']
 groups['ggllvv'] = [
     361077,
 ]
@@ -110,7 +111,9 @@ groups['zz'] = [
     361604,
     361610,
 ]
-
+#groups['vv'] = [
+#    361077,
+#]
 ##groups['zll'] = [
 ##    364100, 364101, 364102, 364103, 364104, 364105, 364106, 364107, 364108,
 ##    364109, 364110, 364111, 364112, 364113,
@@ -137,6 +140,7 @@ groups['zmumu'] = [
     344441,
     #345099, 345100, #tmp for n0234 comparison
 ]
+groups['zll'] = groups['zee'] + groups['zmumu'] 
 groups['ztt'] = [
     #tmp for n0234 comparison
     #344443,

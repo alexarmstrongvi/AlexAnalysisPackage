@@ -187,11 +187,14 @@ def main():
             groups = get_desired_samples_map(args)
 
         # Write to output
+        written_dsids = set()
         for group in sorted(groups, key=lambda k:len(groups[k])):
             lst = groups[group]
+            if set(lst) <= written_dsids: continue
             ofile.write('===== %s (%d) ===== \n'%(group, len(lst)))
             for dsid in lst:
                 ofile.write('%s\n'%dsid)
+                written_dsids.add(dsid)
             ofile.write('\n')
     print 'Output saved at %s\n'%output
 

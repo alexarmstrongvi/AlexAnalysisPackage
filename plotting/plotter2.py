@@ -26,6 +26,7 @@ import sys, os, traceback, argparse
 import time
 import importlib
 import re
+from array import array
 from collections import OrderedDict
 from copy import deepcopy
 
@@ -91,7 +92,6 @@ def make_plots() :
         for sample in SAMPLES :
             list_name = "list_" + reg.name + "_" + sample.name
             sample.set_event_list(cut, list_name, event_list_dir)
-
         ########################################################################
         # Make 1D and 2D plots
         n_total = len(plots_with_region)
@@ -302,9 +302,9 @@ def make_stack_axis(plot):
 
     if plot.bin_labels and plot.ptype == Types.stack:
         plot.set_bin_labels(hax)
-    #if plot.rebin_bins:
-    #    print "WARNING :: rebinning not yet implemented"
-    #    #TODO: Implement rebinning
+    if plot.rebin_bins:
+        new_bins = array('d', plot.rebin_bins)
+        hax = hax.Rebin(len(new_bins)-1, 'axes', new_bins)
     
     return hax
 
@@ -329,7 +329,6 @@ def add_stack_backgrounds(plot, reg):
         h = pu.th1d(h_name, "", int(plot.nbins),
                     plot.xmin, plot.xmax,
                     plot.xlabel, plot.ylabel)
-        h.leg_name = mc_sample.displayname #dynamic class members...ooo yeah!
 
         h.SetLineColor(mc_sample.color)
         h.GetXaxis().SetLabelOffset(-999)
@@ -358,6 +357,12 @@ def add_stack_backgrounds(plot, reg):
         stat_err = r.Double(0.0)
         integral = h.IntegralAndError(0,-1,stat_err)
 
+        # Rebin
+        if plot.rebin_bins:
+            new_bins = array('d', plot.rebin_bins)
+            h = h.Rebin(len(new_bins)-1, h_name, new_bins)
+
+        h.leg_name = mc_sample.displayname #dynamic class members...ooo yeah!
 
         # Add overflow
         if plot.add_overflow:
@@ -423,6 +428,11 @@ def add_stack_data(plot, leg, reg):
     integral = hd.IntegralAndError(0,-1,stat_err)
     YIELD_TBL.data[data.name] = UncFloat(integral, stat_err)
 
+    # Rebin
+    if plot.rebin_bins:
+        new_bins = array('d', plot.rebin_bins)
+        hd = hd.Rebin(len(new_bins)-1, hd_name, new_bins)
+    
     # Add overflow
     if plot.add_overflow:
         pu.add_overflow_to_lastbin(hd)
@@ -441,6 +451,8 @@ def add_stack_data(plot, leg, reg):
     return gdata, hd
 
 def add_stack_mc_errors(plot, leg, hists, stack):
+    if not stack:
+        return None, None
     r.gStyle.SetHatchesSpacing(0.9)
 
     mcError = r.TH1F("mcError", "mcError", 2,0,2)
@@ -483,18 +495,22 @@ def add_stack_mc_errors(plot, leg, hists, stack):
     return mcError, nominalAsymErrors
 
 def normalize_stack(mc_total, signals, data_hist, data_graph, mc_stack, mc_errors):
-    mc_norm_factor = 1.0/mc_total.Integral()
-    sig_norm_factors = [1.0/s.Integral() for s in signals]
-    data_norm_factor = 1.0/data_hist.Integral()
-
-    pu.scale_thstack(mc_stack, mc_norm_factor)
-    mc_total.Scale(mc_norm_factor)
-    pu.scale_tgraph(mc_errors, mc_norm_factor)
-    signals = [s.Scale(f) for s,f in zip(signals, sig_norm_factors)]
-    pu.scale_tgraph(data_graph, data_norm_factor)
+    if mc_total:
+        mc_norm_factor = 1.0/mc_total.Integral()
+        pu.scale_thstack(mc_stack, mc_norm_factor)
+        mc_total.Scale(mc_norm_factor)
+        pu.scale_tgraph(mc_errors, mc_norm_factor)
+    if signals:
+        sig_norm_factors = [1.0/s.Integral() for s in signals]
+        signals = [s.Scale(f) for s,f in zip(signals, sig_norm_factors)]
+    if data_hist:
+        data_norm_factor = 1.0/data_hist.Integral()
+        pu.scale_tgraph(data_graph, data_norm_factor)
 
 def reformat_axis(plot, leg, stack, data, hax, signals):
     ''' Reformat axis to fit content and labels'''
+    if not stack:
+        return
     # Get maximum histogram y-value
     if data:
         maxy = max(pu.get_tgraph_max(data), stack.GetMaximum())

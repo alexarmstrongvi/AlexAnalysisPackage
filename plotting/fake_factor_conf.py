@@ -50,7 +50,7 @@ MCsample.weight_str = 'eventweight'
 MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
 Plot1D.auto_set_ylimits = False
-Plot1D.ymax = 4e3
+Plot1D.ymax = 8e3
 NUM_STR = "num"
 DEN_STR = "den"
 
@@ -83,6 +83,11 @@ for num_den in [NUM_STR, DEN_STR]:
     wtop.color = ROOT.kOrange+8
     SAMPLES.append(wtop)
 
+    # Top (ttbar + singletop + Wt)
+    top = Background("top_%s"%num_den, "Top")
+    top.color = ROOT.kYellow+1
+    SAMPLES.append(top)
+    
     # VV combined
     VV = Background("ggllvv_%s"%num_den, "ggllvv")
     VV.color = ROOT.kSpring-7
@@ -90,22 +95,22 @@ for num_den in [NUM_STR, DEN_STR]:
 
     # WW
     WW = Background("ww_%s"%num_den, "WW")
-    WW.color = ROOT.kSpring-6
+    WW.color = ROOT.kTeal-5
     SAMPLES.append(WW)
 
     # ZZ
     ZZ = Background("zz_%s"%num_den, "ZZ")
-    ZZ.color = ROOT.kSpring-4
+    ZZ.color = ROOT.kMagenta-5
     SAMPLES.append(ZZ)
 
     # WZ
     WZ = Background("wz_%s"%num_den, "WZ")
-    WZ.color = ROOT.kSpring-5
+    WZ.color = ROOT.kSpring+9
     SAMPLES.append(WZ)
 
     # Zll
     zll = Background("zll_%s"%num_den, "Zll")
-    zll.color = ROOT.kAzure-9
+    zll.color = ROOT.kAzure-7
     SAMPLES.append(zll)
 
     # Zee
@@ -120,12 +125,12 @@ for num_den in [NUM_STR, DEN_STR]:
 
     # Ztt
     ztt = Background("ztt_%s"%num_den, "Z#tau#tau")
-    ztt.color = ROOT.kAzure-5
+    ztt.color = ROOT.kAzure+8
     SAMPLES.append(ztt)
 
     # Wjets
     wjets = Background("wjets_%s"%num_den, "W+jets")
-    wjets.color = ROOT.kOrange
+    wjets.color = ROOT.kOrange + 2
     SAMPLES.append(wjets)
 
     # W+gamma
@@ -135,7 +140,7 @@ for num_den in [NUM_STR, DEN_STR]:
 
     # Higgs -> tau tau
     htt = Background("htt_%s"%num_den, "H#tau#tau")
-    htt.color = ROOT.kRed
+    htt.color = ROOT.kRed - 7
     SAMPLES.append(htt)
 
     # Higgs -> W W
@@ -153,21 +158,22 @@ for num_den in [NUM_STR, DEN_STR]:
     bkg_ntuple_dir2 = bkg_ntuple_dir[:-1] + '_' + num_den + "/"
 
     data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir2)
-    ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir2)
-    stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir2)
-    wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir2)
+    top.set_chain_from_dsid_list(g.groups['top'], bkg_ntuple_dir2)
+    #ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir2)
+    #stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir2)
+    #wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir2)
     VV.set_chain_from_dsid_list(g.groups['ggllvv'], bkg_ntuple_dir2)
     WW.set_chain_from_dsid_list(g.groups['ww'], bkg_ntuple_dir2)
     ZZ.set_chain_from_dsid_list(g.groups['zz'], bkg_ntuple_dir2)
     WZ.set_chain_from_dsid_list(g.groups['wz'], bkg_ntuple_dir2)
-    #zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir2)
-    zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir2)
-    zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir2)
+    zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir2)
+    #zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir2)
+    #zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir2)
     ztt.set_chain_from_dsid_list(g.groups['ztt'], bkg_ntuple_dir2)
     wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir2)
     #wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], bkg_ntuple_dir2)
-    htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir2)
-    hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir2)
+    #htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir2)
+    #hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir2)
 
 SAMPLES = [s for s in SAMPLES if s.is_setup()]
 assert SAMPLES, "ERROR :: No samples are setup"
@@ -254,11 +260,18 @@ lepton_trig_pT = '(%s || %s)'%(singlelep_trig_pT, dilep_trig_pT)
 REGIONS = []
 
 zjets_FF_CR_add = '1'
+zjets_FF_CR_add += ' && %s'%singlelep_trig_pT
 zjets_FF_CR_add += ' && (75 < Z_MLL && Z_MLL < 105)'
 zjets_FF_CR_add += ' && nBJets == 0'
 zjets_FF_CR_add += ' && l_mT[2] < 50'
 zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR_add += ' && MET < 50'
+zjets_FF_CR_add += ' && (l_flav[2]!=1 || nLepID!=2 || fabs(lep_d0sigBSCorr[2]) < 15)'
+zjets_FF_CR_add += ' && (l_flav[2]!=1 || nLepID!=3 || fabs(lep_d0sigBSCorr[2]) < 3)'
+zjets_FF_CR_add += ' && (l_flav[2]!=0 || fabs(lep_d0sigBSCorr[2]) < 5)'
+zjets_FF_CR_add += ' && (fabs(lep_z0SinTheta[2]) < 0.5)'
+#zjets_FF_CR_add += ' && (l_flav[2] != 1 || l_ID[2] > 1)'
+zjets_FF_CR_add += ' && (l_flav[2] != 1 || l_ID[2] <= 1)'
 zjets_FF_truth_base = '(!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
 zjets_FF_truth_base += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
 zjets_FF_truth_num = zjets_FF_truth_base\
@@ -267,12 +280,12 @@ zjets_FF_truth_den = zjets_FF_truth_base\
                    + ' && (!isMC || (l_truthClass[2] <= 0 || 2 < l_truthClass[2]))' #Fake Probe Lepton
 num_den_dict = {'den' : 'nLepID == 2 && nLepAntiID >= 1',
                 'num' : 'nLepID == 3'}
-chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && l_flav[2]==1'],
-             'mme' : ['mumu','e','Z_dilep_flav==3 && l_flav[2]==1'],
-             'eem' : ['ee','m','Z_dilep_flav==2 && l_flav[2]==0'],
-             'mmm' : ['mumu','m','Z_dilep_flav==3 && l_flav[2]==0'],
-             'm' : ['ll','m','l_flav[2]==0'],
-             'e' : ['ll','e','l_flav[2]==1'],
+chan_dict = {'eee' : ['ee','e','Z_dilep_flav==2 && l_flav[2]==0'],
+             'mme' : ['mumu','e','Z_dilep_flav==3 && l_flav[2]==0'],
+             'eem' : ['ee','m','Z_dilep_flav==2 && l_flav[2]==1'],
+             'mmm' : ['mumu','m','Z_dilep_flav==3 && l_flav[2]==1'],
+             'm' : ['ll','m','l_flav[2]==1'],
+             'e' : ['ll','e','l_flav[2]==0'],
         }
 for num_den, num_den_sel in num_den_dict.iteritems():
     for chan, ops in chan_dict.iteritems():
@@ -282,7 +295,7 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
         displayname = 'Z+jets FF CR (%s)'%(chan_name)
         REGIONS.append(Region(name, displayname))
-        REGIONS[-1].tcut = ' && '.join([num_den_sel, ops[2], singlelep_trig_pT, zjets_FF_CR_add])
+        REGIONS[-1].tcut = ' && '.join([ops[2], zjets_FF_CR_add])
         REGIONS[-1].truth_fake_sel = zjets_FF_truth_den
         REGIONS[-1].truth_bkg_sel = zjets_FF_truth_num
 
@@ -333,7 +346,8 @@ plot_defaults = {
     'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
     'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
-plot_defaults['l_pt[2]'].rebin_bins = [0,5,10,15,20,25,30,100]
+plot_defaults['l_pt[2]'].rebin_bins = [0,5,10,15,20,25,30,35,100]
+plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.5, 1.5, 2.5, 3.0]
 
 region_plots = {}
 ################################################################################
@@ -348,24 +362,25 @@ YIELD_TBL = YieldTable()
 # Add formulas to yield table
 # Key values will be the labels on the table
 # Formulas should use sample names and these symbols: +, -, *, /, (, ), [0-9]
-YIELD_TBL.formulas['(WZ+ZZ)/Data'] = "(wz + zz)/data"
-YIELD_TBL.formulas['Zll/Data'] = "(zee + zmumu)/data"
+#YIELD_TBL.formulas['Data/MC'] = "data/MC"
+#YIELD_TBL.formulas['1 - (WZ+ZZ)/Data'] = "1 - (wz + zz)/data"
+#YIELD_TBL.formulas['Zll/Data'] = "zll/data"
 
 #######################################
 # What regions to plot
 region_ops = []
-region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
+#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
-#region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
-#region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
-#region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
-#region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
+#region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRnum_eem']
+#region_ops += ['zjets_FF_CRden_mmm', 'zjets_FF_CRnum_mmm']
+#region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRnum eee']
+#region_ops += ['zjets_FF_CRden_mme', 'zjets_FF_CRnum_mme']
 #region_ops += ['zjets_FF_CRden_eem']
 #######################################
 # What variables to plot
 vars_to_plot = []
-#vars_to_plot += ['l_pt[2]']
-vars_to_plot += ['l_eta[2]']
+vars_to_plot += ['l_pt[2]']
+#vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

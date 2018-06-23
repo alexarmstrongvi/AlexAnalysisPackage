@@ -49,7 +49,7 @@ class Plot1D(object) :
     logy_min = 1e-1
     logy_max = 1e10
 
-    norm_ymin = -0.1
+    norm_ymin = 0
     norm_ymax = 1.5
 
     logy_norm_min = 1e-7
@@ -220,9 +220,13 @@ class Plot1D(object) :
         int_bins = (isinstance(self.xmin, (int, long))
                 and isinstance(self.xmax, (int, long)))
 
-        if update_range and cutoff_range != 0:
+        eps = 0.0000001
+        notify = cutoff_range > eps and abs(cutoff_range - bin_width) > eps
+        if update_range and notify:
             print "WARNING :: bin_width is not a divisor of x-axis range.",
-            print "Expanding range by %.f to fit"%cutoff_range
+            print "Variable = %s, Range = [%f,%f], bin_width = %f"%(
+                    self.variable, self.xmin, self.xmax, bin_width)
+            print "Expanding range by %f to fit"%cutoff_range
         if update_range and self.xmin == 0:
             self.xmax += cutoff_range
         elif update_range and self.xmin != 0:
