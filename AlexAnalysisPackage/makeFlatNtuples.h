@@ -107,7 +107,7 @@ TLorentzVector m_antiID_lep1_TLV;
 // Indices 0 and 1 are closest Z pair
 // Index 2 is leading anti-ID or 3rd leading ID lepton
 // Indices 3 and 4 are second closest Z pair
-LeptonVector m_Zlep(5, nullptr); //TODO: change name to m_Zordered_leptons
+LeptonVector m_Zlep(5, nullptr);
 LeptonVector m_selectLeptons;
 LeptonVector m_triggerLeptons;
 
