@@ -50,6 +50,7 @@ MCsample.weight_str = 'eventweight'
 MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
 Plot1D.auto_set_ylimits = False
+Plot1D.doLogY = False
 Plot1D.ymax = 8e3
 NUM_STR = "num"
 DEN_STR = "den"
@@ -106,6 +107,7 @@ for num_den in [NUM_STR, DEN_STR]:
     # WZ
     WZ = Background("wz_%s"%num_den, "WZ")
     WZ.color = ROOT.kSpring+9
+    WZ.scale_factor *= 1.36 
     SAMPLES.append(WZ)
 
     # Zll
@@ -214,18 +216,18 @@ e16_trig    = '(HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e
 mu16_trig   = '(HLT_mu26_ivarmedium || HLT_mu50)'
 
 # Triggers with added pT requirements
-e15_trig_emu_pT   = '(%s && dilep_flav == 0 && Lep0Pt >= 25)'%e15_trig
-mu15_trig_emu_pT  = '(%s && dilep_flav == 0 && Lep0Pt < 25 && Lep1Pt >= 21)'%mu15_trig
-e16_trig_emu_pT   = '(%s && dilep_flav == 0 && Lep0Pt >= 27)'%e16_trig
-mu16_trig_emu_pT  = '(%s && dilep_flav == 0 && Lep0Pt < 27 && Lep1Pt >= 28)'%mu16_trig
-emu15_trig_emu_pT = '(%s && dilep_flav == 0 && 18 <= Lep0Pt && Lep0Pt < 25 && 15 <= Lep1Pt && Lep1Pt < 21)'%emu15_trig
-emu16_trig_emu_pT = '(%s && dilep_flav == 0 && 18 <= Lep0Pt && Lep0Pt < 27 && 15 <= Lep1Pt && Lep1Pt < 28)'%emu16_trig
-e15_trig_mue_pT   = '(%s && dilep_flav == 1 && Lep1Pt >= 25)'%e15_trig
-mu15_trig_mue_pT  = '(%s && dilep_flav == 1 && Lep1Pt < 25 && Lep0Pt >= 21)'%mu15_trig
-e16_trig_mue_pT   = '(%s && dilep_flav == 1 && Lep1Pt >= 27)'%e16_trig
-mu16_trig_mue_pT  = '(%s && dilep_flav == 1 && Lep1Pt < 27 && Lep0Pt >= 28)'%mu16_trig
-emu15_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= Lep1Pt && Lep1Pt < 25 && 15 <= Lep0Pt && Lep0Pt < 21)'%emu15_trig
-emu16_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= Lep1Pt && Lep1Pt < 27 && 15 <= Lep0Pt && Lep0Pt < 28)'%emu16_trig
+e15_trig_emu_pT   = '(%s && dilep_flav == 0 && l_pt[0] >= 25)'%e15_trig
+mu15_trig_emu_pT  = '(%s && dilep_flav == 0 && l_pt[0] < 25 && l_pt[1] >= 21)'%mu15_trig
+e16_trig_emu_pT   = '(%s && dilep_flav == 0 && l_pt[0] >= 27)'%e16_trig
+mu16_trig_emu_pT  = '(%s && dilep_flav == 0 && l_pt[0] < 27 && l_pt[1] >= 28)'%mu16_trig
+emu15_trig_emu_pT = '(%s && dilep_flav == 0 && 18 <= l_pt[0] && l_pt[0] < 25 && 15 <= l_pt[1] && l_pt[1] < 21)'%emu15_trig
+emu16_trig_emu_pT = '(%s && dilep_flav == 0 && 18 <= l_pt[0] && l_pt[0] < 27 && 15 <= l_pt[1] && l_pt[1] < 28)'%emu16_trig
+e15_trig_mue_pT   = '(%s && dilep_flav == 1 && l_pt[1] >= 25)'%e15_trig
+mu15_trig_mue_pT  = '(%s && dilep_flav == 1 && l_pt[1] < 25 && l_pt[0] >= 21)'%mu15_trig
+e16_trig_mue_pT   = '(%s && dilep_flav == 1 && l_pt[1] >= 27)'%e16_trig
+mu16_trig_mue_pT  = '(%s && dilep_flav == 1 && l_pt[1] < 27 && l_pt[0] >= 28)'%mu16_trig
+emu15_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= l_pt[1] && l_pt[1] < 25 && 15 <= l_pt[0] && l_pt[0] < 21)'%emu15_trig
+emu16_trig_mue_pT = '(%s && dilep_flav == 1 && 18 <= l_pt[1] && l_pt[1] < 27 && 15 <= l_pt[0] && l_pt[0] < 28)'%emu16_trig
 e15_trig_ee_pT   = '(%s && Z_dilep_flav == 2 && l_pt[0] >= 25)'%e15_trig
 e16_trig_ee_pT   = '(%s && Z_dilep_flav == 2 && l_pt[0] >= 27)'%e16_trig
 mu15_trig_mumu_pT  = '(%s && Z_dilep_flav == 3 && l_pt[0] >= 21)'%mu15_trig
@@ -259,19 +261,16 @@ lepton_trig_pT = '(%s || %s)'%(singlelep_trig_pT, dilep_trig_pT)
 # Create regions
 REGIONS = []
 
-zjets_FF_CR_add = '1'
-zjets_FF_CR_add += ' && %s'%singlelep_trig_pT
-zjets_FF_CR_add += ' && (75 < Z_MLL && Z_MLL < 105)'
-zjets_FF_CR_add += ' && nBJets == 0'
-zjets_FF_CR_add += ' && l_mT[2] < 50'
-zjets_FF_CR_add += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
-zjets_FF_CR_add += ' && MET < 50'
-zjets_FF_CR_add += ' && (l_flav[2]!=1 || nLepID!=2 || fabs(lep_d0sigBSCorr[2]) < 15)'
-zjets_FF_CR_add += ' && (l_flav[2]!=1 || nLepID!=3 || fabs(lep_d0sigBSCorr[2]) < 3)'
-zjets_FF_CR_add += ' && (l_flav[2]!=0 || fabs(lep_d0sigBSCorr[2]) < 5)'
-zjets_FF_CR_add += ' && (fabs(lep_z0SinTheta[2]) < 0.5)'
-#zjets_FF_CR_add += ' && (l_flav[2] != 1 || l_ID[2] > 1)'
-zjets_FF_CR_add += ' && (l_flav[2] != 1 || l_ID[2] <= 1)'
+zjets_FF_CR = '1'
+zjets_FF_CR += ' && %s'%singlelep_trig_pT
+zjets_FF_CR += ' && fabs(lep_d0sigBSCorr[0]) < 15 && fabs(lep_d0sigBSCorr[1]) < 15 && fabs(lep_d0sigBSCorr[2]) < 15'
+zjets_FF_CR += ' && fabs(lep_z0SinTheta[0]) < 15 && fabs(lep_z0SinTheta[1]) < 15 && fabs(lep_z0SinTheta[2]) < 15'
+zjets_FF_CR += ' && (75 < Z_MLL && Z_MLL < 105)'
+zjets_FF_CR += ' && nBJets == 0'
+zjets_FF_CR += ' && l_mT[2] < 50'
+zjets_FF_CR += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
+#zjets_FF_CR += ' && fabs(l_eta[2]) < 1.4'
+#zjets_FF_CR += ' && fabs(l_eta[2]) >= 1.4'
 zjets_FF_truth_base = '(!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
 zjets_FF_truth_base += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
 zjets_FF_truth_num = zjets_FF_truth_base\
@@ -293,46 +292,16 @@ for num_den, num_den_sel in num_den_dict.iteritems():
         chan_name = '%s + %s %s'%(ops[0], id_or_aid, ops[1])
 
         name = 'zjets_FF_CR%s_%s'%(num_den, chan)
-        displayname = 'Z+jets FF CR (%s)'%(chan_name)
+        displayname = 'Z+jets CR (%s)'%(chan_name)
+        #displayname = 'Z+jets CR (%s, |#eta| < 1.4)'%(chan_name)
+        #displayname = 'Z+jets CR (%s, |#eta| #ge 1.4)'%(chan_name)
         REGIONS.append(Region(name, displayname))
-        REGIONS[-1].tcut = ' && '.join([ops[2], zjets_FF_CR_add])
+        REGIONS[-1].tcut = ' && '.join([ops[2], zjets_FF_CR])
         REGIONS[-1].truth_fake_sel = zjets_FF_truth_den
         REGIONS[-1].truth_bkg_sel = zjets_FF_truth_num
 
 
-# Wjet fake regions
-wjets_FF_CRden_base = 'nLepID == 1 && nLepAntiID >= 1'
-wjets_FF_CRnum_base = 'nLepID == 2'
-wjets_FF_CRden_add = '1'
-wjets_FF_CRden_add += ' && l_q[0] == aID_Lep0Q && aID_dilep_flav <= 1' # reject SFOS zjets
-wjets_FF_CRden_add += ' && (aID_MLL < 70 || 110 < aID_MLL)' # reject zjets
-wjets_FF_CRden_add += ' && nBJets==0' # reject top
-FF_CRden_emu_ch  = 'aID_dilep_flav == 0'
-FF_CRden_mue_ch  = 'aID_dilep_flav == 1'
-FF_CRden_ee_ch   = 'aID_dilep_flav == 2'
-FF_CRden_mumu_ch = 'aID_dilep_flav == 3'
 
-REGIONS.append(Region('wjets_FF_CRden_emu', 'wjets FF CR (anti-ID el)'))
-REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_emu_ch
-
-REGIONS.append(Region('wjets_FF_CRden_mue', 'wjets FF CR (anti-ID mu)'))
-REGIONS[-1].tcut = wjets_FF_CRden_base + '&&' + wjets_FF_CRden_add + '&&' + FF_CRden_mue_ch
-
-wjets_FF_CRnum_base = 'nLepID == 2' # require final state
-wjets_FF_CRnum_add = '1'
-wjets_FF_CRnum_add += ' && l_q[0] == l_q[1]' # reject zjets
-wjets_FF_CRnum_add += ' && (MLL < 70 || 110 < MLL)' # reject zjets
-wjets_FF_CRnum_add += ' && nBJets==0' # reject top
-FF_CRnum_emu_ch  = 'dilep_flav == 0'
-FF_CRnum_mue_ch  = 'dilep_flav == 1'
-FF_CRnum_ee_ch   = 'dilep_flav == 2'
-FF_CRnum_mumu_ch = 'dilep_flav == 3'
-
-REGIONS.append(Region('wjets_FF_CRnum_emu', 'wjets FF CR (ID el)'))
-REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
-
-REGIONS.append(Region('wjets_FF_CRnum_mue', 'wjets FF CR (ID mu)'))
-REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_CRnum_emu_ch
 
 
 ################################################################################
@@ -343,11 +312,17 @@ REGIONS[-1].tcut = wjets_FF_CRnum_base + '&&' + wjets_FF_CRnum_add + '&&' + FF_C
 # Improved plot defining setup
 # These plots will be copied into new plots for each region being run
 plot_defaults = {
-    'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'l_pt[0]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0, 0, 4000],   bin_width=0.1, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
-plot_defaults['l_pt[2]'].rebin_bins = [0,5,10,15,20,25,30,35,100]
-plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.5, 1.5, 2.5, 3.0]
+# Muon Binning (no eta)
+plot_defaults['l_pt[0]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
+plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
+
+# Electron Binning
+#plot_defaults['l_pt[2]'].rebin_bins = [0,10,12,15,20,25,100]
+plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.4, 0, 1.4, 2.5, 3.0]
 
 region_plots = {}
 ################################################################################
@@ -379,7 +354,7 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['l_pt[2]']
+vars_to_plot += ['l_pt[0]']
 #vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names

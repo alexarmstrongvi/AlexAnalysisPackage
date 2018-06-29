@@ -14,12 +14,14 @@
 // - Improve all the variable nameing schemes
 
 #include "AlexAnalysisPackage/makeFlatNtuples.h"
+#include "SusyNtuple/KinematicTools.h"
 
 using std::string;
 using std::cout;
 using std::cerr;
 using std::vector;
 using std::find;
+using kin::getMetRel;
 
 // Various superflow classes
 using namespace sflow;
@@ -1038,8 +1040,8 @@ void add_signallepton_variables(Superflow* superflow) {
       *superflow << HFTname("l_iso0");
       *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
+        if (m_selectLeptons.size() > 0 && m_selectLeptons.at(0)) return out;
         Susy::Lepton* lep = m_selectLeptons.at(0);
-        if (!lep) return out;
         out.push_back(-1);  // for tracking all entries and normalizing bins
         bool flag = false;
         if (lep->isoGradient)               { flag=true; out.push_back(0);}
@@ -1056,8 +1058,8 @@ void add_signallepton_variables(Superflow* superflow) {
       *superflow << HFTname("l_iso1");
       *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
+        if (m_selectLeptons.size() <= 1 || !m_selectLeptons.at(1)) return out;
         Susy::Lepton* lep = m_selectLeptons.at(1);
-        if (!lep) return out;
         out.push_back(-1);  // for tracking all entries and normalizing bins
         bool flag = false;
         if (lep->isoGradient)               { flag=true; out.push_back(0);}
@@ -1074,8 +1076,8 @@ void add_signallepton_variables(Superflow* superflow) {
       *superflow << HFTname("l_iso2");
       *superflow << [=](Superlink* /*sl*/, var_int_array*) -> vector<int> {
         vector<int> out;
+        if (m_selectLeptons.size() <= 2 || !m_selectLeptons.at(2)) return out;
         Susy::Lepton* lep = m_selectLeptons.at(2);
-        if (!lep) return out;
         out.push_back(-1);  // for tracking all entries and normalizing bins
         bool flag = false;
         if (lep->isoGradient)               { flag=true; out.push_back(0);}
@@ -1455,28 +1457,28 @@ void add_other_lepton_variables(Superflow* superflow) {
     // Two-lepton properties
     *superflow << NewVar("Delta eta between leptons"); {
       *superflow << HFTname("DEtaLL");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return fabs(m_lepton0.Eta() - m_lepton1.Eta()); };
       *superflow << SaveVar();
     }
     *superflow << NewVar("Delta phi between leptons"); {
       *superflow << HFTname("DphiLL");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return fabs(m_lepton0.DeltaPhi(m_lepton1));};
       *superflow << SaveVar();
     }
     *superflow << NewVar("delta R of di-lepton system"); {
       *superflow << HFTname("drll");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return m_lepton0.DeltaR(m_lepton1); };
       *superflow << SaveVar();
     }
     *superflow << NewVar("dilepton flavor"); {
       *superflow << HFTname("dilep_flav");
-      *superflow << [=](Superlink* sl, var_int*) -> int {
+      *superflow << [=](Superlink* /*sl*/, var_int*) -> int {
         if(m_selectLeptons.size()<2) return -INT_MAX;
         if(m_selectLeptons.at(0)->isEle() && m_selectLeptons.at(1)->isMu()){return 0;}       // e mu  case
         else if(m_selectLeptons.at(0)->isMu() && m_selectLeptons.at(1)->isEle()){return 1;}  // mu e  case
@@ -1498,21 +1500,21 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("mass of di-lepton system, M_ll"); {
       *superflow << HFTname("MLL");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return m_dileptonP4.M(); };
       *superflow << SaveVar();
     }
     *superflow << NewVar("Pt of di-lepton system, Pt_ll"); {
       *superflow << HFTname("ptll");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return m_dileptonP4.Pt(); };
       *superflow << SaveVar();
     }
     *superflow << NewVar("diff_pt between leading and sub-leading lepton"); {
       *superflow << HFTname("dpt_ll");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 2) return -DBL_MAX;
           return m_lepton0.Pt() - m_lepton1.Pt();
       };
@@ -1520,7 +1522,7 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("dphi between leading lepton and MET"); {
       *superflow << HFTname("DphiLep0MET");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 1) return -DBL_MAX;
           return m_lepton0.DeltaPhi(m_MET);
       };
@@ -1541,12 +1543,96 @@ void add_other_lepton_variables(Superflow* superflow) {
       };
       *superflow << SaveVar();
     }
+    *superflow << NewVar("dphi between MET and closest baseline lepton"); {
+      *superflow << HFTname("DphiBaseLepMET");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          double dPhi = m_selectLeptons.size() ? DBL_MAX : -DBL_MAX;
+          for (Susy::Lepton* lepton : *sl->baseLeptons) {
+            float tmp_dphi = fabs(lepton->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          return dPhi;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dphi between MET and closest lepton"); {
+      *superflow << HFTname("DphiLepMET");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+          double dPhi = m_selectLeptons.size() ? DBL_MAX : -DBL_MAX;
+          for (Susy::Lepton* lepton : m_selectLeptons) {
+            if (!lepton) continue;
+            float tmp_dphi = fabs(lepton->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          return dPhi;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dphi between MET and closest jet"); {
+      *superflow << HFTname("DphiJetMET");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          double dPhi = sl->jets->size() ? DBL_MAX : -DBL_MAX;
+          for (Susy::Jet* jet : *sl->jets) {
+            float tmp_dphi = fabs(jet->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          return dPhi;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dphi between MET and closest base jet"); {
+      *superflow << HFTname("DphiBaseJetMET");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          double dPhi = sl->jets->size() ? DBL_MAX : -DBL_MAX;
+          for (Susy::Jet* jet : *sl->baseJets) {
+            float tmp_dphi = fabs(jet->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          return dPhi;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dphi between MET and closest lep/jet"); {
+      *superflow << HFTname("DphiLepJetMET");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          double dPhi = (sl->jets->size() || m_selectLeptons.size()) ? DBL_MAX : -DBL_MAX;
+          for (Susy::Jet* jet : *sl->jets) {
+            float tmp_dphi = fabs(jet->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          for (Susy::Lepton* lepton : m_selectLeptons) {
+            if (!lepton) continue;
+            float tmp_dphi = fabs(lepton->DeltaPhi(m_MET));
+            if (tmp_dphi < dPhi) dPhi = tmp_dphi; 
+          }
+          return dPhi;
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Relative MET with baseline jets/leps"); {
+      *superflow << HFTname("RelMETbase");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          return getMetRel(*sl->met, *sl->baseLeptons, *sl->baseJets);
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("Relative MET"); {
+      *superflow << HFTname("RelMET");
+      *superflow << [=](Superlink* sl, var_double*) -> double {
+          LeptonVector no_null_leps;
+          for (Susy::Lepton* lepton : m_selectLeptons) {
+            if (lepton) no_null_leps.push_back(lepton);
+          }
+          return getMetRel(*sl->met, no_null_leps, *sl->jets);
+      };
+      *superflow << SaveVar();
+    }
 
     //////////////////////////////////////////////////////////////////////////////
     // Optimized Region Cuts
     *superflow << NewVar("dphi between sub-leading lepton and MET"); {
       *superflow << HFTname("DphiLep1MET");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 2) return -DBL_MAX;
           return m_lepton1.DeltaPhi(m_MET);
       };
@@ -1554,7 +1640,7 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("transverse mass of leading lepton"); {
       *superflow << HFTname("MtLep0");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 1) return -DBL_MAX;
           return sqrt( 2*m_lepton0.Pt()*m_MET.Pt()*(1-cos (m_lepton0.DeltaPhi(m_MET)) ) );
       };
@@ -1562,7 +1648,7 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("transverse mass of subleading lepton"); {
       *superflow << HFTname("MtLep1");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 2) return -DBL_MAX;
           return sqrt( 2*m_lepton1.Pt()*m_MET.Pt()*(1-cos (m_lepton1.DeltaPhi(m_MET)) ) );
       };
@@ -1570,7 +1656,7 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("approximate tau pT"); {
       *superflow << HFTname("tau_pT");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 2) return -DBL_MAX;
           return (m_MET + m_lepton1).Pt();
       };
@@ -1578,7 +1664,7 @@ void add_other_lepton_variables(Superflow* superflow) {
     }
     *superflow << NewVar("ratio of tau pT to subleading lepton pT"); {
       *superflow << HFTname("taulep1_pT_ratio");
-      *superflow << [=](Superlink* sl, var_double*) -> double {
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
           if (m_selectLeptons.size() < 2) return -DBL_MAX;
           TLorentzVector tau_estimate = m_MET + m_lepton1;
           return tau_estimate.Pt() / m_lepton0.Pt();
@@ -2168,7 +2254,7 @@ bool is_antiID_lepton(Susy::Lepton* lepton) {
         iso_pass = ele->isoGradient;
         id_pass  = ele->mediumLLH;
         passID_cuts = iso_pass && id_pass;
-        passAntiID_cuts = ele->veryLooseLLH;
+        passAntiID_cuts = ele->looseLLHBLayer;
     } else if (lepton->isMu()) {
         const Susy::Muon* mu = dynamic_cast<const Susy::Muon*>(lepton);
         pt_pass  = mu->pt > 10;  //15

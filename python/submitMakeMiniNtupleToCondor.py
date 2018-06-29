@@ -10,16 +10,16 @@ import global_variables as g
 ana_name      = "makeFlatNtuples" #"makeMiniNtuple_HIGGS"
 use_local     = True  # run over brick samples instead of fax
 submitMissing = False # submit only DSIDs stored in outputs/missing.txt
-dry_run       = False 
-file_name_suffix = 'diffSigJet'
+dry_run       = False
+file_name_suffix = ''
 
 # Run analysis with selections
 do_baseline        = False
 do_baseline_den    = False
 do_zjets_num_fakes = True
-do_zjets_den_fakes = False
+do_zjets_den_fakes = True
 do_zll_cr          = False
-apply_ff           = False  # apply fake factor to denom events
+apply_ff           = True # apply fake factor to denom events
 only_fakes         = False  # only output fake ntuples
 assert not (only_fakes and do_zjets_num_fakes)
 regions = []
@@ -32,8 +32,8 @@ if do_baseline_den: regions.append('baseline_den')
 # Where to submit condor jobs
 doBrick       = True
 doLocal       = False
-doSDSC        = False
-doUC          = False
+doSDSC        = True
+doUC          = True
 
 # Local samples are only stored on the brick so the
 # condor jobs should only be submitted to the brick
@@ -46,8 +46,8 @@ if use_local:
     filelist_dir        = g.local_input_files
     in_job_filelist_dir = g.local_input_files
 else:
-    filelist_dir        = g.input_files
-    in_job_filelist_dir = g.input_files
+    filelist_dir        = g.fax_input_files
+    in_job_filelist_dir = g.fax_input_files
 
 tar_location = g.analysis_path
 out_dir      = g.output_dir
@@ -75,6 +75,7 @@ def main() :
         print "Submitting sample : %s"%s
         suff = ""
         if not s.endswith("/") : suff = "/"
+        print filelist_dir + s + suff + "*.txt"
         sample_lists = glob.glob(filelist_dir + s + suff + "*.txt")
         if len(sample_lists) == 0 :
             print "WARNING :: No sample lists in filelist dir!"
@@ -96,8 +97,6 @@ def main() :
                     continue
 
             print "    > %s"%dataset
-            dataset = "." + dataset[dataset.find(in_job_filelist_dir):]
-            print "    >> %s"%dataset
 
             if not (str(os.path.abspath(out_dir)) == str(os.environ['PWD'])) :
                 print "You must call this script from the output directory where the ntuples will be stored!"
@@ -123,10 +122,10 @@ def main() :
                 lname = region + "_" + dataset.split("/")[-1].replace(".txt", "")
                 ops = ""
 
-                if do_baseline and region=='baseline':
+                if do_baseline and region=='baseline_sel':
                     ops += '--baseline_sel '
-                if do_baseline_den:
-                    sys.exit()
+                if do_baseline_den and region=='baseline_den':
+                    ops += '--baseline_den '
                 if do_zll_cr and region=='zll_cr':
                     ops += '--zll_cr '
                 if do_zjets_num_fakes and region=='fake_num':
@@ -136,6 +135,8 @@ def main() :
 
                 if submit_fakes and region != 'zjets_num':
                     ops += '--apply_ff '
+                    lname += "_" + 'fake_est' 
+
 
                 if file_name_suffix:
                     ops += '-s %s '%file_name_suffix
@@ -154,10 +155,9 @@ def main() :
             for submit_fakes in [False, True]:
                 if submit_fakes and not (apply_ff and isData): continue
                 if not submit_fakes and apply_ff and only_fakes: continue
-                #for region in ['baseline', 'fake_num', 'fake_den', 'zll_cr']:
                 for region in regions:
                     if region == 'fake_num' and submit_fakes: continue
-                    if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline': continue
+                    if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline_sel': continue
 
                     run_cmd = create_run_cmd(submit_fakes, region)
                     print "Trimmed command output\n>>",

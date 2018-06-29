@@ -9,7 +9,7 @@ if [ -z "$ANALYSIS_DIR" ]; then
 fi
 
 # store tar option settings not as a string
-exclude_ops=`eval echo '--exclude=".*" --exclude="*git*" --exclude="*\.root"'`
+exclude_ops=`eval echo '--exclude=".*" --exclude="*git*"'`
 
 # tar analysis file
 tar cfvz $ANALYSIS_DIR/analysis.tgz ${exclude_ops} $ANALYSIS_DIR/analysis/

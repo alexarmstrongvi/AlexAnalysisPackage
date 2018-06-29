@@ -56,6 +56,7 @@ class Plot1D(object) :
     logy_norm_max = 1e4
 
     auto_set_ylimits = True
+    doLogY = True
 
     def __init__(self,
         region = "",
@@ -79,7 +80,7 @@ class Plot1D(object) :
         logy_norm_min = None,
         logy_norm_max = None,
         is2D = False,
-        doLogY = True, # change to do_logy
+        doLogY = None, 
         doNorm = False,
         add_overflow = True,
         add_underflow = False,
@@ -103,7 +104,7 @@ class Plot1D(object) :
 
         # Flags
         self.is2D = is2D
-        self.doLogY = doLogY
+        if doLogY: self.doLogY = doLogY
         self.doNorm = doNorm
 
         self.add_overflow = add_overflow

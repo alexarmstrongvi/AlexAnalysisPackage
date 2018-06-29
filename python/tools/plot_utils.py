@@ -117,6 +117,7 @@ def th1_to_tgraph(hist) :
         ey = hist.GetBinError(ibin)
         x = hist.GetBinCenter(ibin)
         ex = hist.GetBinWidth(ibin) / 2.0
+        if y == 0: y = -2
         g.SetPoint(ibin-1,x,y)
         g.SetPointError(ibin-1,ex,ex,ey,ey)
 
@@ -189,16 +190,17 @@ def tgraphErrors_divide(g1, g2) :
                 #print "test"
             else :
                 dx1 = g1.GetErrorX(i1)
-                if y1 != 0 : dy1 = g1.GetErrorY(i1)/y1
-                if y2 != 0 : dy2 = g2.GetErrorY(i2)/y2
+                if y1 > 0 : dy1 = g1.GetErrorY(i1)/y1
+                if y2 > 0 : dy2 = g2.GetErrorY(i2)/y2
 
-                if y1 == 0. : g3.SetPoint(iv, x1, -10) # if the ratio is zero, don't draw point at zero (looks bad on ratio pad)
-                elif y2 != 0. : g3.SetPoint(iv, x1, y1/y2)
-                else : g3.SetPoint(iv, x1, y2)
+                if y1 <= 0. or y2 <= 0 : 
+                    g3.SetPoint(iv, x1, -10) # if the ratio is zero, don't draw point at zero (looks bad on ratio pad)
+                else: 
+                    g3.SetPoint(iv, x1, y1/y2)
 
             e = ROOT.Double(0.0)
 
-            if y1 !=0 and y2 != 0 :
+            if y1 > 0 and y2 > 0 :
                 e = sqrt(dy1*dy1 + dy2*dy2)*(y1/y2)
             g3.SetPointError(iv,dx1,e)
 
@@ -232,24 +234,23 @@ def tgraphAsymmErrors_divide(g_num, g_den) :
             g_den.GetPoint(iden, x_den, y_den)
 
             if x_num != x_den : continue
-            else :
-                if y_num !=0 :
-                    ey_num_up = g_num.GetErrorYhigh(inum)/y_num
-                    ey_num_dn = g_num.GetErrorYlow(inum)/y_num
-                if y_den !=0 :
-                    ey_den_up = g_den.GetErrorYhigh(iden)/y_den
-                    ey_den_dn = g_den.GetErrorYlow(iden)/y_den
+            
+            if y_num >0 :
+                ey_num_up = g_num.GetErrorYhigh(inum)/y_num
+                ey_num_dn = g_num.GetErrorYlow(inum)/y_num
+            if y_den >0 :
+                ey_den_up = g_den.GetErrorYhigh(iden)/y_den
+                ey_den_dn = g_den.GetErrorYlow(iden)/y_den
 
-                if y_num == 0. : g3.SetPoint(iv, x_num, -10)
-                elif y_den !=0 :
-                    g3.SetPoint(iv, x_num, y_num/y_den)
-                else :
-                    g3.SetPoint(iv, y_num, y_den)
+            if y_num <= 0. or y_den <= 0.: 
+                g3.SetPoint(iv, x_num, -10)
+            else:
+                g3.SetPoint(iv, x_num, y_num/y_den)
             ex = g_num.GetErrorX(iv)
 
             e_up = ROOT.Double(0.0)
             e_dn = ROOT.Double(0.0)
-            if y_num !=0 and y_den != 0 :
+            if y_num > 0 and y_den > 0 :
                 e_up = sqrt(ey_num_up*ey_num_up + ey_den_up*ey_den_up)*(y_num/y_den)
                 e_dn = sqrt(ey_num_dn*ey_num_dn + ey_den_dn*ey_den_dn)*(y_num/y_den)
             g3.SetPointError(iv, ex, ex, e_dn, e_up)

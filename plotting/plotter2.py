@@ -170,7 +170,7 @@ def make_plotsStack(plot, reg):
     can.Update()
 
     # Save the histogram
-    save_plot(can, plot.name+".eps")
+    save_plot(can, plot.name+".pdf")
 
     # Clean up
     root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data, data_hist, legend, hists])
@@ -228,7 +228,7 @@ def make_plotsRatio(plot, reg) :
 
     ############################################################################
     # Save the histogram
-    save_plot(rcan.canvas, plot.name+".eps")
+    save_plot(rcan.canvas, plot.name+".pdf")
 
     # Clean up
     root_delete([axis, mc_stack, mc_errors, mc_total, error_leg, signals, data,
@@ -495,15 +495,15 @@ def add_stack_mc_errors(plot, leg, hists, stack):
     return mcError, nominalAsymErrors
 
 def normalize_stack(mc_total, signals, data_hist, data_graph, mc_stack, mc_errors):
-    if mc_total:
+    if mc_total and mc_total.Integral():
         mc_norm_factor = 1.0/mc_total.Integral()
         pu.scale_thstack(mc_stack, mc_norm_factor)
         mc_total.Scale(mc_norm_factor)
         pu.scale_tgraph(mc_errors, mc_norm_factor)
-    if signals:
-        sig_norm_factors = [1.0/s.Integral() for s in signals]
-        signals = [s.Scale(f) for s,f in zip(signals, sig_norm_factors)]
-    if data_hist:
+    for s in signals:
+        sig_norm_factor = s.Integral() if s.Integral() else 1
+        s.Scale(sig_norm_factor) 
+    if data_hist and data_hist.Integral():
         data_norm_factor = 1.0/data_hist.Integral()
         pu.scale_tgraph(data_graph, data_norm_factor)
 
@@ -616,7 +616,7 @@ def get_ratio_graph(data_hist, mc_errors):
     index = 0
     for i in xrange(ratio_raw.GetN()) :
         ratio_raw.GetPoint(i, x1, y1)
-        if y1 <= 0. : continue
+        if y1 <= 0. : y1 = r.Double(-2.0)
 
         ratio.SetPoint(index, x1, y1)
         xlo, xhi = ratio_raw.GetErrorXlow(i), ratio_raw.GetErrorXhigh(i)
@@ -736,13 +736,13 @@ def check_for_consistency() :
             regions defined in config file
     '''
     region_names = [r.name for r in REGIONS]
-    bad_regions = [p.region for p in PLOTS if p.region not in region_names]
+    bad_regions = {p.region for p in PLOTS if p.region not in region_names}
     if len(bad_regions) > 0 :
         print 'check_for_consistency ERROR    '\
         'You have configured a plot for a region that is not defined. '\
         'Here is the list of "bad regions":'
         print bad_regions
-        print 'check_for_consistency ERROR    The regions that are defined in the configuration ("%s") are:'%g_plotConfig
+        print 'check_for_consistency ERROR    The regions that are defined in the configuration ("%s") are:'%args.plotConfig
         print region_names
         print "check_for_consistency ERROR    Exiting."
         sys.exit()

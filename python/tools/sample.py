@@ -110,10 +110,13 @@ class Sample :
 
         # Define useful variables
         cut  = r.TCut(cut)
+        n_entries = str(self.tree.GetEntries())
+        #hash_input = '_'.join([cut, save_dir, self.file_path, str(n_entries)])
+        #hash_object = hashlib.md5(b'%s_%s' % (list_name, cut))
+        #list_name = hash_object.hexdigest()
         list_file_name = list_name.replace(".root","") + ".root"
         save_path = os.path.join(save_dir, list_file_name)
         save_path = os.path.realpath(os.path.normpath(save_path))
-        n_entries = str(self.tree.GetEntries())
 
 
         # Check if the list already exists

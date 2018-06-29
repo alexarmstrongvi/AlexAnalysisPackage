@@ -17,6 +17,7 @@ function usage()
     echo -e "\t-a : Add to name of output directories [mc_date -> mc_<input>_data]\n"
     echo -e "\t-n : numerator samples\n"
     echo -e "\t-d : denominator samples\n"
+    echo -e "\t-f : fake samples\n"
     echo -e "\t--update : move flat ntuples into current directory instead of new directory\n"
 }
 
@@ -24,6 +25,7 @@ update=false
 name_mod=""
 num=false
 den=false
+fakes=false
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
     VALUE=`echo $1 | awk -F= '{print $2}'`
@@ -44,6 +46,9 @@ while [ "$1" != "" ]; do
             ;;
         -d)
             den=true
+            ;;
+        -f)
+            fakes=true
             ;;
         *)
             echo "ERROR: unknown parameter \"$PARAM\""
@@ -72,6 +77,8 @@ if [ "$update" = false ]; then
             link_name="${link_name}_num"
         elif [ "$den" = true ]; then
             link_name="${link_name}_den"
+        elif [ "$fakes" = true ]; then
+            link_name="${link_name}_fakes"
         fi
         unlink $link_name
         ln -s $DIR $link_name 
@@ -86,13 +93,19 @@ if [ "$num" = true ]; then
     suffix="_num"
 elif [ "$den" = true ]; then
     suffix="_den"
+elif [ "$fakes" = true ]; then
+    suffix="_fakes"
 else
     suffix=""
 fi
 mv outputs/CENTRAL_physics_Main_*.root ntuples/data${suffix}/
-
 mv outputs/CENTRAL_*.root ntuples/mc${suffix}/
 rm outputs/RunCondorSF.sh outputs/submitFile_TEMPLATE.condor
+
+if [ "$fakes" = true ]; then
+    rm -rf ntuples/mc${suffix}
+    unlink ../ntuples/mc_fakes/
+fi
 
 cd $dir
 echo "Ready for plotting"

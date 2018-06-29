@@ -36,7 +36,7 @@ mc_den_ntuples = analysis_run_dir+"ntuples/mc_den/"
 data_ntuples = analysis_run_dir+"ntuples/data/"
 data_num_ntuples = analysis_run_dir+"ntuples/data_num/"
 data_den_ntuples = analysis_run_dir+"ntuples/data_den/"
-fake_ntuples = analysis_run_dir+"ntuples/fakes/"
+fake_ntuples = analysis_run_dir+"ntuples/data_fakes/"
 
 # Set input files as local or fax
 input_files = local_input_files

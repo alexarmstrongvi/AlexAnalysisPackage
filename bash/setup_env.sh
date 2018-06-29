@@ -21,7 +21,7 @@ lsetup "root ${rootver} --skipConfirm"
 
 # Setup python and desired packages
 lsetup python
-lsetup "lcgenv -p LCG_93 x86_64-slc6-gcc62-dbg pandas"
+#lsetup "lcgenv -p LCG_93 x86_64-slc6-gcc62-dbg pandas"
 
 # if rootcore is already set up, clean up the env
 echo ""
