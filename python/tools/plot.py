@@ -32,7 +32,9 @@ class Types(Enum):
     ratio = 2
     double_ratio = 3
     comparison = 4
-    undefined = 5
+    two_dim = 5
+    profile = 6
+    undefined = 7
 ################################################################################
 # Plot Classes
 ################################################################################
@@ -69,18 +71,7 @@ class Plot1D(object) :
         bin_range = [], # [x0, x1, y0, y1]
         bin_width = None, # Can specify to override nbins
         nbins = 20,
-        xmin = None,
-        xmax = None,
-        ymin = None,
-        ymax = None,
-        logy_min = None,
-        logy_max = None,
-        norm_ymin = None,
-        norm_ymax = None,
-        logy_norm_min = None,
-        logy_norm_max = None,
-        is2D = False,
-        doLogY = None, 
+        doLogY = None,
         doNorm = False,
         add_overflow = True,
         add_underflow = False,
@@ -103,7 +94,7 @@ class Plot1D(object) :
         self.pads = None
 
         # Flags
-        self.is2D = is2D
+        self.is2D = False
         if doLogY: self.doLogY = doLogY
         self.doNorm = doNorm
 
@@ -114,21 +105,12 @@ class Plot1D(object) :
         self.leg_is_bottom_left = leg_is_bottom_left
         self.ptype = ptype
 
-        # Properties
-        if xmin: self.xmin = xmin
-        if xmax: self.xmax = xmax
-        if ymin: self.ymin = ymin
-        if ymax: self.ymax = ymax
-        if logy_min: self.logy_min = logy_min
-        if logy_max: self.logy_max = logy_max
-        if norm_ymin: self.norm_ymin = norm_ymin
-        if norm_ymax: self.norm_ymax = norm_ymax
-        if logy_norm_min: self.logy_norm_min = logy_norm_min
-        if logy_norm_max: self.logy_norm_max = logy_norm_max
-
         self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
 
-        self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
+        if bin_width:
+            self.nbins = determine_nbins(self.xmax, self.xmin, bin_width, self.variable)
+        else:
+            self.nbins = nbins
 
         self.xunits = xunits
         self.yunits = yunits
@@ -194,55 +176,6 @@ class Plot1D(object) :
         if nbins or bin_width:
             self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
 
-
-
-    def determine_nbins(self, bin_width, update_range = True):
-        '''
-        Intelligently determine the number of bins.
-
-        Given a desired bin width and x-axis range, the correct number of bins
-        is determined for use with TH1. The x-axis range or bin width will
-        likely be adjusted so that the latter divides the former. If the
-        boundaries are int type values, these will be maintained.
-
-        args:
-            bin_width (float) - desired width of x-axis bins
-            update_range - option to update x-axis range to be divisible by
-                bin width as opposed to modying bin width to be a divisor
-
-        returns:
-            (int) - the number x-axis bins
-        '''
-        assert self.xmax != self.xmin, ("ERROR :: x-axis range not set")
-        bin_width = float(bin_width)
-        x_range = float(self.xmax - self.xmin)
-        remainder = x_range % bin_width
-        cutoff_range = bin_width - remainder if remainder else 0
-        int_bins = (isinstance(self.xmin, (int, long))
-                and isinstance(self.xmax, (int, long)))
-
-        eps = 0.0000001
-        notify = cutoff_range > eps and abs(cutoff_range - bin_width) > eps
-        if update_range and notify:
-            print "WARNING :: bin_width is not a divisor of x-axis range.",
-            print "Variable = %s, Range = [%f,%f], bin_width = %f"%(
-                    self.variable, self.xmin, self.xmax, bin_width)
-            print "Expanding range by %f to fit"%cutoff_range
-        if update_range and self.xmin == 0:
-            self.xmax += cutoff_range
-        elif update_range and self.xmin != 0:
-            self.xmin -= 0.5 * cutoff_range
-            self.xmax += 0.5 * cutoff_range
-
-        if int_bins:
-            self.xmin = int(round(self.xmin))
-            self.xmax = int(round(self.xmax))
-
-        x_range = (self.xmax - self.xmin)
-        nbins = round( x_range / bin_width )
-
-        return nbins
-
     def bin_width(self):
         return (self.xmax - self.xmin) / self.nbins
 
@@ -263,9 +196,9 @@ class Plot1D(object) :
         '''
         # default values
 
-        assert not bin_range or len(bin_range) in [2,4],(
+        assert len(bin_range) in [2,4],(
             'ERROR :: Unrecognized bin range format:', bin_range)
-
+        if len(bin_range) == 4: tuple(bin_range)
 
         if self.doLogY and self.doNorm:
             ymin = self.logy_norm_min
@@ -280,15 +213,8 @@ class Plot1D(object) :
             ymin = self.ymin
             ymax = self.ymax
 
-        xmin = self.xmin
-        xmax = self.xmax
+        return bin_range[0], bin_range[1], ymin, ymax
 
-        if not bin_range:
-            return  xmin, xmax, ymin, ymax
-        elif len(bin_range) == 2:
-            return bin_range[0], bin_range[1], ymin, ymax
-        elif len(bin_range) == 4:
-            return bin_range[0], bin_range[1], bin_range[2], bin_range[3]
 
     def determine_labels(self, xlabel, ylabel):
 
@@ -362,102 +288,239 @@ class Plot1D(object) :
         self.ptype = Types.double_ratio
 
     def Print(self) :
-        print "Plot1D    plot: %s  (region: %s  var: %s)"%(self.name, self.region, self.variable)
+        print "Plot1D    plot: %s  (region: %s  var: %s)"%(
+            self.name, self.region, self.variable)
 
 class Plot2D :
-    def __init__(self) :
+    xmin = 0
+    xmax = 50.0
+    ymin = 0
+    ymax = 50.0
+    zmin = 0
+    zmax = 1e4
+
+    logz_min = 1e-1
+    logz_max = 1e10
+
+    norm_zmin = 0
+    norm_zmax = 1.5
+
+    logz_norm_min = 1e-7
+    logz_norm_max = 1e4
+
+    auto_set_zlimits = True
+    doLogZ = True
+    def __init__(self,
+        region = "",
+        name = "",
+        xvariable = "",
+        yvariable = "",
+        xlabel = "x-Label",
+        xunits = "",
+        ylabel = "y-Label",
+        yunits = "",
+        zlabel = "",
+        zunits = "",
+        bin_range = [], # [x0, x1, y0, y1, z0, z1]
+        ybin_width = None, # Can specify to override nbins
+        xbin_width = None, # Can specify to override nbins
+        nxbins = 20,
+        nybins = 20,
+        doLogZ = None,
+        doNorm = False,
+        add_overflow = False,
+        add_underflow = False,
+        ptype = Types.two_dim,
+        style = 'colz'
+        ) :
         # Descriptors
-        self.region = ""
-        self.name = ""
+        self.region = region
+        self.xvariable = xvariable
+        self.yvariable = yvariable
+        self.name = name if name else self.determine_name(region, xvariable, yvariable)
 
         # Objects
-        self.canvas = None
+        self.pads = None
+
+        #Flags
+        self.is2D = True
+        if doLogY: self.doLogY = doLogY
+        self.doNorm = doNorm
+        self.add_overflow = add_overflow
+        self.add_underflow = add_underflow
+        self.ptype = ptype
 
         # Properties
-        self.style = "colz"
-        self.xVariable = ""
-        self.yVariable = ""
-        self.xlabel = "x-Label"
-        self.ylabel = "y-Label"
-        self.x_bin_width = 1.0
-        self.xmin = 0.0
-        self.xmax = 50.0
-        self.ymin = 0.0
-        self.ymax = 50.0
-        self.y_bin_width = 1.0
 
-        # Flags
-        self.do_profile = False
-        self.do_profileRMS = False
+        bin_ranges = self.determine_range(bin_range)
+        self.xmin, self.xmax = bin_ranges[0:2]
+        self.ymin, self.ymax = bin_ranges[2:4]
+        self.zmin, self.zmax = bin_ranges[4:6]
 
-    def initialize(self, region="", xvar="", yvar="", name="") :
-        '''
-        Initalize the selection ('region'), x- and y-variables
-        to be plotted, as well as the name of the plot
-        '''
-        self.region = region
-        self.xVariable = xvar
-        self.yVariable = yvar
-        self.name = name
+        if xbin_width:
+            self.nxbins = determine_nbins(self.xmax, self.xmin, xbin_width, self.variable)
+        else:
+            self.nxbins = nxbins
 
-    def setDefaultPads(self, name) :
-        c = r.TCanvas("c_"+name, "c_"+name, 800, 600)
-        self.canvas = c
+        if ubin_width:
+            self.nybins = determine_nbins(self.ymax, self.ymin, ybin_width, self.variable)
+        else:
+            self.nybins = nybins
 
-    def labels(self, x="",y="") :
-        '''
-        Set the x- and y-axis titles
-        '''
-        self.xlabel = x
-        self.ylabel = y
-
-    def xax(self, width=1.0, min=0.0, max=50.0) :
-        '''
-        Set the x-axis attributes
-        '''
-        self.x_bin_width = width
-        self.xmin = min
-        self.xmax = max
-        self.n_binsX = self.get_n_bins(width, min, max)
-
-    def yax(self, width=1.0, min=0.0, max=50.0) :
-        '''
-        Set the y-axis attributes
-        '''
-        self.y_bin_width = width
-        self.ymin = min
-        self.ymax = max
-        self.n_binsY = self.get_n_bins(width, min, max)
-
-    def doProfile(self) :
-        '''
-        Set whether to do a profile plot
-        '''
-        self.do_profile = True
-
-    def doProfileRMS(self) :
-        '''
-        Set whether to do a profile plot
-        with RMS on the y-axis
-        '''
-        self.do_profileRMS = True
-
-    def get_n_bins(self, width, min, max) :
-        '''
-        From the user-provided bin width and (min,max) get
-        the number of bins for the specified axis
-        '''
-        nbins = floor( (max - min) / (width) + 0.5 )
-        return nbins
-
-    def set_style(self, style="") :
-        '''
-        Override the default style of "colz"
-        '''
+        self.xunits = xunits
+        self.yunits = yunits
+        self.zunits = zunits
+        self.xlabel, self.ylabel, self.zlabel = self.determine_labels(xlabel, ylabel, zlabel)
         self.style = style
 
+    def xbin_width(self):
+        return (self.xmax - self.xmin) / self.nxbins
+
+    def ybin_width(self):
+        return (self.ymax - self.ymin) / self.nybins
+
+    def determine_range(self, bin_range):
+        '''
+        Inteligently determine bin range
+
+        The user can provide 4 or 6 values in a list. The default range values
+        will be modified. It is assumed providing 4 values indicates one only
+        wants to set the x- and y-axes.
+
+        args:
+            bin_range (list(int or float)) - list of bin range values
+
+        returns:
+            tuple (6 int or float) - range values for both x- and y-axis
+
+        '''
+        # default values
+
+        assert len(bin_range) in [4,6],(
+            'ERROR :: Unrecognized bin range format:', bin_range)
+
+        if len(bin_range) == 6: return tuple(bin_range)
+
+        if self.doLogZ and self.doNorm:
+            zmin = self.logz_norm_min
+            zmax = self.logz_norm_max
+        elif self.doLogZ:
+            zmin = self.logz_min
+            zmax = self.logz_max
+        elif self.doNorm:
+            zmin = self.norm_zmin
+            zmax = self.norm_zmax
+        else:
+            zmin = self.zmin
+            zmax = self.zmax
+
+        return bin_range[0], bin_range[1], bin_range[2], bin_range[3], zmin, zmax
+
+    def determine_labels(self, xlabel, ylabel, zlabel):
+
+        # Set x-axis label
+        if self.xunits:
+            xlabel = "%s [%s]"%(xlabel, self.xunits)
+        if self.yunits:
+            ylabel = "%s [%s]"%(ylabel, self.yunits)
+
+        # set y-axis label defaults
+        if zlabel:
+            pass
+        elif self.doNorm:
+            zlabel = "a.u."
+        else:
+            zlabel = "Events"
+
+        # set z-axis label
+        xwidth_label = str(round(self.xbin_width(), 2))
+        ywidth_label = str(round(self.ybin_width(), 2))
+        if not self.xunits and xwidth_label == '1.0':
+            pass
+        elif self.xunits and xwidth_label == '1.0':
+            zlabel = "%s / %s"%(zlabel, self.xunits)
+        else:
+            zlabel = "%s / %s %s"%(zlabel, xwidth_label, self.xunits)
+
+        if not self.yunits and ywidth_label == '1.0':
+            pass
+        elif self.yunits and ywidth_label == '1.0':
+            zlabel = "%s / %s"%(zlabel, self.yunits)
+        else:
+            zlabel = "%s / %s %s"%(zlabel, ywidth_label, self.yunits)
+
+        return xlabel, ylabel, zlabel
+
+    def determine_name(self, region, xvariable, yvariable):
+        xvar_stripped = re.sub(r'[(){}[\]]+','', xvariable)
+        yvar_stripped = re.sub(r'[(){}[\]]+','', yvariable)
+        return "%s_%s_%s"%(region, xvar_stripped, yvar_stripped)
+
+    def setDefaultPads(self, name) :
+        self.pads = Pads(name)
+        self.ptype = Types.default
+
+    def set2DPads(self, name) :
+        self.pads = Pads(name)
+        self.ptype = Types.two_dim
+
+    def setTProfilePads(self, name) :
+        self.pads = Pads(name)
+        self.ptype = Types.profile
+
     def Print(self) :
-        print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(self.name, self.region, self.xVariable, self.yVariable)
+        print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(
+            self.name, self.region, self.xVariable, self.yVariable)
+
+def determine_nbins(ax_min, ax_max, bin_width, variable = "?", update_range = True)
+    '''
+    Intelligently determine the number of bins.
+
+    Given a desired bin width and axis range, the correct number of bins
+    is determined for use with TH1. The axis range or bin width will
+    likely be adjusted so that the latter divides the former. If the
+    boundaries are int type values, these will be maintained.
+
+    args:
+        ax_min (float/int) - minimum axis value
+        ax_max (float/int) - maximum axis value
+        bin_width (float) - desired width of axis bins
+        variable (str) - variable of plot. Used for printing a warning
+        update_range - option to update axis range to be divisible by
+            bin width as opposed to modying bin width to be a divisor
+
+    returns:
+        (int) - the number axis bins
+    '''
+    assert ax_min != ax_max, ("ERROR :: axis range not set")
+    bin_width = float(bin_width)
+    ax_range = float(ax_max - ax_min)
+    cutoff_range = bin_width - remainder if remainder else 0
+    int_bins = (isinstance(ax_min, (int, long))
+            and isinstance(ax_max, (int, long)))
+
+    eps = 0.0000001
+    notify = cutoff_range > eps and abs(cutoff_range - bin_width) > eps
+    if update_range and notify:
+        print "WARNING :: bin_width is not a divisor of axis range.",
+        print "Variable = %s, Range = [%f,%f], bin_width = %f"%(
+                variable, ax_min, ax_max, bin_width)
+        print "Expanding range by %f to fit"%cutoff_range
+    if update_range and ax_min == 0:
+        ax_max += cutoff_range
+    elif update_range and ax_min != 0:
+        ax_min -= 0.5 * cutoff_range
+        ax_max += 0.5 * cutoff_range
+
+    if int_bins:
+        ax_min = int(round(ax_min))
+        ax_max = int(round(ax_max))
+
+    ax_range = (ax_max - ax_min)
+
+    nbins = round( ax_range / bin_width )
+
+    return ax_min, ax_max, nbins
 
 ################################################################################
 # TPad handler classes

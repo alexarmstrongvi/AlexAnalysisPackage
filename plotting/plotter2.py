@@ -132,8 +132,115 @@ def make_plots1D(plot, reg) :
         print "ERROR :: Unknown plot type,", plot.ptype.name
 
 def make_plots2D(plot, reg):
-        print "TODO"
+    # Get canvas
+    can = plot.pads.canvas
+    can.cd()
+    if plot.doLogZ : can.SetLogz(True)
 
+    # Get plot primitive
+    axis = make_2D_axis(plot)
+
+    mc_samples = [s for s in SAMPLES if s.isMC and not s.isSignal]
+    data_samples = [s for s in SAMPLES if not s.isMC]
+    signal_samples = [s for s in SAMPLES if s.isMC and s.isSignal]
+
+    mc_plot = make_2D_plot(plot, reg, mc_samples) if mc_samples else None
+    data_plot = make_2D_plot(plot, reg, data_samples) if data_samples else None
+    sig_plot = make_2D_plot(plot, reg, sig_samples) if sig_samples else None
+
+    # Formatting
+    for p in [mc_plot, data_plot, sig_plot]:
+        if not p: continue
+        if p.doNorm:
+            normalize_plot(p)
+        if p.auto_set_zlimits:
+            reformat_zaxis(p)
+        axis.Draw()
+        p.Draw("%s SAME" % plot.style)
+
+        can.RedrawAxis()
+        can.SetTickx()
+        can.SetTicky()
+        can.Update()
+
+        save_plot(can, plot.name+".pdf")
+        root_delete([plot])
+        plot.pads.canvas.Clear()
+    root_delete([axis])
+
+def normalize_plot(plot):
+    if plot and plot.Integral():
+        plot->Scale(1.0/plot.Integral())
+
+def reformat_zaxis(plot):
+    # Get maximum histogram y-value
+    maxz = plot.GetMaximum()
+    minz = plot.GetMinimum()
+    assert maxy > 0
+
+    # Get default y-axis max and min limits
+    if plot.doLogZ:
+        maxz = 10**(pu.get_order_of_mag(maxz))
+        if miny > 0:
+            minz = 10**(pu.get_order_of_mag(minz))
+        else:
+            minz = 10**(pu.get_order_of_mag(maxz) - 7)
+    else:
+        ymin = 0
+
+    # Get y-axis max multiplier to fit labels
+    if plot.doLogY:
+        max_mult = 1e5 if signals else 1e4
+    else:
+        max_mult = 2.0 if signals else 1.8
+
+    # reformat the axis
+    plot.SetMaximum(max_mult*maxz)
+    plot.SetMinimum(ymin)
+
+def make_2D_plot(plot, region, samples):
+
+
+def make_2D_axis(plot):
+    hax = r.TH2D("axes", "", plot.nxbins, plot.xmin, plot.xmax,
+                             plot.nybins, plot.ymin, plot.ymax)
+    hax.SetMinimum(plot.zmin)
+    hax.SetMaximum(plot.zmax)
+
+    xax = hax.GetXaxis()
+    xax.SetTitle(plot.xlabel)
+    xax.SetTitleFont(42)
+    xax.SetLabelFont(42)
+    xax.SetLabelSize(0.035)
+    xax.SetTitleSize(0.048 * 0.85)
+    xax.SetLabelOffset(1.15 * 0.02)
+    xax.SetTitleOffset(1.5 * xax.GetTitleOffset())
+
+    #if plot.bin_labels:
+    #    plot.set_bin_labels(hax)
+
+    yax = hax.GetYaxis()
+    yax.SetTitle(plot.ylabel)
+    yax.SetTitleFont(42)
+    yax.SetLabelFont(42)
+    yax.SetTitleOffset(1.4)
+    yax.SetLabelOffset(0.013)
+    yax.SetLabelSize(1.2 * 0.035)
+    yax.SetTitleSize(0.055 * 0.85)
+
+    # TODO: z-axis formating
+
+    #if plot.bin_labels:
+    #    plot.set_ybin_labels(hax)
+
+    #if plot.rebin_xbins:
+    #    new_bins = array('d', plot.rebin_xbins)
+    #    hax = hax.RebinX(len(new_bins)-1, 'axes', new_bins)
+    #if plot.rebin_ybins:
+    #    new_bins = array('d', plot.rebin_ybins)
+    #    hax = hax.RebinY(len(new_bins)-1, 'axes', new_bins)
+
+    return hax
 ################################################################################
 def make_plotsStack(plot, reg):
     ''' '''
@@ -305,7 +412,7 @@ def make_stack_axis(plot):
     if plot.rebin_bins:
         new_bins = array('d', plot.rebin_bins)
         hax = hax.Rebin(len(new_bins)-1, 'axes', new_bins)
-    
+
     return hax
 
 def add_stack_backgrounds(plot, reg):
@@ -432,7 +539,7 @@ def add_stack_data(plot, leg, reg):
     if plot.rebin_bins:
         new_bins = array('d', plot.rebin_bins)
         hd = hd.Rebin(len(new_bins)-1, hd_name, new_bins)
-    
+
     # Add overflow
     if plot.add_overflow:
         pu.add_overflow_to_lastbin(hd)
@@ -501,8 +608,8 @@ def normalize_stack(mc_total, signals, data_hist, data_graph, mc_stack, mc_error
         mc_total.Scale(mc_norm_factor)
         pu.scale_tgraph(mc_errors, mc_norm_factor)
     for s in signals:
-        sig_norm_factor = s.Integral() if s.Integral() else 1
-        s.Scale(sig_norm_factor) 
+        sig_norm_factor = 1.0/s.Integral() if s.Integral() else 1
+        s.Scale(sig_norm_factor)
     if data_hist and data_hist.Integral():
         data_norm_factor = 1.0/data_hist.Integral()
         pu.scale_tgraph(data_graph, data_norm_factor)
@@ -523,14 +630,14 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
     # Get default y-axis max and min limits
     logy = plot.doLogY
     if logy:
-        ymax = 10**(pu.get_order_of_mag(maxy))
+        maxy = 10**(pu.get_order_of_mag(maxy))
         if miny > 0:
-            ymin = 10**(pu.get_order_of_mag(miny))
+            miny = 10**(pu.get_order_of_mag(miny))
         else:
-            ymin = 10**(pu.get_order_of_mag(maxy) - 7)
+            miny = 10**(pu.get_order_of_mag(maxy) - 7)
     else:
-        ymax = maxy
-        ymin = 0
+        maxy = maxy
+        miny = 0
 
     # Get y-axis max multiplier to fit labels
     if logy:
@@ -540,9 +647,9 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
 
     # reformat the axis
     stack.SetMaximum(max_mult*maxy)
-    stack.SetMinimum(ymin)
+    stack.SetMinimum(miny)
     hax.SetMaximum(max_mult*maxy)
-    hax.SetMinimum(ymin)
+    hax.SetMinimum(miny)
 
 def draw_stack(axis, mc_stack, mc_errors, mc_total, signals, data, legend, reg_name, do_norm) :
     axis.Draw()
@@ -584,7 +691,7 @@ def get_ratio_axis(plot, stack, ylabel, ymax):
 
     if plot.bin_labels and plot.ptype == Types.ratio:
         plot.set_bin_labels(h_sm)
-    
+
     #if plot.rebin_bins:
     #    print "WARNING :: rebinning not yet implemented"
     #    #TODO: Implement rebinning
