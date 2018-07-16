@@ -23,10 +23,10 @@ import global_variables as g
 
 ################################################################################
 # Configuration options
-doBrick = True
+doBrick = False
 doLocal = False 
 doSDSC = False # We do not have the necessary permissions, jobs will hang
-doUC = False
+doUC = True 
 
 ################################################################################
 # Format sensative functions
@@ -93,6 +93,13 @@ def main ():
     ############################################################################
     # Submit jobs for each sample
     for ii, dataset in enumerate(sample_files, 1):
+        # TODO
+        #
+        # Get sample DSID
+        # If sample in split list
+        #   Open file and grab root file name
+        #   Define relpath_to_dataset 
+
         d_name = dataset.split("/")[-1].replace(".txt", "")
         r_name = get_region_name(args)
         output_name = r_name + "_" + d_name
@@ -102,6 +109,7 @@ def main ():
         # Convert paths to work on remote site
         relpath_to_dataset = dataset.strip('/')
 
+        #
 
         ########################################################################
         # Create run command
@@ -132,9 +140,9 @@ def main ():
         # Execute run command
         print "[%d/%d] Submitting %s" % (ii, len(sample_files), d_name)
         if args.dry_run:
-            #print
-            #print run_cmd
-            #print
+            print
+            print run_cmd
+            print
             pass
         else:
             subprocess.call(run_cmd, shell=True)
@@ -179,7 +187,7 @@ def check_inputs(args):
         print "ERROR :: Multiple regions selected. Can only pick one"
         return False
 
-    den_region = args.do_baseline_den and args.do_zjets_den_fakes
+    den_region = args.do_baseline_den or args.do_zjets_den_fakes
     if args.apply_ff and not den_region:
         print "ERROR :: Cannot apply fake factor on non-denominator region"
         return False
@@ -203,7 +211,6 @@ def check_environment():
     assert python_ver >= 2.7, ("Running old version of python\n", sys.version)
 
 def make_condor_script(brick = False, local = False, sdsc = False, uc = False) :
-    #TODO: Can I change the condor file name?
     f = open('submitFile.condor', 'w')
     f.write('universe = vanilla\n')
     f.write('+local=%s\n'%brick)
@@ -263,6 +270,8 @@ def make_condor_executable() :
     f.write('${sflow_exec} ${sflow_options}\n')
     f.write('echo "final directory structure:"\n')
     f.write('ls -ltrh\n')
+    f.write('echo "Printing environment"\n\n')
+    f.write('( set -o posix ; set ) | sort')
     f.close()
 
 def is_data_sample(did):
