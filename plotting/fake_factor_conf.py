@@ -51,7 +51,7 @@ MCsample.scale_factor = lumi
 Sample.input_file_treename = 'superNt'
 Plot1D.auto_set_ylimits = False
 Plot1D.doLogY = False
-Plot1D.ymax = 8e3
+Plot1D.ymax = 6e3
 NUM_STR = "num"
 DEN_STR = "den"
 
@@ -312,17 +312,16 @@ for num_den, num_den_sel in num_den_dict.iteritems():
 # Improved plot defining setup
 # These plots will be copied into new plots for each region being run
 plot_defaults = {
-    'l_pt[0]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
-    'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0, 0, 4000],   bin_width=0.1, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'l_pt[2]'            : Plot1D( bin_range=[0.0, 1000.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0, 0, 4000],   bin_width=0.01, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
 # Muon Binning (no eta)
-plot_defaults['l_pt[0]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
-plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
+#plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
+plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,1000]
 
 # Electron Binning
 #plot_defaults['l_pt[2]'].rebin_bins = [0,10,12,15,20,25,100]
-plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.4, 0, 1.4, 2.5, 3.0]
+plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.45, 0, 1.45, 2.5, 3.0]
 
 region_plots = {}
 ################################################################################
@@ -344,7 +343,7 @@ YIELD_TBL = YieldTable()
 #######################################
 # What regions to plot
 region_ops = []
-#region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
+region_ops += ['zjets_FF_CRden_e', 'zjets_FF_CRnum_e']
 region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRnum_eem']
 #region_ops += ['zjets_FF_CRden_mmm', 'zjets_FF_CRnum_mmm']
@@ -354,8 +353,8 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['l_pt[0]']
-#vars_to_plot += ['l_eta[2]']
+#vars_to_plot += ['l_pt[2]']
+vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))

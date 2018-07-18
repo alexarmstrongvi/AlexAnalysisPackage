@@ -100,11 +100,11 @@ else
 fi
 mv outputs/CENTRAL_physics_Main_*.root ntuples/data${suffix}/
 mv outputs/CENTRAL_*.root ntuples/mc${suffix}/
-rm outputs/RunCondorSF.sh outputs/submitFile_TEMPLATE.condor
+rm outputs/RunCondorSF.sh outputs/submitFile.condor
 
 if [ "$fakes" = true ]; then
     rm -rf ntuples/mc${suffix}
-    unlink ../ntuples/mc_fakes/
+    #unlink ../ntuples/mc_fakes/
 fi
 
 cd $dir

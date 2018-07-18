@@ -23,6 +23,9 @@ def main():
                         "-3 in inflate (zlib)",\
                         "Register StreamerInfo for Susy::Muon on non-empty slot",\
                         "Socket error",\
+                        "[FATAL] Auth failed",\
+                        "Transport endpoint is not connected",\
+                        "[3005] Unable to open",\
                         #"which: no python in ((null))",\
                         "FATAL Cross-section is negative",\
                         "<EmptyFile>"]
@@ -62,7 +65,7 @@ def main():
 
 
     tmp_list = list(unmatched_dsids)
-    print "Missing Cross Section:"
+    print "Unmatched:"
     for dsid in tmp_list:
         for out_file in out_files:
             if dsid not in out_file: continue
@@ -75,8 +78,9 @@ def main():
                     print "? " + out_file
     print "Results:"
     for fm in failure_messages:
-        percentage = 100*fail_count[fm]/float(len(dsid_list))
-        print "%3i/%3i (%3.1f%%)\twith %s"%(fail_count[fm],len(dsid_list),percentage,fm)
+        if fail_count[fm]:
+            percentage = 100*fail_count[fm]/float(len(dsid_list))
+            print "%3i/%3i (%3.1f%%)\twith %s"%(fail_count[fm],len(dsid_list),percentage,fm)
     percentage  = 100*len(unmatched_dsids)/float(len(dsid_list))
     percentage2 = 100*len(missed_dsids)/float(len(dsid_list))
     print "%3i/%3i (%3.1f%%)\t     Unmatched - unrecognized error message"%(

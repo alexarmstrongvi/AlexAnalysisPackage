@@ -588,6 +588,7 @@ void add_event_variables(Superflow* superflow) {
             LepEnum::LepType typeOfLep = probeIsEl ? LepEnum::Electron : LepEnum::Muon;
             fakeFactor = m_applyFakeFactorTool->apply(m_antiID_lep0_TLV.Pt(), typeOfLep);
         }
+        //print_weight_info(sl, fakeFactor);
         return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;
     };
     *superflow << SaveVar();
@@ -1476,6 +1477,22 @@ void add_other_lepton_variables(Superflow* superflow) {
         return m_lepton0.DeltaR(m_lepton1); };
       *superflow << SaveVar();
     }
+    *superflow << NewVar("dphi between MET and leading lepton"); {
+      *superflow << HFTname("DphiLep0MET");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+          if (m_selectLeptons.size() < 1) return -DBL_MAX;
+          return fabs(m_lepton0.DeltaPhi(m_MET));
+      };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("dphi between MET and subleading lepton"); {
+      *superflow << HFTname("DphiLep1MET");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+          if (m_selectLeptons.size() <= 1) return -DBL_MAX;
+          return fabs(m_lepton1.DeltaPhi(m_MET));
+      };
+      *superflow << SaveVar();
+    }
     *superflow << NewVar("dilepton flavor"); {
       *superflow << HFTname("dilep_flav");
       *superflow << [=](Superlink* /*sl*/, var_int*) -> int {
@@ -1503,6 +1520,13 @@ void add_other_lepton_variables(Superflow* superflow) {
       *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
         if (m_selectLeptons.size() < 2) return -DBL_MAX;
         return m_dileptonP4.M(); };
+      *superflow << SaveVar();
+    }
+    *superflow << NewVar("mass of tri-lepton system, M_lll"); {
+      *superflow << HFTname("MLLL");
+      *superflow << [=](Superlink* /*sl*/, var_double*) -> double {
+        if (m_selectLeptons.size() < 3) return -DBL_MAX;
+        return (m_dileptonP4 + m_antiID_lep0_TLV).M(); };
       *superflow << SaveVar();
     }
     *superflow << NewVar("Pt of di-lepton system, Pt_ll"); {
@@ -2397,4 +2421,16 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
 }
 
 
-
+void print_weight_info(Superlink* sl, float fakefactor) {
+    cout << "Event weight printout\n";
+    cout << "\t Run: " << sl->nt->evt()->run << " - Evt: " << sl->nt->evt()->eventNumber << "\n";
+    //cout << "\t Fake factor = " << fakefactor << "\n";
+    //cout << "\t Pileup = " << sl->nt->evt()->wPileup << "\n";
+    cout << "\t Overal event weight = " << sl->weights->susynt << "\n";
+    //cout << "\t\t Generator event weight = " << sl->nt->evt()->w << "\n";
+    //cout << "\t Superweight Pileup = " << sl->weights->pileup << "\n";
+    //cout << "\t Lepton SF = " << sl->weights->lepSf << "\n";
+    //cout << "\t Trigger SF = " << sl->weights->trigSf << "\n";
+    //cout << "\t B-tagging SF = " << sl->weights->btagSf << "\n";
+    //cout << "\t JVT SF = " << sl->weights->jvtSf << "\n";
+}

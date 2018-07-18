@@ -174,7 +174,7 @@ class Plot1D(object) :
 
         self.xmin, self.xmax, self.ymin, self.ymax = self.determine_range(bin_range)
         if nbins or bin_width:
-            self.nbins = self.determine_nbins(bin_width) if bin_width else nbins
+            self.nbins = determine_nbins(bin_width) if bin_width else nbins
 
     def bin_width(self):
         return (self.xmax - self.xmin) / self.nbins
@@ -196,9 +196,8 @@ class Plot1D(object) :
         '''
         # default values
 
-        assert len(bin_range) in [2,4],(
+        assert not bin_range or len(bin_range) in [2,4],(
             'ERROR :: Unrecognized bin range format:', bin_range)
-        if len(bin_range) == 4: tuple(bin_range)
 
         if self.doLogY and self.doNorm:
             ymin = self.logy_norm_min
@@ -213,8 +212,15 @@ class Plot1D(object) :
             ymin = self.ymin
             ymax = self.ymax
 
-        return bin_range[0], bin_range[1], ymin, ymax
+        xmin = self.xmin
+        xmax = self.xmax
 
+        if not bin_range:
+            return  xmin, xmax, ymin, ymax
+        elif len(bin_range) == 2:
+            return bin_range[0], bin_range[1], ymin, ymax
+        elif len(bin_range) == 4:
+            return bin_range[0], bin_range[1], bin_range[2], bin_range[3]
 
     def determine_labels(self, xlabel, ylabel):
 
@@ -344,7 +350,7 @@ class Plot2D :
 
         #Flags
         self.is2D = True
-        if doLogY: self.doLogY = doLogY
+        if doLogZ: self.doLogZ = doLogZ
         self.doNorm = doNorm
         self.add_overflow = add_overflow
         self.add_underflow = add_underflow
@@ -358,12 +364,12 @@ class Plot2D :
         self.zmin, self.zmax = bin_ranges[4:6]
 
         if xbin_width:
-            self.nxbins = determine_nbins(self.xmax, self.xmin, xbin_width, self.variable)
+            self.nxbins = determine_nbins(self.xmax, self.xmin, xbin_width, self.xvariable)
         else:
             self.nxbins = nxbins
 
-        if ubin_width:
-            self.nybins = determine_nbins(self.ymax, self.ymin, ybin_width, self.variable)
+        if ybin_width:
+            self.nybins = determine_nbins(self.ymax, self.ymin, ybin_width, self.xvariable)
         else:
             self.nybins = nybins
 
@@ -372,6 +378,13 @@ class Plot2D :
         self.zunits = zunits
         self.xlabel, self.ylabel, self.zlabel = self.determine_labels(xlabel, ylabel, zlabel)
         self.style = style
+
+    def update(self, region, xvar, yvar):
+        self.region = region
+        self.xvariable = xvar
+        self.yvariable = yvar
+        self.name = self.determine_name(region, xvar, yvar)
+
 
     def xbin_width(self):
         return (self.xmax - self.xmin) / self.nxbins
@@ -472,7 +485,7 @@ class Plot2D :
         print "Plot2D    plot: %s  (region: %s  xVar: %s  yVar: %s)"%(
             self.name, self.region, self.xVariable, self.yVariable)
 
-def determine_nbins(ax_min, ax_max, bin_width, variable = "?", update_range = True)
+def determine_nbins(ax_max, ax_min, bin_width, variable = "?", update_range = True):
     '''
     Intelligently determine the number of bins.
 
@@ -495,6 +508,7 @@ def determine_nbins(ax_min, ax_max, bin_width, variable = "?", update_range = Tr
     assert ax_min != ax_max, ("ERROR :: axis range not set")
     bin_width = float(bin_width)
     ax_range = float(ax_max - ax_min)
+    remainder = ax_range % bin_width
     cutoff_range = bin_width - remainder if remainder else 0
     int_bins = (isinstance(ax_min, (int, long))
             and isinstance(ax_max, (int, long)))
@@ -518,9 +532,9 @@ def determine_nbins(ax_min, ax_max, bin_width, variable = "?", update_range = Tr
 
     ax_range = (ax_max - ax_min)
 
-    nbins = round( ax_range / bin_width )
+    nbins = int(round( ax_range / bin_width ))
 
-    return ax_min, ax_max, nbins
+    return nbins
 
 ################################################################################
 # TPad handler classes

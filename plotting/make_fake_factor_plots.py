@@ -406,13 +406,14 @@ def save_and_write_hists(ff_hists_dict, hists):
 # Saving plots of fake factor hists
     for channel_name, ff_hists in ff_hists_dict.iteritems():
         data_corr_ff_hist = ff_hists[KEYS.data_corr_fake_factor]
-        data_ff_hist = ff_hists[KEYS.data_fake_factor]
+        #data_ff_hist = ff_hists[KEYS.data_fake_factor]
         mc_ff_hist = ff_hists[KEYS.mc_fake_factor]
         mc_ff_hist.color = r.kBlue+2
-        data_ff_hist.color = r.kBlack
+        #data_ff_hist.color = r.kBlack
         data_corr_ff_hist.color = r.kRed
         plot_title = 'Fake Factor (Ch: %s)'%channel_name
-        hists_to_plot = [mc_ff_hist, data_ff_hist, data_corr_ff_hist]
+        #hists_to_plot = [mc_ff_hist, data_ff_hist, data_corr_ff_hist]
+        hists_to_plot = [mc_ff_hist, data_corr_ff_hist]
         plot = data_corr_ff_hist.plot
         save_hist(plot_title, plot, channel_name, hists_to_plot)
 
@@ -555,7 +556,7 @@ def save_hist(title, plot, reg_name, hist_list):
     can.Update()
 
     # Save
-    outname = reg_name+ '_' + plot.variable + '_' + title + ".eps"
+    outname = reg_name+ '_' + plot.variable + '_' + title + ".pdf"
     outname = outname.replace(" ","_")
     outname = sub(r'[:\-(){}[\]]+','', outname)
     save_path = os.path.join(plots_dir, args.dir_name, outname)

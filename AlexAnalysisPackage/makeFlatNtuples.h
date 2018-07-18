@@ -84,6 +84,7 @@ bool isIn(T element, vector<T> container) {
         return true;
     }
 }
+void print_weight_info(Superlink* sl, float fakefactor);
 
 // Important globals
 TChain* m_chain = new TChain("susyNt");

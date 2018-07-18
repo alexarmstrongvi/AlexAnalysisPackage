@@ -101,12 +101,13 @@ def make_plots() :
             # Clear the yield table
             YIELD_TBL.reset()
             YIELD_TBL.region = reg.displayname
-            YIELD_TBL.variable = plot.variable
 
             # Determine the correct plot
-            if p.is2D :
+            if plot.is2D :
+                YIELD_TBL.variable = plot.xvariable+":"+plot.yvariable
                 make_plots2D(plot, reg)
             else:
+                YIELD_TBL.variable = plot.variable
                 make_plots1D(plot, reg)
 
             # Print yield table
@@ -136,6 +137,9 @@ def make_plots2D(plot, reg):
     can = plot.pads.canvas
     can.cd()
     if plot.doLogZ : can.SetLogz(True)
+    can.SetLeftMargin(0.15)
+    can.SetBottomMargin(0.15)
+    can.SetRightMargin(0.2)
 
     # Get plot primitive
     axis = make_2D_axis(plot)
@@ -146,64 +150,96 @@ def make_plots2D(plot, reg):
 
     mc_plot = make_2D_plot(plot, reg, mc_samples) if mc_samples else None
     data_plot = make_2D_plot(plot, reg, data_samples) if data_samples else None
-    sig_plot = make_2D_plot(plot, reg, sig_samples) if sig_samples else None
+    sig_plot = make_2D_plot(plot, reg, signal_samples) if signal_samples else None
 
     # Formatting
-    for p in [mc_plot, data_plot, sig_plot]:
-        if not p: continue
-        if p.doNorm:
-            normalize_plot(p)
-        if p.auto_set_zlimits:
-            reformat_zaxis(p)
+    for h, suffix in [(mc_plot,'mc'), (data_plot,'data'), (sig_plot,'signal')]:
+        if not h: continue
+        if plot.doNorm:
+            normalize_plot(h)
+        if plot.auto_set_zlimits:
+            reformat_zaxis(plot, h)
         axis.Draw()
-        p.Draw("%s SAME" % plot.style)
+        h.Draw("%s SAME" % plot.style)
 
         can.RedrawAxis()
         can.SetTickx()
         can.SetTicky()
         can.Update()
 
-        save_plot(can, plot.name+".pdf")
-        root_delete([plot])
+        save_plot(can, plot.name+"_"+suffix+".pdf")
         plot.pads.canvas.Clear()
-    root_delete([axis])
+    root_delete([axis, mc_plot, data_plot, sig_plot])
 
-def normalize_plot(plot):
-    if plot and plot.Integral():
-        plot->Scale(1.0/plot.Integral())
+def make_2D_plot(plot, reg, samples):
+    h = r.TH2D(plot.name, "", plot.nxbins, plot.xmin, plot.xmax, plot.nybins, plot.ymin, plot.ymax)
+    for sample in samples:
+        
+        x_var = re.sub(r'[(){}[\]]+','',plot.xvariable)
+        y_var = re.sub(r'[(){}[\]]+','',plot.yvariable)
+        h_name_tmp = "h_"+reg.name+'_'+sample.name+"_"+x_var+"_"+y_var
+        h_tmp = r.TH2D(h_name_tmp, "", plot.nxbins, plot.xmin, plot.xmax, plot.nybins, plot.ymin, plot.ymax) 
+        # Draw final histogram (i.e. selections and weights applied)
 
-def reformat_zaxis(plot):
-    # Get maximum histogram y-value
-    maxz = plot.GetMaximum()
-    minz = plot.GetMinimum()
-    assert maxy > 0
 
-    # Get default y-axis max and min limits
+        if not sample.isMC:
+            weight_str = '1'
+        elif plot.xvariable != sample.weight_str and plot.yvariable != sample.weight_str:
+            weight_str = "%s * %s"%(sample.weight_str, str(sample.scale_factor))
+        else:
+            weight_str = '1'
+        draw_cmd = "%s>>%s"%(plot.yvariable+":"+plot.xvariable, h_tmp.GetName())
+        sample.tree.Draw(draw_cmd, weight_str, "goff")
+
+        # Yield +/- stat error
+        stat_err = r.Double(0.0)
+        integral = h_tmp.IntegralAndError(0,-1,0,-1,stat_err)
+        if sample.isMC and sample.isSignal:
+            YIELD_TBL.signals[sample.name] = UncFloat(integral, stat_err)
+        elif sample.isMC and not sample.isSignal:
+            YIELD_TBL.mc[sample.name] = UncFloat(integral, stat_err)
+        elif not sample.isMC:
+            YIELD_TBL.data[sample.name] = UncFloat(integral, stat_err)
+
+        h.Add(h_tmp)
+
+    zax = h.GetZaxis()
+    zax.SetTitle(plot.zlabel)
+    zax.SetTitleFont(42)
+    zax.SetLabelFont(42)
+    zax.SetTitleOffset(1.5)
+    zax.SetLabelOffset(0.013)
+    zax.SetLabelSize(1.2 * 0.035)
+    return h
+
+def normalize_plot(hist):
+    if hist and hist.Integral():
+        hist.Scale(1.0/hist.Integral())
+
+def reformat_zaxis(plot, h):
+    # Get maximum histogram z-value
+    maxz = h.GetMaximum()
+    minz = h.GetMinimum()
+    assert maxz > 0
+
+    # Get default z-axis max and min limits
     if plot.doLogZ:
         maxz = 10**(pu.get_order_of_mag(maxz))
-        if miny > 0:
+        if minz > 0:
             minz = 10**(pu.get_order_of_mag(minz))
         else:
             minz = 10**(pu.get_order_of_mag(maxz) - 7)
     else:
-        ymin = 0
+        minz = 0
 
-    # Get y-axis max multiplier to fit labels
-    if plot.doLogY:
-        max_mult = 1e5 if signals else 1e4
-    else:
-        max_mult = 2.0 if signals else 1.8
+    # Get z-axis max multiplier to fit labels
 
     # reformat the axis
-    plot.SetMaximum(max_mult*maxz)
-    plot.SetMinimum(ymin)
-
-def make_2D_plot(plot, region, samples):
-
+    h.SetMaximum(maxz)
+    h.SetMinimum(minz)
 
 def make_2D_axis(plot):
-    hax = r.TH2D("axes", "", plot.nxbins, plot.xmin, plot.xmax,
-                             plot.nybins, plot.ymin, plot.ymax)
+    hax = r.TH2D("axes", "", plot.nxbins, plot.xmin, plot.xmax, plot.nybins, plot.ymin, plot.ymax)
     hax.SetMinimum(plot.zmin)
     hax.SetMaximum(plot.zmax)
 
@@ -228,7 +264,14 @@ def make_2D_axis(plot):
     yax.SetLabelSize(1.2 * 0.035)
     yax.SetTitleSize(0.055 * 0.85)
 
-    # TODO: z-axis formating
+    zax = hax.GetZaxis()
+    zax.SetTitle(plot.zlabel)
+    #zax.SetTitleFont(42)
+    #zax.SetLabelFont(42)
+    #zax.SetTitleOffset(1.4)
+    #zax.SetLabelOffset(0.013)
+    #zax.SetLabelSize(1.2 * 0.035)
+    #zax.SetTitleSize(0.055 * 0.85)
 
     #if plot.bin_labels:
     #    plot.set_ybin_labels(hax)
@@ -571,6 +614,7 @@ def add_stack_mc_errors(plot, leg, hists, stack):
 
     # now add backgrounds to legend
     for h in hists :
+        if h.Integral(0, -1) <= 0: continue
         leg.AddEntry(h, h.leg_name, "f")
 
     totalSM = stack.GetStack().Last().Clone("totalSM")
@@ -625,7 +669,9 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
     else:
         maxy = stack.GetMaximum()
         miny = stack.GetMinimum()
-    assert maxy > 0
+    if maxy <= 0:
+        print "WARNING :: Max value of plot is <= 0"
+        return 
 
     # Get default y-axis max and min limits
     logy = plot.doLogY
@@ -634,14 +680,14 @@ def reformat_axis(plot, leg, stack, data, hax, signals):
         if miny > 0:
             miny = 10**(pu.get_order_of_mag(miny))
         else:
-            miny = 10**(pu.get_order_of_mag(maxy) - 7)
+            miny = 10**(pu.get_order_of_mag(maxy) - 4)
     else:
         maxy = maxy
         miny = 0
 
     # Get y-axis max multiplier to fit labels
     if logy:
-        max_mult = 1e5 if signals else 1e4
+        max_mult = 1e6 if signals else 1e5
     else:
         max_mult = 2.0 if signals else 1.8
 

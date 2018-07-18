@@ -13,6 +13,7 @@ License:
 # General python
 import sys, os
 import glob
+import hashlib
 
 # Root data analysis framework
 import ROOT as r
@@ -109,12 +110,13 @@ class Sample :
         self.tree.SetEventList(0)
 
         # Define useful variables
-        cut  = r.TCut(cut)
+        cut = str(cut)
+        tcut  = r.TCut(cut)
         n_entries = str(self.tree.GetEntries())
-        #hash_input = '_'.join([cut, save_dir, self.file_path, str(n_entries)])
-        #hash_object = hashlib.md5(b'%s_%s' % (list_name, cut))
-        #list_name = hash_object.hexdigest()
-        list_file_name = list_name.replace(".root","") + ".root"
+        hash_input = '_'.join([cut, save_dir, self.file_path, str(n_entries)])
+        hash_object = hashlib.md5(b'%s' % hash_input)
+        list_name = hash_object.hexdigest()
+        list_file_name = list_name + ".root"
         save_path = os.path.join(save_dir, list_file_name)
         save_path = os.path.realpath(os.path.normpath(save_path))
 
@@ -138,7 +140,7 @@ class Sample :
                 stored_file_path = rfile.Get("file_path").GetTitle()
                 stored_n_entries = rfile.Get("n_entries").GetTitle()
 
-                if cut != stored_cut:
+                if tcut != stored_cut:
                     print "EventList cuts have changed. Remaking EventList."
                     load_eventlist = False
                 elif save_path != stored_save_path:
@@ -165,13 +167,13 @@ class Sample :
             print "Creating TEventList for", self.name
             rfile = r.TFile(save_path,'recreate')
             draw_list = ">> " + list_name
-            self.tree.Draw(draw_list, cut)
+            self.tree.Draw(draw_list, tcut)
             event_list = r.gROOT.FindObject(list_name).Clone()
             self.tree.SetEventList(event_list)
             event_list.Write(list_name)
 
             # Append other information
-            cut.Write("cut")
+            tcut.Write("cut")
             r.TNamed("save_path",save_path).Write()
             #new_save_path = r.TNamed("save_path",save_path)
             #new_save_path.Write()

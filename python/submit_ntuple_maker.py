@@ -28,6 +28,7 @@ doLocal = False
 doSDSC = False # We do not have the necessary permissions, jobs will hang
 doUC = True 
 
+FAX_FILES = True
 ################################################################################
 # Format sensative functions
 # Naming should match with what the executable expects
@@ -283,7 +284,10 @@ def get_args():
     _area_tar   = os.path.normpath(os.path.join(g.analysis_path,'area.tgz'))
     _out_dir    = g.output_dir
     _log_dir    = g.logs_dir
-    _file_dir   = g.fax_input_files
+    if FAX_FILES:
+        _file_dir   = g.fax_input_files
+    else:
+        _file_dir   = g.local_input_files
 
     parser = argparse.ArgumentParser(
             description=__doc__,
@@ -318,15 +322,10 @@ def get_args():
     parser.add_argument('--do_zll_cr', action='store_true')
     parser.add_argument('--apply_ff', action='store_true')
     parser.add_argument('--only_fakes', action='store_true')
-    parser.add_argument('--local_brick', action='store_true')
     parser.add_argument('--dry_run', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
-    if args.local_brick:
-        args.file_dir = g.local_input_files
-        args.do_local = args.do_UC = args.do_SDSC = False
-        args.do_brick = True
     if args.only_fakes:
         args.apply_ff = True
 

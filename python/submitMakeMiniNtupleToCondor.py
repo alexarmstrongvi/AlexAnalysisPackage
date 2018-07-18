@@ -14,10 +14,10 @@ dry_run       = False
 file_name_suffix = ''
 
 # Run analysis with selections
-do_baseline        = False
-do_baseline_den    = False
-do_zjets_num_fakes = True
-do_zjets_den_fakes = True
+do_baseline        = True
+do_baseline_den    = True
+do_zjets_num_fakes = False
+do_zjets_den_fakes = False
 do_zll_cr          = False
 apply_ff           = True # apply fake factor to denom events
 only_fakes         = False  # only output fake ntuples
@@ -133,7 +133,7 @@ def main() :
                 if do_zjets_den_fakes and region=='fake_den':
                     ops += '--fake_den '
 
-                if submit_fakes and region != 'zjets_num':
+                if submit_fakes and (region != 'zjets_num' and region != 'baseline_sel'):
                     ops += '--apply_ff '
                     lname += "_" + 'fake_est' 
 
@@ -156,7 +156,7 @@ def main() :
                 if submit_fakes and not (apply_ff and isData): continue
                 if not submit_fakes and apply_ff and only_fakes: continue
                 for region in regions:
-                    if region == 'fake_num' and submit_fakes: continue
+                    if region in ['fake_num','baseline_sel'] and submit_fakes: continue
                     if (do_zjets_den_fakes or do_zjets_num_fakes) and region == 'baseline_sel': continue
 
                     run_cmd = create_run_cmd(submit_fakes, region)

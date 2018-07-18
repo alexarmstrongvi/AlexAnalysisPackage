@@ -34,6 +34,7 @@ def main():
     # Add missing/failed DSIDs to output file if not already there
     failed_file_count = 0
     stored_dsid_count = 0
+    print "Checking %d files for 'Files OK'" % len(out_files)
     for out_file in out_files:
         if 'Files OK' in open(directory_with_logs+out_file).read(): continue
         DSID = Tools.strip_string_to_substring(out_file,'[1-9][0-9][0-9][0-9][0-9][0-9]')
