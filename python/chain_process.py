@@ -7,15 +7,16 @@ import ROOT as r
 import global_variables as g
 
 directory_with_inputs = g.input_files
-directory_with_files =  g.analysis_run_dir+"ntuples/"
+directory_with_files =  g.analysis_run_dir+"outputs/"
 output_directory =      g.analysis_run_dir+"ntuples/grouped_samples/"
 
-missing_dsid = open(g.missing_dsids_file,'w')
+missing_dsids = set()
+
 
 def get_files(dsid_list, directory) :
     """
     Grab all files in a given directory that have a desired DSID.
-    Write all missing file DSIDs to output file missing_dsid 
+    Write all missing file DSIDs to output file missing_dsids 
 
     Args:
         dsid_list ( list(int) ): list of desired DSID  
@@ -24,19 +25,15 @@ def get_files(dsid_list, directory) :
     Returns:
         list(str): list of all file names that have a desired DSID
     """
-    mc_files = glob.glob(directory + "mc/" + "CENTRAL*.root")
-    data_files = glob.glob(directory + "data/" + "CENTRAL*.root")
-    all_files = mc_files + data_files
+    all_files = glob.glob(directory + "CENTRAL*.root")
     process_files = []
     for dsid in dsid_list :
-        iii = 0
         for root_file in all_files :
             if str(dsid) in root_file :
                 process_files.append(root_file)
                 break # move to next dsid 
-            iii += 1
-        if iii == len(all_files): 
-            missing_dsid.write(str(dsid)+"\n")
+        else: 
+            missing_dsids.add(dsid)
     return process_files
 
 def main() :
@@ -45,7 +42,6 @@ def main() :
         print "Running over " + group
         print "\tFound %d dataset ids"%len(dsids)
         
-        missing_dsid.write("\n"+"="*10+" Sample:  "+group+"  "+"="*10+"\n\n")
         root_files = get_files(dsids, directory_with_files)
         print "\tFound %d root files for the process"%len(root_files)
 
@@ -67,6 +63,11 @@ def main() :
         #output_file.Write() 
         print "\tProcess tree has %d total entries"%chain.GetEntries()
         output_file.Close()
+
+        
+    with  open(g.missing_dsids_file,'w') as ofile:
+        for dsid in missing_dsids:
+            ofile.write(str(dsid)+"\n")
 
 if __name__ == '__main__':
     main()

@@ -23,7 +23,7 @@ import global_variables as g
 
 ################################################################################
 # Configuration options
-doBrick = False
+doBrick = True
 doLocal = False 
 doSDSC = False # We do not have the necessary permissions, jobs will hang
 doUC = True 
@@ -118,37 +118,25 @@ def main ():
         # Positional arguments for condor executable
         # Order is important. See "make_condor_executable" for expected order
         # They get imported as an environment variable
-        run_cmd = "ARGS="
-        run_cmd += '"'
-        run_cmd += '%s '%args.out_dir
-        run_cmd += '%s '%args.log_dir
-        run_cmd += '%s '%args.executable
-        run_cmd += '%s '%args.area_dir
-        run_cmd += "%s " % add_executable_ops(relpath_to_dataset, args)
-        run_cmd += '" '
-
-        # Main submit file
-        run_cmd += 'condor_submit submitFile.condor '
-
-        # Define location of area tar
-        run_cmd += '-append "transfer_input_files = %s" '%args.area_tar
-
-        # Defin names of output log files
-        run_cmd += '-append "output = %s" '%(log_file_path + ".out")
-        run_cmd += '-append "log = %s" '%(log_file_path + ".log")
-        run_cmd += '-append "error = %s" '%(log_file_path + ".err")
+        cmd_args = '%s '%args.out_dir
+        cmd_args += '%s '%args.log_dir
+        cmd_args += '%s '%args.executable
+        cmd_args += '%s '%args.area_dir
+        cmd_args += "%s " % add_executable_ops(relpath_to_dataset, args)
+        out_file = log_file_path + ".out"
+        log_file = log_file_path + ".log"
+        err_file = log_file_path + ".err"
+        append_queue_submission_to_condor_submit(cmd_args, err_file, out_file, log_file)
 
         # Execute run command
-        print "[%d/%d] Submitting %s" % (ii, len(sample_files), d_name)
+        print "[%d/%d] Adding to queue: %s" % (ii, len(sample_files), d_name)
         if args.dry_run:
             print
-            print run_cmd
+            print cmd_args
             print
-            pass
-        else:
-            subprocess.call(run_cmd, shell=True)
-
+    
     if not args.dry_run:
+        subprocess.call('condor_submit submitFile.condor', shell=True)
         subprocess.call("condor_q $USER", shell=True)
 
 ################################################################################
@@ -218,12 +206,21 @@ def make_condor_script(brick = False, local = False, sdsc = False, uc = False) :
     f.write('+site_local=%s\n'%local)
     f.write('+sdsc=%s\n'%sdsc)
     f.write('+uc=%s\n'%uc)
-    f.write('executable = RunCondorSF.sh\n')
-    f.write('arguments = $ENV(ARGS)\n')
+    f.write('transfer_input_files = %s\n' % args.area_tar)
     f.write('should_transfer_files = YES\n')
     f.write('when_to_transfer_output = ON_EXIT\n')
     f.write('use_x509userproxy = True\n')
     f.write('notification = Never\n')
+    f.close()
+
+def append_queue_submission_to_condor_submit(arguments, err_file, out_file, log_file):
+    f = open("submitFile.condor", 'a')
+    f.write('\n')
+    f.write('executable = RunCondorSF.sh\n')
+    f.write('arguments = %s\n' % arguments)
+    f.write('error = %s\n' % err_file)
+    f.write('output = %s\n' % out_file)
+    f.write('log = %s\n' % log_file)
     f.write('queue\n')
     f.close()
 
@@ -271,8 +268,8 @@ def make_condor_executable() :
     f.write('${sflow_exec} ${sflow_options}\n')
     f.write('echo "final directory structure:"\n')
     f.write('ls -ltrh\n')
-    f.write('echo "Printing environment"\n\n')
-    f.write('( set -o posix ; set ) | sort')
+    #f.write('echo "Printing environment"\n\n')
+    #f.write('( set -o posix ; set ) | sort')
     f.close()
 
 def is_data_sample(did):

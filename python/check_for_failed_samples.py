@@ -31,12 +31,18 @@ def main():
     out_files = [x for x in log_files if x.endswith('.out')]
     
     # Check which output files have success message
-    # Add missing/failed DSIDs to output file if not already there
+    # Add failed DSIDs to output file if not already there (don't add empty files)
     failed_file_count = 0
     stored_dsid_count = 0
+    empty_file_count = 0
     print "Checking %d files for 'Files OK'" % len(out_files)
     for out_file in out_files:
-        if 'Files OK' in open(directory_with_logs+out_file).read(): continue
+        output_info = open(directory_with_logs+out_file).read()
+        if 'Files OK' in output_info:
+            continue
+        if not output_info: 
+            empty_file_count+=1
+            continue
         DSID = Tools.strip_string_to_substring(out_file,'[1-9][0-9][0-9][0-9][0-9][0-9]')
         if DSID: 
             failed_file_count+=1
@@ -45,9 +51,15 @@ def main():
                 stored_dsid_count+=1
     
     # Wrap up
-    ofile.close()
-    print "\t%i/%i failed samples stored"%(stored_dsid_count,failed_file_count)
-    if append_write == 'a': print "\tDSIDs added to " + missing_dsid_file.split('/')[-1]
-    if append_write == 'w': print "\tDSIDs stored at " + missing_dsid_file
+    ofile.close()  
+    if empty_file_count:
+        print "\t%i files are still running or empty" % empty_file_count
+    if failed_file_count:
+        print "\t%i/%i failed samples stored"%(stored_dsid_count,failed_file_count)
+    elif not empty_file_count:
+        print "\tAll files are good :)"
+    if stored_dsid_count > 0:
+        if append_write == 'a': print "\tDSIDs added to " + missing_dsid_file.split('/')[-1]
+        if append_write == 'w': print "\tDSIDs stored at " + missing_dsid_file
 if __name__ == "__main__":
     main()

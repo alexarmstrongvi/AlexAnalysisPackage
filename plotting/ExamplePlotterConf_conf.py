@@ -37,7 +37,7 @@ import global_variables as g
 # Toggles
 run_fakes = False
 add_truth_den = False
-add_truth_num = True
+add_truth_num = False
 run_den = False
 run_num = True
 
@@ -113,6 +113,11 @@ SAMPLES.append(signal)
 
 #######################################
 # Initialize all backgrounds
+# Higgs (Htt + HWW + HV + ttH)
+higgs = Background("higgs", "Higgs")
+higgs.color = ROOT.kRed - 7
+SAMPLES.append(higgs)
+
 # ttbar
 ttbar = Background("ttbar", "t#bar{t}")
 ttbar.color = ROOT.kOrange+2
@@ -128,36 +133,25 @@ wtop = Background("wt", "Wt")
 wtop.color = ROOT.kOrange+8
 SAMPLES.append(wtop)
 
+# ttbare + lep
+ttbarlep = Background("ttbarlep", "ttbarlep")
+ttbarlep.color = ROOT.kOrange+5
+SAMPLES.append(ttbarlep)
+
 # Top (ttbar + singletop + Wt)
 top = Background("top", "Top")
 top.color = ROOT.kOrange+1
 SAMPLES.append(top)
 
 # VV combined
-VV = Background("ggllvv", "ggllvv")
+VV = Background("vv", "Diboson")
 VV.color = ROOT.kSpring-7
 SAMPLES.append(VV)
 
-# WW
-WW = Background("ww", "WW")
-WW.color = ROOT.kTeal-5
-SAMPLES.append(WW)
-
-# ZZ
-ZZ = Background("zz", "ZZ")
-ZZ.color = ROOT.kMagenta-5
-SAMPLES.append(ZZ)
-
-# WZ
-WZ = Background("wz", "WZ")
-WZ.color = ROOT.kSpring+9
-WZ.scale_factor *= 1.36
-SAMPLES.append(WZ)
-
-# Zll
-zll = Background("zll", "Zll")
-zll.color = ROOT.kAzure-7
-SAMPLES.append(zll)
+# VVV combined
+VVV = Background("vvv", "Triboson")
+VVV.color = ROOT.kSpring-5
+SAMPLES.append(VVV)
 
 # Zee
 zee = Background("zee", "Zee")
@@ -179,20 +173,21 @@ wjets = Background("wjets", "W+jets")
 wjets.color = ROOT.kYellow +2 
 SAMPLES.append(wjets)
 
+# V+gamma
+vgamma = Background("vgamma", "V+gamma")
+vgamma.color = ROOT.kYellow - 1
+SAMPLES.append(vgamma)
+
 # W+gamma
 wgamma = Background("wgamma", "W+gamma")
-wgamma.color = ROOT.kYellow - 1
+wgamma.color = ROOT.kYellow - 2
 SAMPLES.append(wgamma)
 
-# Higgs -> tau tau
-htt = Background("htt", "H#tau#tau")
-htt.color = ROOT.kRed - 7
-SAMPLES.append(htt)
+# Z+gamma
+zgamma = Background("zgamma", "Z+gamma")
+zgamma.color = ROOT.kYellow - 3
+SAMPLES.append(zgamma)
 
-# Higgs -> W W
-hww = Background("hww", "HWW")
-hww.color = ROOT.kBlue+3
-SAMPLES.append(hww)
 
 
 ################################################################################
@@ -342,7 +337,7 @@ zjets_FF_CR = '1'
 zjets_FF_CR += ' && %s'%singlelep_trig_pT
 zjets_FF_CR += ' && fabs(lep_d0sigBSCorr[0]) < 15 && fabs(lep_d0sigBSCorr[1]) < 15 && fabs(lep_d0sigBSCorr[2]) < 15'
 zjets_FF_CR += ' && fabs(lep_z0SinTheta[0]) < 15 && fabs(lep_z0SinTheta[1]) < 15 && fabs(lep_z0SinTheta[2]) < 15'
-zjets_FF_CR += ' && (75 < Z_MLL && Z_MLL < 105)'
+zjets_FF_CR += ' && (80 < Z_MLL && Z_MLL < 100)'
 zjets_FF_CR += ' && nBJets == 0'
 zjets_FF_CR += ' && l_mT[2] < 50'
 zjets_FF_CR += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
@@ -689,22 +684,21 @@ region_plots = {}
 data_dsids = g.groups['data15']+g.groups['data16']
 
 data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir)
-#top.set_chain_from_dsid_list(g.groups['top'], bkg_ntuple_dir)
-ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
-stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir)
-wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir)
-VV.set_chain_from_dsid_list(g.groups['ggllvv'], bkg_ntuple_dir)
-WW.set_chain_from_dsid_list(g.groups['ww'], bkg_ntuple_dir)
-ZZ.set_chain_from_dsid_list(g.groups['zz'], bkg_ntuple_dir)
-WZ.set_chain_from_dsid_list(g.groups['wz'], bkg_ntuple_dir)
-zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir)
-#zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir)
-#zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir)
+top.set_chain_from_dsid_list(g.groups['top'], bkg_ntuple_dir)
+#ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir)
+#stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir)
+#wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir)
+ttbarlep.set_chain_from_dsid_list(g.groups['ttbar_lep'], bkg_ntuple_dir)
+VV.set_chain_from_dsid_list(g.groups['VV'], bkg_ntuple_dir)
+VVV.set_chain_from_dsid_list(g.groups['VVV'], bkg_ntuple_dir)
+#zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir)
+zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir)
+zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir)
 ztt.set_chain_from_dsid_list(g.groups['ztt'], bkg_ntuple_dir)
 wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir)
-#wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], bkg_ntuple_dir)
-#htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir)
-#hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir)
+wgamma.set_chain_from_dsid_list(g.groups['wgamma'], bkg_ntuple_dir)
+zgamma.set_chain_from_dsid_list(g.groups['zgamma'], bkg_ntuple_dir)
+higgs.set_chain_from_dsid_list(g.groups['higgs'], bkg_ntuple_dir)
 #signal.set_chain_from_dsid_list(g.groups['higgs_lfv'], signal_ntuple_dir)
 if run_fakes:
     fakes.set_chain_from_dsid_list(data_dsids, fake_ntuple_dir)
@@ -720,12 +714,12 @@ YIELD_TBL = YieldTable()
 # Formulas should use sample names and these symbols: +, -, *, /, (, ), [0-9]
 # 'MC' is also a recognized label for all backgrounds
 YIELD_TBL.formulas['Data/MC'] = "data/MC"
-#YIELD_TBL.formulas['WZ/MC'] = "wz/MC"
-#YIELD_TBL.formulas['normF'] = "(data-(MC-wz))/wz"
-#YIELD_TBL.formulas['WZ/sqrt(MC)'] = "wz/(MC**(0.5))"
+YIELD_TBL.formulas['VV/MC'] = "vv/MC"
+YIELD_TBL.formulas['normF'] = "(data-(MC-vv))/vv"
+YIELD_TBL.formulas['VV/sqrt(MC)'] = "vv/(MC**(0.5))"
 #YIELD_TBL.formulas['WZ/sqrt(Data)'] = "wz/(data**(0.5))"
-YIELD_TBL.formulas['Bkg/Data'] = "(MC-wjets)/data"
-YIELD_TBL.formulas['W+Jets/MC'] = "wjets/MC"
+#YIELD_TBL.formulas['Bkg/Data'] = "(MC-wjets)/data"
+#YIELD_TBL.formulas['W+Jets/MC'] = "wjets/MC"
 #YIELD_TBL.formulas['Fakes/MC'] = "fakes/MC"
 #YIELD_TBL.formulas['Fakes/Data'] = "fakes/data"
 
@@ -733,18 +727,18 @@ YIELD_TBL.formulas['W+Jets/MC'] = "wjets/MC"
 # What regions to plot
 region_ops = []
 if run_den:
-    #region_ops += ['wzCR']
+    region_ops += ['wzCR']
     #region_ops += ['zjets_FF_CRden_m'] # Test Region
     #region_ops += ['zjets_FF_CRden_eee'] # Test Region
     #region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRden_e']
     #region_ops += ['zjets_FF_CRden_eem'] # Test region
     #region_ops += ['zjets_FF_CRden_eem', 'zjets_FF_CRden_mmm']
     #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
-    region_ops += ['wjets_FF_VRden_emu']
+    #region_ops += ['wjets_FF_VRden_emu']
 elif run_num:
-    #region_ops += ['wzCR']
+    region_ops += ['wzCR']
     #region_ops += ['zjets_FF_CRnum_m']
-    region_ops += ['zjets_FF_CRnum_m', 'zjets_FF_CRnum_e']
+    #region_ops += ['zjets_FF_CRnum_m', 'zjets_FF_CRnum_e']
     #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
     #region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
     #region_ops += ['wjets_FF_VRnum_emu'] #, 'wjets_FF_VRnum_mue'
@@ -755,14 +749,14 @@ else:
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
+#vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
 #vars_to_plot += ['MET', 'MLL','nBJets', 'nLJets', 'MLLL', 'dpt_ll', 'drll']
 #vars_to_plot += ['n_baseJets','n_jets','JetN_g30','nForwardJets']
 #vars_to_plot += ['dR_ZLep0_Fake','dR_ZLep1_Fake','dR_Z_Fake']
 #vars_to_plot += ['l_mT[0]','l_mT[1]']
 
 #vars_to_plot += ['DphiLepMET', 'DphiJetMET', 'DphiBaseLepMET', 'DphiBaseJetMET','DphiLepJetMET']
-#vars_to_plot += ['MET','RelMET']
+vars_to_plot += ['MET','RelMET']
 #vars_to_plot += ['DEtaLL','DphiLL','drll']
 #vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]']
 #vars_to_plot += ['l_eta[0]','l_eta[1]','l_eta[2]']

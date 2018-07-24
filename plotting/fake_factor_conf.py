@@ -69,6 +69,11 @@ for num_den in [NUM_STR, DEN_STR]:
 
     #######################################
     # Initialize all backgrounds
+    # Higgs (Htt + HWW + HV + ttH)
+    higgs = Background("higgs_%s"%num_den, "Higgs")
+    higgs.color = ROOT.kRed - 7
+    SAMPLES.append(higgs)
+
     # ttbar
     ttbar = Background("ttbar_%s"%num_den, "t#bar{t}")
     ttbar.color = ROOT.kOrange+2
@@ -84,31 +89,25 @@ for num_den in [NUM_STR, DEN_STR]:
     wtop.color = ROOT.kOrange+8
     SAMPLES.append(wtop)
 
+    # ttbar + X
+    ttbar_x = Background("ttbar_x_%s"%num_den, "t#bar{t} + X")
+    ttbar_x.color = ROOT.kOrange+5
+    SAMPLES.append(ttbar_x)
+
     # Top (ttbar + singletop + Wt)
     top = Background("top_%s"%num_den, "Top")
     top.color = ROOT.kYellow+1
     SAMPLES.append(top)
     
     # VV combined
-    VV = Background("ggllvv_%s"%num_den, "ggllvv")
+    VV = Background("VV_%s"%num_den, "VV")
     VV.color = ROOT.kSpring-7
     SAMPLES.append(VV)
 
-    # WW
-    WW = Background("ww_%s"%num_den, "WW")
-    WW.color = ROOT.kTeal-5
-    SAMPLES.append(WW)
-
-    # ZZ
-    ZZ = Background("zz_%s"%num_den, "ZZ")
-    ZZ.color = ROOT.kMagenta-5
-    SAMPLES.append(ZZ)
-
-    # WZ
-    WZ = Background("wz_%s"%num_den, "WZ")
-    WZ.color = ROOT.kSpring+9
-    WZ.scale_factor *= 1.36 
-    SAMPLES.append(WZ)
+    # VVV combined
+    VVV = Background("VVV_%s"%num_den, "VVV")
+    VVV.color = ROOT.kSpring-7
+    SAMPLES.append(VVV)
 
     # Zll
     zll = Background("zll_%s"%num_den, "Zll")
@@ -140,42 +139,35 @@ for num_den in [NUM_STR, DEN_STR]:
     wgamma.color = ROOT.kOrange-1
     SAMPLES.append(wgamma)
 
-    # Higgs -> tau tau
-    htt = Background("htt_%s"%num_den, "H#tau#tau")
-    htt.color = ROOT.kRed - 7
-    SAMPLES.append(htt)
-
-    # Higgs -> W W
-    hww = Background("hww_%s"%num_den, "HWW")
-    hww.color = ROOT.kBlue+3
-    SAMPLES.append(hww)
+    # Z+gamma
+    zgamma = Background("zgamma_%s"%num_den, "Z+gamma")
+    zgamma.color = ROOT.kOrange-3
+    SAMPLES.append(wgamma)
 
     #######################################
     ## Build the TChain/TTree for each sample
     # To remove sample from plot, comment out the line setting its TChain
     # Samples with empty TChains get removed below
-
     data_dsids = g.groups['data15']+g.groups['data16']
     data_ntuple_dir2 = data_ntuple_dir[:-1] + '_' + num_den + "/"
     bkg_ntuple_dir2 = bkg_ntuple_dir[:-1] + '_' + num_den + "/"
 
     data.set_chain_from_dsid_list(data_dsids, data_ntuple_dir2)
+    higgs.set_chain_from_dsid_list(g.groups['higgs'], bkg_ntuple_dir2)
     top.set_chain_from_dsid_list(g.groups['top'], bkg_ntuple_dir2)
     #ttbar.set_chain_from_dsid_list(g.groups['ttbar'], bkg_ntuple_dir2)
     #stop.set_chain_from_dsid_list(g.groups['singletop'], bkg_ntuple_dir2)
     #wtop.set_chain_from_dsid_list(g.groups['Wt'], bkg_ntuple_dir2)
-    VV.set_chain_from_dsid_list(g.groups['ggllvv'], bkg_ntuple_dir2)
-    WW.set_chain_from_dsid_list(g.groups['ww'], bkg_ntuple_dir2)
-    ZZ.set_chain_from_dsid_list(g.groups['zz'], bkg_ntuple_dir2)
-    WZ.set_chain_from_dsid_list(g.groups['wz'], bkg_ntuple_dir2)
+    #ttbar_x.set_chain_from_dsid_list(g.groups['ttbar_lep'], bkg_ntuple_dir2)
+    VV.set_chain_from_dsid_list(g.groups['VV'], bkg_ntuple_dir2)
+    VVV.set_chain_from_dsid_list(g.groups['VVV'], bkg_ntuple_dir2)
     zll.set_chain_from_dsid_list(g.groups['zll'], bkg_ntuple_dir2)
     #zee.set_chain_from_dsid_list(g.groups['zee'], bkg_ntuple_dir2)
     #zmumu.set_chain_from_dsid_list(g.groups['zmumu'], bkg_ntuple_dir2)
     ztt.set_chain_from_dsid_list(g.groups['ztt'], bkg_ntuple_dir2)
     wjets.set_chain_from_dsid_list(g.groups['wjets'], bkg_ntuple_dir2)
-    #wgamma.set_chain_from_dsid_list(g.groups['w_gamma'], bkg_ntuple_dir2)
-    #htt.set_chain_from_dsid_list(g.groups['htt'], bkg_ntuple_dir2)
-    #hww.set_chain_from_dsid_list(g.groups['hww'], bkg_ntuple_dir2)
+    wgamma.set_chain_from_dsid_list(g.groups['wgamma'], bkg_ntuple_dir2)
+    zgamma.set_chain_from_dsid_list(g.groups['zgamma'], bkg_ntuple_dir2)
 
 SAMPLES = [s for s in SAMPLES if s.is_setup()]
 assert SAMPLES, "ERROR :: No samples are setup"
@@ -353,8 +345,8 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-#vars_to_plot += ['l_pt[2]']
-vars_to_plot += ['l_eta[2]']
+vars_to_plot += ['l_pt[2]']
+#vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))
