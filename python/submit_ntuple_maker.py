@@ -72,6 +72,14 @@ def main ():
     else:
         dsids = {str(d) for d in g.get_all_dsids()}
 
+    if args.apply_ff:
+        data_dsids = set()
+        import pdb
+        for group, dsid_ls in g.get_data_groups().items():
+            tmp_dsids = {str(s) for s in dsid_ls}
+            data_dsids = data_dsids | set(tmp_dsids).intersection(dsids)
+        dsids = data_dsids
+
     # Get list of sample files
     samples_dir = os.path.normpath(args.file_dir)
     all_sample_files = set(glob.glob("%s/*.txt"%samples_dir))
@@ -94,6 +102,7 @@ def main ():
     ############################################################################
     # Submit jobs for each sample
     for ii, dataset in enumerate(sample_files, 1):
+        if args.apply_ff and 'data' not in dataset.split("/")[-1]: continue
         # TODO
         #
         # Get sample DSID
@@ -318,13 +327,9 @@ def get_args():
     parser.add_argument('--do_zjets_den_fakes', action='store_true')
     parser.add_argument('--do_zll_cr', action='store_true')
     parser.add_argument('--apply_ff', action='store_true')
-    parser.add_argument('--only_fakes', action='store_true')
     parser.add_argument('--dry_run', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
-
-    if args.only_fakes:
-        args.apply_ff = True
 
     args.area_tar = os.path.abspath(args.area_tar)
 
