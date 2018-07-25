@@ -14,7 +14,7 @@ def main():
                         "no url specified",\
                         "Redirect limit has been reached",\
                         "Operation expired",\
-                        "no such file or directory",\
+                        #"no such file or directory",\
                         "no message of desired type",\
                         "permission denied",\
                         "is disallowed",\
@@ -25,7 +25,7 @@ def main():
                         "Socket error",\
                         "[FATAL] Auth failed",\
                         "Transport endpoint is not connected",\
-                        "[3005] Unable to open",\
+                        "Unable to open",\
                         #"which: no python in ((null))",\
                         "FATAL Cross-section is negative",\
                         "<EmptyFile>"]
