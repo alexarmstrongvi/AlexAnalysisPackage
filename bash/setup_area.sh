@@ -110,7 +110,8 @@ ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/python ./python
 ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/plotting ./plotting
 
 # Configure setup_env.sh
-sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
+sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.bu
+cp $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.bu $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
 
 # Final setup and compile
 echo -e "\n\n------------------------------------------------------------"
