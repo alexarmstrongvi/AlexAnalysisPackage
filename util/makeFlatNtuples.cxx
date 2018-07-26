@@ -2421,7 +2421,7 @@ int get_lepton_truth_class(Susy::Lepton* lepton) {
 }
 
 
-void print_weight_info(Superlink* sl, float fakefactor) {
+void print_weight_info(Superlink* sl, float /*fakefactor*/) {
     cout << "Event weight printout\n";
     cout << "\t Run: " << sl->nt->evt()->run << " - Evt: " << sl->nt->evt()->eventNumber << "\n";
     //cout << "\t Fake factor = " << fakefactor << "\n";
