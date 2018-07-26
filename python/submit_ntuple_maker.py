@@ -26,9 +26,9 @@ import global_variables as g
 doBrick = True
 doLocal = False 
 doSDSC = False # We do not have the necessary permissions, jobs will hang
-doUC = True 
+doUC = False 
 
-FAX_FILES = True
+FAX_FILES = False
 ################################################################################
 # Format sensative functions
 # Naming should match with what the executable expects

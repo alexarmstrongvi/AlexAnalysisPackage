@@ -35,9 +35,9 @@ from tools.YieldTable import YieldTable, UncFloat
 ################################################################################
 import global_variables as g
 # Toggles
-run_fakes = False
+run_fakes = True
 add_truth_den = False
-add_truth_num = False
+add_truth_num = True
 run_den = False
 run_num = True
 
@@ -145,12 +145,12 @@ SAMPLES.append(top)
 
 # VV combined
 VV = Background("vv", "Diboson")
-VV.color = ROOT.kSpring-7
+VV.color = ROOT.kSpring-8
 SAMPLES.append(VV)
 
 # VVV combined
 VVV = Background("vvv", "Triboson")
-VVV.color = ROOT.kSpring-5
+VVV.color = ROOT.kSpring-7
 SAMPLES.append(VVV)
 
 # Zee
@@ -302,7 +302,7 @@ wz_cr_cut += ' && fabs(lep_z0SinTheta[0]) < 15 && fabs(lep_z0SinTheta[1]) < 15 &
 wz_cr_cut += " && 75 < Z_MLL && Z_MLL < 105"
 wz_cr_cut += ' && nBJets == 0'
 wz_cr_cut += ' && l_mT[2] > 50'
-wz_cr_cut += ' && (Z2_MLL < 80 || 110 < Z2_MLL)'
+#wz_cr_cut += ' && (Z2_MLL < 80 || 110 < Z2_MLL)'
 REGIONS[-1].tcut = wz_cr_cut
 
 zll_cr_base = "1"
@@ -522,7 +522,7 @@ plot_defaults = {
     'l_author'             : Plot1D( bin_range=[-1.5, 30.5],  bin_width=1, doLogY=False, doNorm=True, xlabel='Lepton author'),
     'LepLepSign'           : Plot1D( bin_range=[-1.5, 1.5],   bin_width=1, xlabel='Leptons sign product'),
     'l_pt[0]'              : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, xunits='GeV', xlabel='p_{T}^{leading lep}'),
-    'l_pt[1]'              : Plot1D( bin_range=[0.0, 150.0],  bin_width=1, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
+    'l_pt[1]'              : Plot1D( bin_range=[0.0, 150.0],  bin_width=5, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
     'Lep0Pt'               : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{leading lep}'),
     'Lep1Pt'               : Plot1D( bin_range=[0.0, 200.0],  nbins=40, xunits='GeV', xlabel='p_{T}^{subleading lep}'),
     'Lep0Eta'              : Plot1D( bin_range=[-3.0, 3.0],   nbins=20, xlabel='#eta^{leading lep}'),
@@ -544,11 +544,11 @@ plot_defaults = {
     'MtLep1'               : Plot1D( bin_range=[0.0, 140.0],  nbins=20, xunits='GeV', xlabel='m_{T}(l_{1},MET)'),
     #'MLLL'                 : Plot1D( bin_range=[60, 400],     nbins=60, add_underflow=True, xunits='GeV', xlabel='M_{lll}'),
     'MLLL'                 : Plot1D( bin_range=[0, 120],      nbins=60, add_underflow=True, xunits='GeV', xlabel='M_{lll}'),
-    #'MLL'                  : Plot1D( bin_range=[60, 120],     bin_width=1, add_underflow=True, doLogY=False, xunits='GeV', xlabel='M_{ll}'),
-    'MLL'                  : Plot1D( bin_range=[0, 300],     bin_width=5, xunits='GeV', xlabel='M_{ll}'),
+    'MLL'                  : Plot1D( bin_range=[60, 120],     bin_width=1, add_underflow=True, doLogY=False, xunits='GeV', xlabel='M_{ll}'),
+    #'MLL'                  : Plot1D( bin_range=[0, 300],     bin_width=5, xunits='GeV', xlabel='M_{ll}'),
     'ptll'                 : Plot1D( bin_range=[0.0, 500.0],  nbins=50, xunits='GeV', xlabel='pT_{ll}'),
     # MET + leptons
-    'MET'                  : Plot1D( bin_range=[0.0, 100.0],  bin_width=5, doLogY=False, xunits='GeV', xlabel='E_{T}^{miss}'),
+    'MET'                  : Plot1D( bin_range=[0.0, 200.0],  bin_width=5, doLogY=False, xunits='GeV', xlabel='E_{T}^{miss}'),
     'METPhi'               : Plot1D( bin_range=[0.0, 3.15],   nbins=30, xlabel='MET_{#phi}'),
     'MCollASym'            : Plot1D( bin_range=[0.0, 250.0],  nbins=25, xunits='GeV', xlabel='LFV Collinear Mass m_{coll}'),
     'dpt_ll'               : Plot1D( bin_range=[-100.0, 150.0],bin_width=5, doLogY=False, xunits='GeV', xlabel='#Deltap_{T}^{ll}'),
@@ -616,7 +616,7 @@ plot_defaults = {
     'Z_dilep_sign'         : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='Z Dilepton Sign : OS(-1) SS(1)'),
     'Z2_dilep_sign'        : Plot1D( bin_range=[-2.5, 2.5],   bin_width=1, xlabel='2nd Z Dilepton Sign : OS(-1) SS(1)'),
     'Z_Lep2_dPhi_MET'      : Plot1D( bin_range=[-3.15, 3.15], nbins=63, add_underflow=True, xlabel='#Delta#phi(l_{3},MET)'),
-    'l_mT[2]'              : Plot1D( bin_range=[0.0, 300.0],  bin_width=5, xunits='GeV', xlabel='Lepton2 m_{T}'),
+    'l_mT[2]'              : Plot1D( bin_range=[0.0, 300.0],  bin_width=10, xunits='GeV', xlabel='Lepton2 m_{T}'),
     'l_mT[1]'              : Plot1D( bin_range=[0.0, 300.0],  bin_width=5, xunits='GeV', xlabel='Lepton1 m_{T}'),
     'l_mT[0]'              : Plot1D( bin_range=[0.0, 300.0],  bin_width=5, xunits='GeV', xlabel='Lepton0 m_{T}'),
     'dR_ZLep0_Fake'        : Plot1D( bin_range=[0.0, 6.0],    bin_width=0.1, xlabel='#DeltaR_{fake, Zlep0}'),
@@ -655,9 +655,9 @@ plot_defaults['l_ID'].bin_labels = ['', 'tight', 'medium', 'looseBlayer','loose'
 
 
 #plot_defaults['l_mT[2]'].rebin_bins = [0,50,60,70,80,90,100,120,140,160,190,220,250,300]
-plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,100]
+#plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,100]
 #plot_defaults['l_pt[1]'].rebin_bins = [0,10,11,12,13,14,15,17,20,25,35,100]
-plot_defaults['l_pt[1]'].rebin_bins = [0,10,11,15,20,25,35,100]
+#plot_defaults['l_pt[1]'].rebin_bins = [0,10,11,15,20,25,35,100]
 #plot_defaults['l_pt[1]'].rebin_bins = [0,10,15,20,25,30,35,100]
 # To alter the plot properties for a specific region
 # Deep copy the default plot into new plot dictionary
@@ -736,10 +736,10 @@ if run_den:
     #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
     #region_ops += ['wjets_FF_VRden_emu']
 elif run_num:
-    region_ops += ['wzCR']
+    #region_ops += ['wzCR']
     #region_ops += ['zjets_FF_CRnum_m']
     #region_ops += ['zjets_FF_CRnum_m', 'zjets_FF_CRnum_e']
-    #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
+    region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
     #region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
     #region_ops += ['wjets_FF_VRnum_emu'] #, 'wjets_FF_VRnum_mue'
 else:
@@ -749,14 +749,15 @@ else:
 #######################################
 # What variables to plot
 vars_to_plot = []
-#vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
+#vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_mT[2]', 'MLL', 'MET']
+vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
 #vars_to_plot += ['MET', 'MLL','nBJets', 'nLJets', 'MLLL', 'dpt_ll', 'drll']
 #vars_to_plot += ['n_baseJets','n_jets','JetN_g30','nForwardJets']
 #vars_to_plot += ['dR_ZLep0_Fake','dR_ZLep1_Fake','dR_Z_Fake']
 #vars_to_plot += ['l_mT[0]','l_mT[1]']
 
 #vars_to_plot += ['DphiLepMET', 'DphiJetMET', 'DphiBaseLepMET', 'DphiBaseJetMET','DphiLepJetMET']
-vars_to_plot += ['MET','RelMET']
+#vars_to_plot += ['MET','RelMET']
 #vars_to_plot += ['DEtaLL','DphiLL','drll']
 #vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]']
 #vars_to_plot += ['l_eta[0]','l_eta[1]','l_eta[2]']

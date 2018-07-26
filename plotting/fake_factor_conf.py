@@ -102,6 +102,7 @@ for num_den in [NUM_STR, DEN_STR]:
     # VV combined
     VV = Background("VV_%s"%num_den, "VV")
     VV.color = ROOT.kSpring-7
+    VV.scale_factor *= 1.045
     SAMPLES.append(VV)
 
     # VVV combined
@@ -142,7 +143,7 @@ for num_den in [NUM_STR, DEN_STR]:
     # Z+gamma
     zgamma = Background("zgamma_%s"%num_den, "Z+gamma")
     zgamma.color = ROOT.kOrange-3
-    SAMPLES.append(wgamma)
+    SAMPLES.append(zgamma)
 
     #######################################
     ## Build the TChain/TTree for each sample
@@ -304,12 +305,12 @@ for num_den, num_den_sel in num_den_dict.iteritems():
 # Improved plot defining setup
 # These plots will be copied into new plots for each region being run
 plot_defaults = {
-    'l_pt[2]'            : Plot1D( bin_range=[0.0, 1000.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
+    'l_pt[2]'            : Plot1D( bin_range=[0.0, 100.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
     'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0, 0, 4000],   bin_width=0.01, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
 }
 # Muon Binning (no eta)
 #plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
-plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,1000]
+plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,100]
 
 # Electron Binning
 #plot_defaults['l_pt[2]'].rebin_bins = [0,10,12,15,20,25,100]
@@ -345,8 +346,8 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['l_pt[2]']
-#vars_to_plot += ['l_eta[2]']
+#vars_to_plot += ['l_pt[2]']
+vars_to_plot += ['l_eta[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))
