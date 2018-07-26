@@ -31,8 +31,9 @@ if [ -d "${ROOTCOREDIR}" ]; then
 fi
 source RootCoreBin/local_setup.sh
 
-rc find_packages
-rc clean
-rc compile
+# Uncomment if desired
+#rc find_packages
+#rc clean
+#rc compile
 
 cd $dir

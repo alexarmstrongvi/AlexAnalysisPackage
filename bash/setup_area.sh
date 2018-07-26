@@ -62,7 +62,6 @@ cd $ANALYSIS_DIR/analysis/susynt-read/
 source bash/setup_release.sh
 
 cd $ANALYSIS_DIR/analysis/
-mv susynt-read/RootCore ./
 mv susynt-read/SusyNtuple ./
 mv susynt-read/SUSYTools ./
 
@@ -110,13 +109,16 @@ ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/python ./python
 ln -s $ANALYSIS_DIR/analysis/AlexAnalysisPackage/plotting ./plotting
 
 # Configure setup_env.sh
-sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.bu
-cp $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.bu $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
+cd $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/
+cp setup_env.bu setup_env.sh
+sed -i'' s:X_ANALYSIS_DIR_X:$ANALYSIS_DIR: $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
+cd $ANALYSIS_DIR
 
 # Final setup and compile
 echo -e "\n\n------------------------------------------------------------"
 echo -e "\nFinal setup and compile"
-cd $ANALYSIS_DIR
+cd $ANALYSIS_DIR/analysis
+rcSetup Base,2.4.32
 source $ANALYSIS_DIR/analysis/AlexAnalysisPackage/bash/setup_env.sh
 rc find_packages
 rc clean
