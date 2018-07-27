@@ -61,6 +61,8 @@ echo -e "\nSetting up susynt-read environment"
 cd $ANALYSIS_DIR/analysis/susynt-read/
 source bash/setup_release.sh
 
+
+
 cd $ANALYSIS_DIR/analysis/
 mv susynt-read/SusyNtuple ./
 mv susynt-read/SUSYTools ./
@@ -72,6 +74,7 @@ cd $ANALYSIS_DIR/analysis/
 git clone git@github.com:alexarmstrongvi/Superflow.git
 cd $ANALYSIS_DIR/analysis/Superflow
 git remote add upstream git@github.com:dantrim/Superflow.git
+git checkout AA/devel
 
 echo -e "\nCloning RestFrames"
 cd $ANALYSIS_DIR/analysis/
