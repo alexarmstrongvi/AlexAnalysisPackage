@@ -95,7 +95,7 @@ cd $ANALYSIS_DIR/analysis_run/
 mkdir -p ntuples outputs logs plots yields lists
 
 cd $ANALYSIS_DIR/analysis_run/ntuples
-mkdir data mc
+mkdir grouped_samples
 
 mv $ANALYSIS_DIR/AlexAnalysisPackage $ANALYSIS_DIR/analysis/
 
