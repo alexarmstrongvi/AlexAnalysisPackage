@@ -1,0 +1,37 @@
+0) Go into directory
+    >> cd /data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/n0234_n0235_comparison
+    >> source ../AlexAnalysisPackage/bash/setup_env.sh
+
+1) Make flat ntuples of of both samples
+    >> export LOCAL_DIR="/data/uclhc/uci/user/dantrim/susynt_productions"
+    >> export N0235_SAMPLE="n0235/mc/group.phys-susy.mc15_13TeV.410009.PowhegPythiaEvtGen_P2012_ttbar_hdamp172p5_dil.SusyNt.p2949_n0235_nt/group.phys-susy.11734697._000001.susyNt.root"
+    >> makeMiniNtuple_HIGGS -i $LOCAL_DIR/$N0235_SAMPLE -s n0235 |& tee n0235_output.log
+    >> export N0234_SAMPLE="n0234/mc/group.phys-susy.mc15_13TeV.410009.PowhegPythiaEvtGen_P2012_ttbar_hdamp172p5_dil.SusyNt.p2879_n0234_nt/group.phys-susy.11722813._000001.susyNt.root"
+    >> makeMiniNtuple_HIGGS -i $LOCAL_DIR/$N0234_SAMPLE -s n0234 |& tee n0234_output.log
+    - Other Samples:
+        >> export N0235_SAMPLE="n0235/mc/group.phys-susy.mc15_13TeV.361604.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZvvll_mll4.SusyNt.e4475_s2726_r7772_r7676_p2949_n0235_nt/"
+        >> export N0234_SAMPLE="n0234/mc/group.phys-susy.mc15_13TeV.361604.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZvvll_mll4.SusyNt.e4475_s2726_r7772_r7676_p2879_n0234_nt/"
+
+2) Compare the cutflows
+    >> vimdiff n0235_output.log n0234_output.log
+
+3) Make Event Cutflow Lists
+    - Make any needed edits to HiggsLFVcutflow.cxx (vim ../HiggsLFVcutflow/Root/HiggsLFVcutflow.cxx)
+    >> LFVcf -i $LOCAL_DIR/$N0235_SAMPLE &> n0235_event_printout_LFVcf.txt
+    >> LFVcf -i $LOCAL_DIR/$N0234_SAMPLE &> n0234_event_printout_LFVcf.txt
+    >> python ../../lfvASym_gitshare/AcceptanceChallenge/alex/cutflow_txt_to_json.py n0235_event_printout_LFVcf.txt
+    >> python ../../lfvASym_gitshare/AcceptanceChallenge/alex/cutflow_txt_to_json.py n0234_event_printout_LFVcf.txt
+    >> python ../../lfvASym_gitshare/AcceptanceChallenge/scripts/cutflow_comparison.py n0234_event_printout_LFVcf.json n0235_event_printout_LFVcf.json -o n0234_n0235_event_comparison.txt
+    >> vim n0234_n0235_event_comparison.txt
+
+4) Compare specific event information
+    - Identify the cut that removed different events or the cut that removed events which passed the other cutflow
+    - Go into the json output and copy the events
+    - Add as a vector list labeled events_to_check in ../HiggsLFVcutflow/Root/HiggsLFVcutflow.cxx
+    >> rc compile
+    >> LFVcf -i $LOCAL_DIR/$N0235_SAMPLE &> n0235_select_event_printout_LFVcf.txt
+        - OR -
+    >> LFVcf -i $LOCAL_DIR/$N0234_SAMPLE &> n0234_select_event_printout_LFVcf.txt
+    - Search through output file to see why events failed
+    - Note cause and then repeat for different events that fail a different cut
+    >> vim n0234_n0235_event_comparison.json

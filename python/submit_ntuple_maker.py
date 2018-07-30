@@ -23,12 +23,12 @@ import global_variables as g
 
 ################################################################################
 # Configuration options
-doBrick = True
+doBrick = False
 doLocal = False 
 doSDSC = False # We do not have the necessary permissions, jobs will hang
-doUC = False 
+doUC = True 
 
-FAX_FILES = False
+FAX_FILES = True
 ################################################################################
 # Format sensative functions
 # Naming should match with what the executable expects

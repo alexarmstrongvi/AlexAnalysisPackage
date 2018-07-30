@@ -1,0 +1,26 @@
+WORKFLOW for making flat ntuples
+
+1) Identify missing flat ntuples (python python/chain_process.py)
+2) If any changes, re-tar Directory (source ../../analysis/AlexAnalysisPackage/bash/make_tarball.sh)
+3) Make sure grid proxy is setup (source ../../analysis/AlexAnalysisPackage/bash/setup_grid.sh)
+4) Submit samples to condor (python submit_ntuple_maker.py --do_REGION)
+    - make sure the script is configured as desired (vim submit_ntuple_maker.py)
+    - if not using missing samples, clear out log files first (rm ../logs/*)
+5) Check status of jobs (condor_ls)
+    -full cmd (condor_q -nobatch | head; echo ...; condor_q -nobatch | grep -v 0+00:00:00 | tail; printf "Started but idle jobs : "; condor_q -nobatch | grep -v 0+00:00:00 | grep " I " | wc -l;)
+6) Check log files for any incomplete samples (python python/check_for_failed_samples.py)
+    - Also recheck for missing samples (python python/chain_process.py)
+    - See printout of info on failed samples (python python/print_failed_sample_stats.py)
+    - See logs after they are done (find ../logs/ -mtime -1 -type f -name "*.err")
+        - assumes they were made in the last 24 hours. If not change -mtime parameter
+    - prinout out information on sample run time (source ../../analysis/AlexAnalysisPackage/bash/print_condor_timing_info.sh)
+7) Move all acceptable files into storage (source ../../analysis/AlexAnalysisPackage/bash/store_output_ntuples.sh)
+    - add the '-a=foobar' option to modify the name of the directory that gets created. Useful for fakes  
+    - add the '--update' option to move the files over without making new directories for them
+    - make sure to record what the sample is for (vim ../ntuples/README.txt)
+8) Repeat steps (1) to make sure added samples are no longer missing
+
+=== OLD INSTRUCTIONS ===
+2) Make sure inputs_local file is updated (python python/make_local_condor_lists.py)
+    - consider removing old inputs_local file (rm -rf ../../analysis/inputs_local/*)
+    - may need to edit global_variables (vim ../outputs/python/global_variables.py)

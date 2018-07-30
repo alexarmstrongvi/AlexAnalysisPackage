@@ -1,0 +1,53 @@
+1) Configure submitMakeMiniNtupleToCondor.py for making fake factor hists
+    - estimate_fakes = only_fakes = false
+    - do_zjets_fakes = true
+
+2) Submit flat ntuple production to condor
+    - see /data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis_run/outputs/README.txt
+
+3) Make fake factor histograms
+    - (python FF_Calculator.py -c HiggsLFV_conf.py -o FF_hists.root)
+    - may need to update FakeFactorCalculator to point to FF hists
+        - vim AlexAnalysisPackage/util/makeMiniNtuple_HIGGS.cxx  
+        - look for path_to_FF_file
+
+4) Configure submitMakeMiniNtupleToCondor.py for estimating fakes
+    - estimate_fakes = true
+    - only_fakes = false (or true)
+    - do_zjets_fakes = true
+
+6) Submit flat ntuple production to condor
+    - see /data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis_run/outputs/README.txt
+    
+
+### UNIT TESTING ###
+
+# Numerator and Denominator Yields
+
+# Numerator and Denominator Truth Compositioni
+
+# Fake factors hists
+
+# Fake estimates
+DATA_SAMPLE='/data/uclhc/uci/user/dantrim/susynt_productions/n0234/data/group.phys-susy.data16_13TeV.00302265.physics_Main.SusyNt.f709_m1620_p2880_n0234_nt/group.phys-susy.11718706._000001.susyNt.root'
+MC_SAMPLE='/data/uclhc/uci/user/dantrim/susynt_productions/n0234/mc/group.phys-susy.mc15_13TeV.410009.PowhegPythiaEvtGen_P2012_ttbar_hdamp172p5_dil.SusyNt.p2879_n0234_nt/'
+makeMiniNtuple_HIGGS -i $DATA_SAMPLE -f zjets -s nominal -n 100000
+root -l CENTRAL_physics_Main_302265_nominal.root
+TH1F h("h","h",1,0,5); superNt->Draw("isMC>>h","eventweight","goff"); h.Integral()
+vim ../../analysis/AlexAnalysisPackage/util/makeMiniNtuple_HIGGS.cxx
+rc compile
+
+makeMiniNtuple_HIGGS -i $DATA_SAMPLE -f zjets -s dummy -n 50000 -e true
+makeMiniNtuple_HIGGS -i $DATA_SAMPLE -f zjets -s old -n 50000 -e true
+makeMiniNtuple_HIGGS -i $DATA_SAMPLE -f zjets -s final -n 50000 -e true
+
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -n 1 | head -n 25
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -f zjets_num -s zjets_num -n 1 | head -n 25
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -f zjets_den -s zjets_den -n 1 | head -n 25
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -f zjets_den -e -s zjets_FFest -n 1 | head -n 25
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -f zjets_num -e -s zjets_fail -n 1 | head -n 25
+makeMiniNtuple_HIGGS -i $MC_SAMPLE -e -s FFest -n 1 | head -n 25
+
+
+1) Run over a single (or several) datasets
+    - 
