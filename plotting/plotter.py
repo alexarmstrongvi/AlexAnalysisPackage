@@ -889,7 +889,7 @@ def check_for_consistency() :
             regions defined in config file
     '''
     region_names = [r.name for r in REGIONS]
-    bad_regions = {p.region for p in PLOTS if p.region not in region_names}
+    bad_regions = set([p.region for p in PLOTS if p.region not in region_names])
     if len(bad_regions) > 0 :
         print 'check_for_consistency ERROR    '\
         'You have configured a plot for a region that is not defined. '\

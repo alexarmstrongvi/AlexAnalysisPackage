@@ -9,7 +9,7 @@ import os
 from argparse import ArgumentParser
 from collections import defaultdict
 import global_variables as g
-import pyToolsBasic as tools
+import pyTools as tools
 
 def get_desired_samples_map(args):
     """ Get map of DSID lists from global list"""

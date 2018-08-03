@@ -11,7 +11,7 @@ input files. It also groups the samples into categories
 import os
 import sys
 from argparse import ArgumentParser
-import pyToolsBasic as tools
+import pyTools as tools
 from collections import defaultdict
 
 def main():
