@@ -43,7 +43,7 @@ import tools.plot_utils as pu
 from tools.plot import Types
 from tools.YieldTable import UncFloat
 from global_variables import event_list_dir, plots_dir
-from plotter2 import make_stack_axis
+from plotter import make_stack_axis
 
 @contextmanager
 def open_root(f_name, f_mode):

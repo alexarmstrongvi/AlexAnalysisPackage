@@ -35,9 +35,9 @@ from tools.YieldTable import YieldTable, UncFloat
 ################################################################################
 import global_variables as g
 # Toggles
-run_fakes = True
+run_fakes = False
 add_truth_den = False
-add_truth_num = True
+add_truth_num = False
 run_den = False
 run_num = True
 
@@ -300,7 +300,7 @@ wz_cr_cut += ' && %s' % singlelep_trig_pT
 wz_cr_cut += ' && fabs(lep_d0sigBSCorr[0]) < 15 && fabs(lep_d0sigBSCorr[1]) < 15 && fabs(lep_d0sigBSCorr[2]) < 15'
 wz_cr_cut += ' && fabs(lep_z0SinTheta[0]) < 15 && fabs(lep_z0SinTheta[1]) < 15 && fabs(lep_z0SinTheta[2]) < 15'
 wz_cr_cut += " && 75 < Z_MLL && Z_MLL < 105"
-wz_cr_cut += ' && nBJets == 0'
+#wz_cr_cut += ' && nBJets == 0'
 wz_cr_cut += ' && l_mT[2] > 50'
 #wz_cr_cut += ' && (Z2_MLL < 80 || 110 < Z2_MLL)'
 REGIONS[-1].tcut = wz_cr_cut
@@ -736,10 +736,10 @@ if run_den:
     #region_ops += ['zjets_FF_CRden_eee', 'zjets_FF_CRden_mme']
     #region_ops += ['wjets_FF_VRden_emu']
 elif run_num:
-    #region_ops += ['wzCR']
+    region_ops += ['wzCR']
     #region_ops += ['zjets_FF_CRnum_m']
     #region_ops += ['zjets_FF_CRnum_m', 'zjets_FF_CRnum_e']
-    region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
+    #region_ops += ['zjets_FF_CRnum_eem', 'zjets_FF_CRnum_mmm']
     #region_ops += ['zjets_FF_CRnum_eee', 'zjets_FF_CRnum_mme']
     #region_ops += ['wjets_FF_VRnum_emu'] #, 'wjets_FF_VRnum_mue'
 else:
@@ -748,9 +748,9 @@ else:
 
 #######################################
 # What variables to plot
-vars_to_plot = []
+vars_to_plot = ['isMC']
 #vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_mT[2]', 'MLL', 'MET']
-vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
+#vars_to_plot += ['l_pt[0]','l_pt[1]','l_pt[2]','l_eta[2]', 'MLL', 'MET', 'dR_Z_Fake']
 #vars_to_plot += ['MET', 'MLL','nBJets', 'nLJets', 'MLLL', 'dpt_ll', 'drll']
 #vars_to_plot += ['n_baseJets','n_jets','JetN_g30','nForwardJets']
 #vars_to_plot += ['dR_ZLep0_Fake','dR_ZLep1_Fake','dR_Z_Fake']
