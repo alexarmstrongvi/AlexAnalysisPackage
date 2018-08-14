@@ -136,12 +136,13 @@ SuperflowRunMode m_run_mode = SuperflowRunMode::nominal;  ///< The mode in which
 // Tool for applying the fake factor
 
 // set path to where the fake factor histograms are located
-string m_path_to_FF_file = "/data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists/";
+string m_path_to_FF_file = "data/uclhc/uci/user/armstro1/SusyNt/SusyNt_n0235_LFV_analysis/analysis/AlexAnalysisPackage/plotting/FF_hists/";
 
 //TODO: Get a better toggle setup than just commenting out lines
 //// My own fake factors
 //string fake_file = "FF_hists_1bin.root";
 string fake_file = "FF_hists_pTbin.root";
+string fake2d_file = "FF_hists_pT_etabin.root";
 string m_el_FF_hist = "zjets_FF_CR_e_fake_factor_data_bkgd_subtracted";
 string m_mu_FF_hist = "zjets_FF_CR_m_fake_factor_data_bkgd_subtracted";
 //// Fake Factors from another analysis
@@ -154,6 +155,7 @@ string m_mu_FF_hist = "zjets_FF_CR_m_fake_factor_data_bkgd_subtracted";
 //string m_mu_FF_hist = "h_zjets_FF_CR_m_data_Z_Lep2_pT_minus_bkgd";
 //}
 string m_fake_path = m_path_to_FF_file + fake_file;
+string m_fake2d_path = m_path_to_FF_file + fake2d_file;
 
 
 

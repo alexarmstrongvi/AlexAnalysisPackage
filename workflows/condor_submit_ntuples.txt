@@ -1,4 +1,5 @@
 WORKFLOW for making flat ntuples
+cd /data/uclhc/uci/user/armstro1/SusyNt//analysis_run/outputs
 
 1) Identify missing flat ntuples (python python/chain_process.py)
 2) If any changes, re-tar Directory (source ../../analysis/AlexAnalysisPackage/bash/make_tarball.sh)

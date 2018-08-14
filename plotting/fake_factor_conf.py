@@ -23,11 +23,10 @@ import ROOT
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 # Local classes for plotting
-from tools.plot import Plot1D, Types
-from tools.sample import Sample, MCsample, Data, Background, Signal
-from tools.region import Region
-import tools.systematic as systematic
-from tools.YieldTable import YieldTable, UncFloat
+from PlotTools.plot import Plot1D, Plot2D, Types
+from PlotTools.sample import Sample, MCsample, Data, Background, Signal
+from PlotTools.region import Region
+from PlotTools.YieldTable import YieldTable, UncFloat
 
 
 ################################################################################
@@ -258,14 +257,14 @@ zjets_FF_CR = '1'
 zjets_FF_CR += ' && %s'%singlelep_trig_pT
 zjets_FF_CR += ' && fabs(lep_d0sigBSCorr[0]) < 15 && fabs(lep_d0sigBSCorr[1]) < 15 && fabs(lep_d0sigBSCorr[2]) < 15'
 zjets_FF_CR += ' && fabs(lep_z0SinTheta[0]) < 15 && fabs(lep_z0SinTheta[1]) < 15 && fabs(lep_z0SinTheta[2]) < 15'
-zjets_FF_CR += ' && (80 < Z_MLL && Z_MLL < 100)' # for electrons
+zjets_FF_CR += ' && (80 < Z_MLL && Z_MLL < 100)'
 zjets_FF_CR += ' && l_mT[2] < 40'
 zjets_FF_CR += ' && (Z2_MLL < 80 || 100 < Z2_MLL)'
 zjets_FF_CR += ' && MET < 60'
 #zjets_FF_CR += ' && nBJets == 0'
 #zjets_FF_CR += ' && nLJets <= 2'
-#zjets_FF_CR += ' && fabs(l_eta[2]) < 1.4'
-#zjets_FF_CR += ' && fabs(l_eta[2]) >= 1.4'
+#zjets_FF_CR += ' && fabs(l_eta[2]) < 1.45'
+#zjets_FF_CR += ' && fabs(l_eta[2]) >= 1.45'
 zjets_FF_truth_base = '(!isMC || (0 < l_truthClass[0] && l_truthClass[0] <= 2))' #Prompt Leading Lepton
 zjets_FF_truth_base += ' && (!isMC || (0 < l_truthClass[1] && l_truthClass[1] <= 2))' #Prompt Subleading Lepton
 zjets_FF_truth_num = zjets_FF_truth_base\
@@ -309,14 +308,12 @@ for num_den, num_den_sel in num_den_dict.iteritems():
 plot_defaults = {
     'l_pt[2]'            : Plot1D( bin_range=[0.0, 1000.0],  bin_width=0.5, ptype=Types.stack, doLogY=False, add_overflow = False, xunits='GeV', xlabel='Fake candidate lepton p_{T}'),
     'l_eta[2]'           : Plot1D( bin_range=[-3.0, 3.0, 0, 4000],   bin_width=0.01, ptype=Types.stack, doLogY= False, add_underflow = True, xlabel='Fake candidate lepton #eta'),
+    'fabs(l_eta[2]):l_pt[2]'   : Plot2D( bin_range=[0, 1000,0, 3.0], xbin_width = 1, ybin_width = 0.01, ylabel='Fake probe lepton |#eta|', xunits='GeV', xlabel='Leading lepton p_{T}')
 }
-# Muon Binning (no eta)
-#plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,12.5,15,18,21,24,28,35,100]
 plot_defaults['l_pt[2]'].rebin_bins = [0,10,11,15,20,25,35,1000]
-
-# Electron Binning
-#plot_defaults['l_pt[2]'].rebin_bins = [0,10,12,15,20,25,100]
 plot_defaults['l_eta[2]'].rebin_bins = [-3.0, -2.5, -1.45, 0, 1.45, 2.5, 3.0]
+plot_defaults['fabs(l_eta[2]):l_pt[2]'].rebin_xbins = plot_defaults['l_pt[2]'].rebin_bins 
+plot_defaults['fabs(l_eta[2]):l_pt[2]'].rebin_ybins = [0, 1.45, 2.5, 3.0] 
 
 region_plots = {}
 ################################################################################
@@ -348,8 +345,9 @@ region_ops += ['zjets_FF_CRden_m', 'zjets_FF_CRnum_m']
 #######################################
 # What variables to plot
 vars_to_plot = []
-vars_to_plot += ['l_pt[2]']
+#vars_to_plot += ['l_pt[2]']
 #vars_to_plot += ['l_eta[2]']
+vars_to_plot = ['fabs(l_eta[2]):l_pt[2]']
 
 # Remove duplicate names
 vars_to_plot = list(set(vars_to_plot))
@@ -379,7 +377,12 @@ for var in vars_to_plot:
         else:
             assert False, ("ERROR :: requested plot not defined:", var)
 
-        p.update(region, var)
+        if p.is2D:
+            varx = var.split(':')[1]
+            vary = var.split(':')[0]
+            p.update(region, varx, vary)
+        else:
+            p.update(region, var)
 
         # Set plot type if not already set
         if p.ptype == Types.default:
@@ -399,6 +402,8 @@ for var in vars_to_plot:
             p.setRatioPads(p.name)
         elif p.ptype == Types.stack:
             p.setStackPads(p.name)
+        elif p.ptype == Types.two_dim:
+            p.set2DPads(p.name)
         else:
             print "WARNING :: %s plots are not yet setup"%p.ptype.name
             continue

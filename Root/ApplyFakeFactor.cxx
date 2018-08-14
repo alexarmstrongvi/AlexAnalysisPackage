@@ -89,7 +89,7 @@ double ApplyFakeFactor::apply(double pt, LepEnum::LepType typeOfLep){
 double ApplyFakeFactor::apply(double pt, double eta, LepEnum::LepType typeOfLep){
 
   TH2F* hist = get2DFakeFactorHist(typeOfLep);
-  if(!hist) return 0;
+  if(!hist) {std::cout << "TESTING :: Couldn't get 2D hist\n"; return 0;}
   int xbin = getBinX(hist, pt);
   int ybin = getBinY(hist, eta);
   return hist->GetBinContent(xbin, ybin);

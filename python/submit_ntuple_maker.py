@@ -23,8 +23,8 @@ import global_variables as g
 
 ################################################################################
 # Configuration options
-doBrick = False
-doLocal = False 
+doBrick = True
+doLocal = False # Usually the same as the brick
 doSDSC = False # We do not have the necessary permissions, jobs will hang
 doUC = True 
 
@@ -113,6 +113,8 @@ def main ():
         d_name = dataset.split("/")[-1].replace(".txt", "")
         r_name = get_region_name(args)
         output_name = r_name + "_" + d_name
+        if args.apply_ff:
+            output_name = 'fakes_' + output_name
         if args.suffix: output_name += "_" + args.suffix
         log_file_path = os.path.normpath(os.path.join(args.log_dir, output_name))
 

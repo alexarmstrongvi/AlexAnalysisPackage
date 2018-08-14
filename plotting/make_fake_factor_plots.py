@@ -39,9 +39,8 @@ r.TLegend.__init__._creates = False
 r.THStack.__init__._creates = False
 
 # Local classes for plotting
-import tools.plot_utils as pu
-from tools.plot import Types
-from tools.YieldTable import UncFloat
+import PlotTools.plot_utils as pu
+from PlotTools.YieldTable import UncFloat
 from global_variables import event_list_dir, plots_dir
 from plotter import make_stack_axis
 
@@ -226,7 +225,7 @@ def main ():
         ########################################################################
         # Make hists
         for plot in plots_with_region:
-            print "Running on %s plot"%plot.variable
+            print "Running on %s plot"%plot.name
             add_ff_hist_primitives(plot, hists, reg)
     print "Identified channels:", hists.keys()
     print "Samples in each channel:",sorted(hists[hists.keys()[0]][conf.DEN_STR].keys(), key=len)
@@ -234,6 +233,10 @@ def main ():
     format_and_combine_hists(hists)
     print "Making fake factor histograms"
     ff_hists = get_fake_factor_hists(hists)
+    for channel_name, ff_hist_dict in ff_hists.iteritems():
+        print "FF values for", channel_name
+        ff_hist = ff_hist_dict[KEYS.data_corr_fake_factor]
+        pu.print_hist(ff_hist)
     print "Making plots"
     save_and_write_hists(ff_hists, hists)
 
@@ -269,7 +272,9 @@ def add_ff_hist_primitives(plot, hists, reg):
         for cut in cuts:
             hist_key = KEYS.generate_hist_key(sample, reg, cut)
             # histogram name must be unique relative to all hists made by script
-            h_name = "h_"+reg.name+'_'+hist_key+"_"+plot.variable
+            var = plot.yvariable + ":" + plot.xvariable if plot.is2D else plot.variable
+            var = sub(r'[:\-(){}[\]]+','', var)
+            h_name = "h_"+reg.name+'_'+hist_key+"_"+ var
             hist = build_hist(h_name, plot, sample, cut)
             hist.displayname = sample.displayname
             hist.plot = plot
@@ -287,9 +292,12 @@ def add_ff_hist_primitives(plot, hists, reg):
                 num_or_den_sel = 'base_sel'
 
             yld_tbls[num_or_den_sel].region = yld_region
-            yld_tbls[num_or_den_sel].variable = plot.variable
+            yld_tbls[num_or_den_sel].variable = var
             stat_err = r.Double(0.0)
-            integral = hist.IntegralAndError(0,-1,stat_err)
+            if plot.is2D:
+                integral = hist.IntegralAndError(0,-1,0,-1,stat_err)
+            else:
+                integral = hist.IntegralAndError(0,-1,stat_err)
             print "Base histograms (Sample: %s, Yield: %.2f): %s created"%(
                     sample.name, integral, h_name)
             if sample.isMC:
@@ -302,8 +310,7 @@ def add_ff_hist_primitives(plot, hists, reg):
     yld_tbls['base_sel'].partitions.append(yld_tbls['den_sel'])
     yld_tbls['base_sel'].partitions.append(yld_tbls['num_sel'])
     YIELD_TABLES.append(yld_tbls['base_sel'])
-    
-    
+     
             
 def format_and_combine_hists(hists):
     '''
@@ -350,10 +357,11 @@ def format_and_combine_hists(hists):
                     mc_total_hist.displayname = KEYS.fake_mc_str.replace("_"," ")
                 else:
                     mc_total_hist.displayname = 'Total MC'
-                mc_total_hist.SetLineWidth(3)
-                mc_total_hist.SetLineStyle(1)
-                mc_total_hist.SetFillStyle(0)
-                mc_total_hist.SetLineWidth(3)
+                if not hist.plot.is2D:
+                    mc_total_hist.SetLineWidth(3)
+                    mc_total_hist.SetLineStyle(1)
+                    mc_total_hist.SetFillStyle(0)
+                    mc_total_hist.SetLineWidth(3)
                 mc_total_hist.is_total = True
 
                 sample_dict[mc_hist_key] = mc_total_hist
@@ -391,10 +399,12 @@ def get_fake_factor_hists(hists):
             ff_hist.plot = copy(num_hist.plot)
 
             # Format the hists
-            ff_hist.plot.update(doLogY = False, doNorm = True) #doNorm only affects axis
+            if not ff_hist.plot.is2D:
+                ff_hist.plot.update(doLogY = False, doNorm = True) #doNorm only affects axis
 
             ff_hists[channel_name][fake_factor_key] = ff_hist
     return ff_hists
+
 
 def save_and_write_hists(ff_hists_dict, hists):
     # Writing fake factor hists to root file
@@ -402,6 +412,11 @@ def save_and_write_hists(ff_hists_dict, hists):
         with open_root(args.ofile_name,"RECREATE") as ofile:
             for channel_name, ff_hists in ff_hists_dict.iteritems():
                 ff_hists[KEYS.data_corr_fake_factor].Write()
+        return
+
+    for channel_name, ff_hists in ff_hists_dict.iteritems():
+        if ff_hists[KEYS.data_corr_fake_factor].plot.is2D:
+            return
 
 # Saving plots of fake factor hists
     for channel_name, ff_hists in ff_hists_dict.iteritems():
@@ -556,13 +571,15 @@ def save_hist(title, plot, reg_name, hist_list):
     can.Update()
 
     # Save
-    outname = reg_name+ '_' + plot.variable + '_' + title + ".pdf"
+    var = plot.yvariable + ":" + plot.xvariable if plot.is2D else plot.variable
+    outname = reg_name+ '_' + var+ '_' + title + ".pdf"
     outname = outname.replace(" ","_")
     outname = sub(r'[:\-(){}[\]]+','', outname)
     save_path = os.path.join(plots_dir, args.dir_name, outname)
     save_path = os.path.normpath(save_path)
     can.SaveAs(save_path)
     axis.Delete()
+    can.Clear()
 
 def reformat_axis(plot, axis, hist_list):
     ''' Reformat axis to fit content and labels'''
@@ -606,25 +623,36 @@ def reformat_axis(plot, axis, hist_list):
 ################################################################################
 # Fake factor functions
 def build_hist(h_name, plot, sample, cut):
-    hist = pu.th1d(h_name, "", int(plot.nbins),
-                plot.xmin, plot.xmax,
-                plot.ylabel, plot.ylabel)
-    hist.Sumw2
-    hist.SetLineColor(sample.color)
     cut = r.TCut(cut)
-    sel = r.TCut("1")
-    draw_cmd = "%s>>+%s"%(plot.variable, hist.GetName())
-    sample.tree.Draw(draw_cmd, cut * sel, "goff")
-    
-    if plot.rebin_bins:
-        new_bins = array('d', plot.rebin_bins)
-        hist = hist.Rebin(len(new_bins)-1, h_name, new_bins)
+    if plot.is2D:
+        hist = r.TH2D(h_name, "", plot.nxbins, plot.xmin, plot.xmax, plot.nybins, plot.ymin, plot.ymax)
+        draw_cmd = "%s>>%s"%(plot.yvariable+":"+plot.xvariable, hist.GetName())
+        print draw_cmd
+        sample.tree.Draw(draw_cmd, cut, "goff")
+        if plot.rebin_xbins:
+            new_bins = array('d', plot.rebin_xbins)
+            hist = pu.make_rebinned_th2f(hist, xbins=new_bins)
+        if plot.rebin_ybins:
+            new_bins = array('d', plot.rebin_ybins)
+            hist = pu.make_rebinned_th2f(hist, ybins=new_bins)
 
-    if plot.add_overflow:
-        pu.add_overflow_to_lastbin(hist)
-    if plot.add_underflow:
-        pu.add_underflow_to_firstbin(hist)
+    else:
+        hist = pu.th1d(h_name, "", int(plot.nbins),
+                    plot.xmin, plot.xmax,
+                    plot.ylabel, plot.ylabel)
+        hist.Sumw2
+        hist.SetLineColor(sample.color)
+        draw_cmd = "%s>>+%s"%(plot.variable, hist.GetName())
+        sample.tree.Draw(draw_cmd, cut, "goff")
+        
+        if plot.rebin_bins:
+            new_bins = array('d', plot.rebin_bins)
+            hist = hist.Rebin(len(new_bins)-1, h_name, new_bins)
 
+        if plot.add_overflow:
+            pu.add_overflow_to_lastbin(hist)
+        if plot.add_underflow:
+            pu.add_underflow_to_firstbin(hist)
 
     return hist
 
@@ -698,11 +726,8 @@ def check_for_consistency() :
 def check_import_globals():
 
     #TODO: Allow plotting of multiple variables
-    assert len(set([p.variable for p in conf.PLOTS])) == 1, (
-        "ERROR :: Currently cannot handle plotting multiple variables")
-
     reg_names = [p.region for p in conf.PLOTS]
-    print "TESTING :: plot regions =", reg_names
+    
     assert all(conf.NUM_STR in n or conf.DEN_STR in n for n in reg_names),(
         "ERROR :: Non fake factor region defined")
     

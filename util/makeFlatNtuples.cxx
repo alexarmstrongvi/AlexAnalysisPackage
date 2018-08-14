@@ -255,9 +255,12 @@ void setup_chain(TChain* chain, string iname) {
 }
 
 void initialize_fake_factor_tool(ApplyFakeFactor* applyFakeFactorTool) {
-    applyFakeFactorTool->set_savedFakeFactorFileName(m_fake_path);
-    applyFakeFactorTool->set_saved_elFakeFactorName(m_el_FF_hist);
-    applyFakeFactorTool->set_saved_muFakeFactorName(m_mu_FF_hist);
+    //applyFakeFactorTool->set_savedFakeFactorFileName(m_fake_path);
+    //applyFakeFactorTool->set_saved_elFakeFactorName(m_el_FF_hist);
+    //applyFakeFactorTool->set_saved_muFakeFactorName(m_mu_FF_hist);
+    applyFakeFactorTool->set_savedFakeFactorFileName(m_fake2d_path);
+    applyFakeFactorTool->set_saved_elFakeFactorName_2D(m_el_FF_hist);
+    applyFakeFactorTool->set_saved_muFakeFactorName_2D(m_mu_FF_hist);
     applyFakeFactorTool->initialize().ignore();
 }
 
@@ -586,7 +589,10 @@ void add_event_variables(Superflow* superflow) {
         if (args.apply_ff && m_denominator_selection) {
             bool probeIsEl = m_antiID_lep0->isEle();
             LepEnum::LepType typeOfLep = probeIsEl ? LepEnum::Electron : LepEnum::Muon;
-            fakeFactor = m_applyFakeFactorTool->apply(m_antiID_lep0_TLV.Pt(), typeOfLep);
+            float pt = m_antiID_lep0_TLV.Pt();
+            //fakeFactor = m_applyFakeFactorTool->apply(pt, typeOfLep);
+            float eta = fabs(m_antiID_lep0_TLV.Eta());
+            fakeFactor = m_applyFakeFactorTool->apply(pt, eta, typeOfLep);
         }
         //print_weight_info(sl, fakeFactor);
         return sl->weights->product() * sl->nt->evt()->wPileup * fakeFactor;

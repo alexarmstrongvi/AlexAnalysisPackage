@@ -425,6 +425,10 @@ def make_stack_legend(plot):
     return leg
 
 def make_stack_axis(plot):
+    #import pdb; pdb.set_trace()
+    #old_hax = r.gROOT.FindObject("axes")
+    #if old_hax: del old_hax
+
     hax = r.TH1F("axes", "", int(plot.nbins), plot.xmin, plot.xmax)
     hax.SetMinimum(plot.ymin)
     hax.SetMaximum(plot.ymax)
@@ -454,7 +458,10 @@ def make_stack_axis(plot):
         plot.set_bin_labels(hax)
     if plot.rebin_bins:
         new_bins = array('d', plot.rebin_bins)
-        hax = hax.Rebin(len(new_bins)-1, 'axes', new_bins)
+        hax_tmp = hax.Rebin(len(new_bins)-1, '', new_bins)
+        hax.Delete()
+        hax = hax_tmp
+
 
     return hax
 

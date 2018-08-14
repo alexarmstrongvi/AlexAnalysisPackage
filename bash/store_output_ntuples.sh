@@ -103,7 +103,7 @@ mv outputs/CENTRAL_*.root ntuples/mc${suffix}/
 rm outputs/RunCondorSF.sh outputs/submitFile.condor
 
 if [ "$fakes" = true ]; then
-    rm -rf ntuples/mc${suffix}
+    rm -rf ntuples/mc${suffix}*
     #unlink ../ntuples/mc_fakes/
 fi
 
